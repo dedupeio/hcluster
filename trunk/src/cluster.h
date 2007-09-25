@@ -1,0 +1,98 @@
+/**
+ * cluster.h
+ *
+ * Author: Damian Eads
+ * Date:   September 22, 2007
+ *
+ * Copyright (c) 2007, Damian Eads
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *   - Redistributions of source code must retain the above
+ *     copyright notice, this list of conditions and the
+ *     following disclaimer.
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *   - Neither the name of the author nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef _CPY_CLUSTER_H
+#define _CPY_CLUSTER_H
+
+#define CPY_LINKAGE_SINGLE 0
+#define CPY_LINKAGE_COMPLETE 1
+#define CPY_LINKAGE_AVERAGE 2
+#define CPY_LINKAGE_CENTROID 3
+
+#define CPY_PDIST_EUCLIDEAN 0
+#define CPY_PDIST_SEUCLIDEAN 1
+#define CPY_PDIST_MAHALANOBIS 2
+#define CPY_PDIST_CITY_BLOCK 3
+#define CPY_PDIST_MINKOWSKI 4
+#define CPY_PDIST_COSINE 5
+#define CPY_PDIST_CORRELATION 6
+#define CPY_PDIST_SPEARMAN 7
+#define CPY_PDIST_HAMMING 8
+#define CPY_PDIST_JACCARD 9
+#define CPY_PDIST_CHEBYCHEV 10
+
+typedef struct cnode {
+  int n;
+  int id;
+  double d;
+  struct cnode *left;
+  struct cnode *right;
+} cnode;
+
+typedef struct clnode {
+  struct clnode *next;
+  struct cnode *val;
+} clnode;
+
+typedef struct clist {
+  struct clnode *head;
+  struct clnode *tail;
+} clist;
+
+typedef struct cinfo {
+  struct cnode *nodes;
+  int *ind;
+  double *dmt;
+  double *dm;
+  double *buf;
+  double **rows;
+  int *rowsize;
+} cinfo;
+
+typedef void (distfunc) (cinfo *info, int mini, int minj, int np, int n); 
+
+void chopmins(int *ind, int mini, int minj, int np);
+void chopmins_ns_i(double *ind, int mini, int np);
+void chopmins_ns_ij(double *ind, int mini, int minj, int np);
+
+void dist_single(cinfo *info, int mini, int minj, int np, int n);
+void dist_average(cinfo *info, int mini, int minj, int np, int n);
+void dist_complete(cinfo *info, int mini, int minj, int np, int n);
+
+void linkage(double *dm, double *Z, int n, int method, distfunc dfunc);
+
+#endif
