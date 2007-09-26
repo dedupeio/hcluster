@@ -158,12 +158,12 @@ void chopmins(int *ind, int mini, int minj, int np) {
     ind[i] = ind[i + 2];
   }
   /**  }**/
-  if (np > 0) {
-    ind[np - 1] = 1.0 / 0.0;
+  /**  if (np > 0) {
+    ind[np - 1] = HUGE_VALF;
   }
   if (np > 1) {
-    ind[np - 2] = 1.0 / 0.0;
-  }
+    ind[np - 2] = INFINITY;
+    }***/
   /**  fprintf(stderr, "[Remove mini=%d minj=%d]\n", mini, minj);**/
 }
 
@@ -179,12 +179,12 @@ void chopmins_ns_ij(double *ind, int mini, int minj, int np) {
     ind[i] = ind[i + 2];
   }
   /**}**/
-  if (np > 0) {
-    ind[np - 1] = 1.0 / 0.0;
+  /**  if (np > 0) {
+    ind[np - 1] = INFINITY;
   }
   if (np > 1) {
-    ind[np - 2] = 1.0 / 0.0;
-  }
+    ind[np - 2] = INFINITY;
+    }**/
 }
 
 void chopmins_ns_i(double *ind, int mini, int np) {
@@ -192,9 +192,9 @@ void chopmins_ns_i(double *ind, int mini, int np) {
     for (i = mini; i < np - 1; i++) {
       ind[i] = ind[i + 1];
     }
-  if (np > 0) {
-    ind[np - 1] = 1.0 / 0.0;
-  }
+    /**  if (np > 0) {
+    ind[np - 1] = INFINITY;
+    }**/
 }
 
 void dist_single(cinfo *info, int mini, int minj, int np, int n) {
