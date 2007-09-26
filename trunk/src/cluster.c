@@ -58,7 +58,7 @@ double euclidean_distance(const double *u, const double *v, int n) {
     d = u[i] - v[i];
     s = s + d * d;
   }
-  return sqrt(s / n);
+  return sqrt(s);
 }
 
 double city_block_distance(const double *u, const double *v, int n) {

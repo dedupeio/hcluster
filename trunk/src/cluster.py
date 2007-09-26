@@ -35,6 +35,7 @@
 
 import _cluster_wrap
 import scipy
+import types
 
 __method_ids = {'single': 0, 'complete': 1, 'average': 2}
 
@@ -237,4 +238,37 @@ def squareform(X):
     else:
         raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted')
 
-def pdist(X, metric)
+def pdist(X, metric='euclidean', p=2):
+    a = scipy.array(())
+    
+    if type(X) != type(a):
+        raise AttributeError('The parameter passed must be an array.')
+
+    if X.dtype != 'double':
+        raise AttributeError('A double array must be passed.')
+
+    s = X.shape
+
+    if len(s) != 2:
+        raise AttributeError('A matrix must be passed.');
+
+    m = s[0]
+    n = s[1]
+    dm = scipy.zeros((m * (m - 1) / 2,), dtype='double')
+
+    if type(metric) is types.FunctionType:
+        k = 0
+        for i in xrange(0, m - 1):
+            for j in xrange(i+1, m):
+                dm[k] = metric(X[i, :], X[j, :])
+                k = k + 1
+    elif type(metric) is types.StringType:
+        if metric.lower() in set(['euclidean', 'euclid', 'eu', 'e']):
+            _cluster_wrap.pdist_euclidean_wrap(X, dm)
+        elif metric.lower() in set(['cityblock', 'cblock', 'cb', 'c']):
+            _cluaster_wrap.pdist_city_block_wrap(X, dm)
+        elif metric.lower() in set(['minkowski', 'mi', 'm']):
+            _cluaster_wrap.pdist_minkowski_wrap(X, dm, p)
+    else:
+        raise AttributeError('2nd argument metric must be a string identifier or a function.')
+    return dm

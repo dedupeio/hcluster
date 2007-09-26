@@ -114,9 +114,9 @@ extern PyObject *to_vector_from_squareform(PyObject *self, PyObject *args) {
 }
 
 extern PyObject *pdist_euclidean_wrap(PyObject *self, PyObject *args) {
-  PyArrayObject *_M, *_v;
-  int n;
-  double *v, *M;
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm, *X;
   if (!PyArg_ParseTuple(args, "O!O!",
 			&PyArray_Type, &_X,
 			&PyArray_Type, &_dm)) {
@@ -133,6 +133,48 @@ extern PyObject *pdist_euclidean_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *pdist_city_block_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm, *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (double*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_city_block(X, dm, m, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
+extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm, *X;
+  double p;
+  if (!PyArg_ParseTuple(args, "O!O!d",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm,
+			&p)) {
+    return 0;
+  }
+  else {
+    X = (double*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_minkowski(X, dm, m, n, p);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
 
 static PyMethodDef _clusterWrapMethods[] = {
   {"cluster_impl", cluster_wrapper, METH_VARARGS},
@@ -140,6 +182,8 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"chopmins_ns_i", chopmin_ns_i_wrapper, METH_VARARGS},
   {"chopmins", chopmins_wrapper, METH_VARARGS},
   {"pdist_euclidean_wrap", pdist_euclidean_wrap, METH_VARARGS},
+  {"pdist_city_block_wrap", pdist_city_block_wrap, METH_VARARGS},
+  {"pdist_minkowski_wrap", pdist_minkowski_wrap, METH_VARARGS},
   {"to_squareform_from_vector", to_squareform_from_vector, METH_VARARGS},
   {"to_vector_from_squareform", to_vector_from_squareform, METH_VARARGS},
   {NULL, NULL}     /* Sentinel - marks the end of this structure */

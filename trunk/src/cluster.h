@@ -88,6 +88,10 @@ typedef void (distfunc) (cinfo *info, int mini, int minj, int np, int n);
 void dist_to_squareform_from_vector(double *M, const double *v, int n);
 void dist_to_vector_from_squareform(const double *M, double *v, int n);
 
+void pdist_euclidean(const double *X, double *dm, int m, int n);
+void pdist_city_block(const double *X, double *dm, int m, int n);
+void pdist_minkowski(const double *X, double *dm, int m, int n, double p);
+
 void chopmins(int *ind, int mini, int minj, int np);
 void chopmins_ns_i(double *ind, int mini, int np);
 void chopmins_ns_ij(double *ind, int mini, int minj, int np);
