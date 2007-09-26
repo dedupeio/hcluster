@@ -113,11 +113,33 @@ extern PyObject *to_vector_from_squareform(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *pdist_euclidean_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_M, *_v;
+  int n;
+  double *v, *M;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (double*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_euclidean(X, dm, m, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
+
 static PyMethodDef _clusterWrapMethods[] = {
   {"cluster_impl", cluster_wrapper, METH_VARARGS},
   {"chopmins_ns_ij", chopmin_ns_ij_wrapper, METH_VARARGS},
   {"chopmins_ns_i", chopmin_ns_i_wrapper, METH_VARARGS},
   {"chopmins", chopmins_wrapper, METH_VARARGS},
+  {"pdist_euclidean_wrap", pdist_euclidean_wrap, METH_VARARGS},
   {"to_squareform_from_vector", to_squareform_from_vector, METH_VARARGS},
   {"to_vector_from_squareform", to_vector_from_squareform, METH_VARARGS},
   {NULL, NULL}     /* Sentinel - marks the end of this structure */

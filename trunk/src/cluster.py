@@ -97,6 +97,8 @@ class cnode:
 
 def totree(Z, return_dict=False):
     """
+    t = totree(Z)
+    
     Converts a hierarchical clustering encoded in the matrix Z (by linkage)
     into a tree. The root cnode object is returned.
     
@@ -111,6 +113,13 @@ def totree(Z, return_dict=False):
     If return_dict is True the object returned is a tuple (t,Z) where
     """
 
+    a = scipy.array(())
+
+    if type(a) != type(Z):
+        raise AttributeError('Z must be a numpy.ndarray')
+
+    if Z.dtype != 'double':
+        raise AttributeError('Z must have double elements, not %s', str(Z.dtype))
     if len(Z.shape) != 2:
         raise AttributeError('Z must be a matrix')
 
@@ -227,3 +236,5 @@ def squareform(X):
         return v
     else:
         raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted')
+
+def pdist(X, metric)
