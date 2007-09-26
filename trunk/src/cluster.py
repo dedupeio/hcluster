@@ -34,7 +34,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import _cluster_wrap
-import fts
 import scipy
 
 __method_ids = {'single': 0, 'complete': 1, 'average': 2}
@@ -43,10 +42,10 @@ __unavailable_method_id = {'centroid': 3, 'ward': 4}
 
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
-        pnts * (pnts - 1) sized vector is returned.
+        pnts * (pnts - 1) / 2 sized vector is returned.
     """
     if pnts >= 2:
-        D = scipy.rand(pnts * (pnts - 1))
+        D = scipy.rand(pnts * (pnts - 1) / 2)
     else:
         raise AttributeError("The number of points in the distance matrix must be at least 2.")
     return D
@@ -159,3 +158,72 @@ def totree(Z, return_dict=False):
         d[n + i] = nd
 
     return nd
+
+def squareform(X):
+    """ Converts a vectorform distance vector to a squareform distance
+    matrix, and vice-versa.
+
+    v = squareform(X)
+
+      Given a square dxd symmetric distance matrix X, v=squareform(X)
+      returns a d*(d-1)/2 (n \choose 2) sized vector v.
+
+      v[(i + 1) \choose 2 + j] is the distance between points i and j.
+      If X is non-square or asymmetric, an error is returned.
+
+    X = squareform(v)
+
+      Given a d*d(-1)/2 sized v for some integer d>=2 encoding distances
+      as described, X=squareform(v) returns a dxd distance matrix X. The
+      X[i, j] and X[j, i] value equals v[(i + 1) \choose 2 + j] and all
+      diagonal elements are zero.
+    """
+    a = scipy.array(())
+    
+    if type(X) != type(a):
+        raise AttributeError('The parameter passed must be an array.')
+
+    if X.dtype != 'double':
+        raise AttributeError('A double array must be passed.')
+
+    s = X.shape
+    
+    # X = squareform(v)
+    if len(s) == 1:
+        
+        # Grab the closest value to the square root of the number
+        # of elements times 2 to see if the number of elements
+        # is indeed a binomial coefficient.
+        d = int(scipy.ceil(scipy.sqrt(X.shape[0] * 2)))
+
+        print d, s[0]
+        # Check that v is of valid dimensions.
+        if d * (d - 1) / 2 != int(s[0]):
+            raise AttributeError('Incompatible vector size. It must be a binomial coefficient n choose 2 for some integer n >= 2.')
+        
+        # Allocate memory for the distance matrix.
+        M = scipy.zeros((d, d), 'double')
+
+        # Fill in the values of the distance matrix.
+        _cluster_wrap.to_squareform_from_vector(M, X)
+
+        # Return the distance matrix.
+        M = M + M.transpose()
+        return M
+    elif len(s) == 2:
+        if s[0] != s[1]:
+            raise AttributeError('The matrix argument must be square.')
+        if scipy.sum(scipy.sum(X == X.transpose())) != scipy.product(X.shape):
+            raise AttributeError('The distance matrix must be symmetrical.')
+        
+        # One-side of the dimensions is set here.
+        d = s[0]
+        
+        # Create a vector.
+        v = scipy.zeros(((d * (d - 1) / 2),), 'double')
+
+        # Convert the vector to squareform.
+        _cluster_wrap.to_vector_from_squareform(X, v)
+        return v
+    else:
+        raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted')
