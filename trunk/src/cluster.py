@@ -249,6 +249,87 @@ def squareform(X, force=None):
         raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted' % len(s))
 
 def pdist(X, metric='euclidean', p=2):
+    """ Computes the distance between m points in n-dimensional space.
+
+        1. pdist(X)
+
+        Computes the distance between m points using Euclidean distance
+        (2-norm) as the distance metric between the points. The points
+        are arranged as m n-dimensional row vectors in the matrix X.
+
+        2. pdist(X, 'minkowski', p)
+
+        Computes the distances using the Minkowski distance (p-norm) where
+        p is a number.
+
+        3. pdist(X, 'cityblock')
+
+        Computes the city block or manhattan distance between the points.
+
+        4. pdist(X, 'seuclidean')
+
+        Computes the standardized euclidean distance so that the distances
+        are of unit variance.
+
+        5. pdist(X, 'cosine')
+
+        Computes the cosine distance between vectors u and v. This is
+        
+           1 - uv^T
+           -----------
+           |u|_2 |v|_2
+
+        where |*|_2 is the 2 norm of its argument *.
+
+        6. pdist(X, 'correlation')
+
+        Computes the correlation distance between vectors u and v. This is
+
+           1 - (u - |u|_1)(v - |v|_1)^T
+           -------------------------------
+           |(u - |u|_1)|_2 |(v - |v|_1)|^T
+
+        where |*|_1 is the Manhattan (or 1-norm) of its argument *.
+
+        7. pdist(X, 'hamming')
+
+        Computes the normalized Hamming distance, or the proportion
+        of those vector elements between two vectors u and v which
+        disagree. To save memory, the matrix X can be of type boolean.
+
+        8. pdist(X, 'jaccard')
+
+        Computes the Jaccard distance between the points. Given two
+        vectors, u and v, the Jaccard disaance is the proportion of
+        those elements u_i and v_i that disagree where at least one
+        of them is non-zero.
+
+        9. pdist(X, 'chebyshev')
+
+        Computes the Chebyshev distance between the points. The
+        Chebyshev distance between two vectors u and v is the maximum
+        norm-1 distance between their respective elements. More
+        precisely, the distance is given by
+
+           d(u,v) = max_{i=1}^{n}{|u_i-v_i|}.
+
+        10. pdist(X, f)
+        
+        Computes the distance between all pairs of vectors in X
+        using the user supplied 2-arity function f. For example,
+        Euclidean distance between the vectors could be computed
+        as follows,
+
+            dm = pdist(X, \
+                       (lambda u, v: \
+                        scipy.sqrt(((u-v)*(u-v).T).sum())))
+
+        11. pdist(X, 'test_Y')
+
+        Computes the distance between all pairs of vectors in X
+        using the distance metric Y but with a more succint,
+        verifiable, but less efficient implementation.
+    """
     a = scipy.array(())
     
     if type(X) != type(a):
