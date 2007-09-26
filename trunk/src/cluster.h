@@ -92,6 +92,8 @@ void pdist_euclidean(const double *X, double *dm, int m, int n);
 void pdist_city_block(const double *X, double *dm, int m, int n);
 void pdist_minkowski(const double *X, double *dm, int m, int n, double p);
 
+void compute_inconsistency_coefficient(const double *Z, double *Y, int d);
+
 void chopmins(int *ind, int mini, int minj, int np);
 void chopmins_ns_i(double *ind, int mini, int np);
 void chopmins_ns_ij(double *ind, int mini, int minj, int np);

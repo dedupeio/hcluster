@@ -490,6 +490,11 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
 
 }
 
+/** Stub. **/
+void compute_inconsistency_coefficient(const double *Z, double *Y, int d) {
+  return;
+}
+
 void pdist(const double *X, double *dm, int m, int n, int metric, double p) {
   switch (metric) {
   case CPY_PDIST_EUCLIDEAN:
