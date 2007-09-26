@@ -35,7 +35,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #define NCHOOSE2(_n) ((_n)*(_n-1)/2)
 #define ISCLUSTER(_nd) ((_nd)->id >= n)
 #define GETCLUSTER(_id) ((lists + _id - n))
@@ -487,8 +486,36 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
   free(buf);
   free(rows);
   free(rowsize);
-
 }
+
+/**
+ * endpnts is a (n-1) by 4 by 2 array
+ *
+ * ctrpnts is a (n-1) by 2 by 2 array
+ *
+ * edge is a (n-1) by 2 by 2 array
+ *
+ * sbl: size between leaves
+ *
+ * Thoughts to self: might be more efficient to compute these bits and
+ * pieces when constructing z.
+ */
+/**
+void get_dendrogram_line_endpoints(const double *Z,
+				   int n,
+				   double *endpnts,
+				   double *ctrpnts
+				   double *edge,
+				   double sbl) {
+  const double *Zit;
+  double *endpntsit;
+  double *ctrpntsit;
+  double *edgeit;
+  int i, j;
+  for (i = 0; i < n - 1; i++) {
+    Zit = Z + (4 * i)
+  }
+  }**/
 
 /** Stub. **/
 void compute_inconsistency_coefficient(const double *Z, double *Y, int d) {
