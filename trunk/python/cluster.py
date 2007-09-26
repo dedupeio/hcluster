@@ -154,7 +154,7 @@ def totree(Z, return_dict=False):
         if fi < i + n:
             raise AttributeError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 1' % fj)
         nd = cnode(i + n, d[Z[i, 0]], d[Z[i, 1]])
-        if d[(int)Z[i, 0]].count + d[(int)Z[i, 1]].count != nd.count:
+        if d[int(Z[i, 0])].count + d[int(Z[i, 1])].count != nd.count:
             raise AttributeError('Corrupt matrix Z. The count Z[%d,3] is incorrect.' % i)
         d[n + i] = nd
 
