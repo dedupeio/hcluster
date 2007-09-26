@@ -1,6 +1,3 @@
-#all: _align.so
-#	gcc -shared align.o align_wrap.o -o _align.so
-
 all: _cluster_wrap.so
 
 _cluster_wrap.so cluster_wrap.o: cluster.o cluster_wrap.c
