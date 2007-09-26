@@ -36,6 +36,7 @@
 import _cluster_wrap
 import scipy
 import types
+import math
 
 __method_ids = {'single': 0, 'complete': 1, 'average': 2}
 
@@ -266,9 +267,54 @@ def pdist(X, metric='euclidean', p=2):
         if metric.lower() in set(['euclidean', 'euclid', 'eu', 'e']):
             _cluster_wrap.pdist_euclidean_wrap(X, dm)
         elif metric.lower() in set(['cityblock', 'cblock', 'cb', 'c']):
-            _cluaster_wrap.pdist_city_block_wrap(X, dm)
+            _cluster_wrap.pdist_city_block_wrap(X, dm)
         elif metric.lower() in set(['minkowski', 'mi', 'm']):
-            _cluaster_wrap.pdist_minkowski_wrap(X, dm, p)
+            _cluster_wrap.pdist_minkowski_wrap(X, dm, p)
+        elif metric.lower() in set(['seuclidean', 'mahalanobis', \
+                                    'cosine', 'correlation', 'hamming', \
+                                    'jaccard', 'chebychev']):
+            dm = pdist(X, 'test_' + metric.lower())
+        elif metric == 'test_euclidean':
+            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
+        elif metric == 'test_seuclidean':
+            D = scipy.diagflat(scipy.var(X, axis=0))
+            DI = scipy.linalg.inv(D)
+            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*DI*(u-v).T).sum())))
+        elif metric == 'test_mahalanobis':
+            V = scipy.cov(X.T)
+            VI = scipy.linalg.inv(V)
+            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*VI*(u-v).T).sum())))            
+        elif metric == 'test_cityblock':
+            dm = pdist(X, (lambda u, v: abs(u-v).sum()))
+        elif metric == 'test_minkowski':
+            dm = pdist(X, (lambda u, v: math.pow((abs(u-v)**p).sum(), 1.0/p)))
+        elif metric == 'test_cosine':
+            dm = pdist(X, \
+                       (lambda u, v: \
+                        (1 - scipy.dot(u, v)) / \
+                        (math.sqrt(scipy.dot(u, u)) * \
+                         math.sqrt(scipy.dot(v, v)))))
+        elif metric == 'test_correlation':
+            dm = pdist(X, \
+                       (lambda u, v: 1 - \
+                        scipy.dot(u - u.mean(), v - v.mean()) / \
+                        math.sqrt(scipy.dot(u - u.mean(), \
+                                            u - u.mean())) \
+                        * math.sqrt(scipy.dot(v - v.mean(), \
+                                              v - v.mean()))))
+        elif metric == 'test_hamming':
+            dm = pdist(X, (lambda u, v: (u != v).mean()))
+        elif metric == 'test_jaccard':
+            dm = pdist(X, \
+                       (lambda u, v: \
+                        ((scipy.bitwise_and((u != v),
+                                       scipy.bitwise_or(u != 0, \
+                                                   v != 0))).sum()) / \
+                        (scipy.bitwise_or(u != 0, v != 0)).sum()))
+        elif metric == 'test_chebyshev':
+            dm = pdist(X, lambda u, v: max(abs(u-v)))
+        else:
+            raise AttributeError('Unknown Distance Metric: %s' % chebyshev)
     else:
         raise AttributeError('2nd argument metric must be a string identifier or a function.')
     return dm

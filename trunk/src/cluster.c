@@ -75,7 +75,7 @@ double minkowski_distance(const double *u, const double *v, int n, double p) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
-    d = u[i] - v[i];
+    d = fabs(u[i] - v[i]);
     s = s + pow(d, p);
   }
   return pow(s, 1.0 / p);
