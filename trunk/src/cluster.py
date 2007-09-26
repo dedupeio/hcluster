@@ -170,7 +170,7 @@ def totree(Z, return_dict=False):
 
     return nd
 
-def squareform(X):
+def squareform(X, force=None):
     """ Converts a vectorform distance vector to a squareform distance
     matrix, and vice-versa.
 
@@ -188,6 +188,10 @@ def squareform(X):
       as described, X=squareform(v) returns a dxd distance matrix X. The
       X[i, j] and X[j, i] value equals v[(i + 1) \choose 2 + j] and all
       diagonal elements are zero.
+
+    As with MATLAB, if force is equal to 'tovector' or 'tomatrix',
+    the input will be treated as a distance matrix or distance vector
+    respectively.
     """
     a = scipy.array(())
     
@@ -200,8 +204,7 @@ def squareform(X):
     s = X.shape
     
     # X = squareform(v)
-    if len(s) == 1:
-        
+    if len(s) == 1 and force != 'tomatrix':
         # Grab the closest value to the square root of the number
         # of elements times 2 to see if the number of elements
         # is indeed a binomial coefficient.
@@ -221,12 +224,16 @@ def squareform(X):
         # Return the distance matrix.
         M = M + M.transpose()
         return M
-    elif len(s) == 2:
+    elif len(s) != 1 and force.lower() == 'tomatrix':
+        raise AttributeError("Forcing 'tomatrix' but input X is not a distance vector.")
+    elif len(s) == 2 and force.lower() != 'tovector':
         if s[0] != s[1]:
             raise AttributeError('The matrix argument must be square.')
         if scipy.sum(scipy.sum(X == X.transpose())) != scipy.product(X.shape):
             raise AttributeError('The distance matrix must be symmetrical.')
-        
+        if (X.diagonal() != 0).any():
+            raise AttributeError('The distance matrix must have zeros along the diagonal.')
+
         # One-side of the dimensions is set here.
         d = s[0]
         
@@ -236,8 +243,10 @@ def squareform(X):
         # Convert the vector to squareform.
         _cluster_wrap.to_vector_from_squareform(X, v)
         return v
+    elif len(s) != 2 and force.lower() == 'tomatrix':
+        raise AttributeError("Forcing 'tomatrix' but input X is not a distance vector.")
     else:
-        raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted')
+        raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted' % len(s))
 
 def pdist(X, metric='euclidean', p=2):
     a = scipy.array(())
