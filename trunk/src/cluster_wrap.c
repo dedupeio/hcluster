@@ -77,12 +77,49 @@ extern PyObject *chopmins_wrapper(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *to_squareform_from_vector(PyObject *self, PyObject *args) {
+  PyArrayObject *_M, *_v;
+  int n;
+  double *v, *M;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_M,
+			&PyArray_Type, &_v)) {
+    return 0;
+  }
+  else {
+    M = (double*)_M->data;
+    v = (double*)_v->data;
+    n = _M->dimensions[0];
+    dist_to_squareform_from_vector(M, v, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
+extern PyObject *to_vector_from_squareform(PyObject *self, PyObject *args) {
+  PyArrayObject *_M, *_v;
+  int n;
+  double *v, *M;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_M,
+			&PyArray_Type, &_v)) {
+    return 0;
+  }
+  else {
+    M = (double*)_M->data;
+    v = (double*)_v->data;
+    n = _M->dimensions[0];
+    dist_to_vector_from_squareform(M, v, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
 
 static PyMethodDef _clusterWrapMethods[] = {
   {"cluster_impl", cluster_wrapper, METH_VARARGS},
   {"chopmins_ns_ij", chopmin_ns_ij_wrapper, METH_VARARGS},
   {"chopmins_ns_i", chopmin_ns_i_wrapper, METH_VARARGS},
   {"chopmins", chopmins_wrapper, METH_VARARGS},
+  {"to_squareform_from_vector", to_squareform_from_vector, METH_VARARGS},
+  {"to_vector_from_squareform", to_vector_from_squareform, METH_VARARGS},
   {NULL, NULL}     /* Sentinel - marks the end of this structure */
 };
 
