@@ -722,20 +722,6 @@ void compute_inconsistency_coefficient(const double *Z, double *Y, int d) {
   return;
 }
 
-void pdist(const double *X, double *dm, int m, int n, int metric, double p) {
-  switch (metric) {
-  case CPY_PDIST_EUCLIDEAN:
-    pdist_euclidean(X, dm, m, n);
-    break;
-  case CPY_PDIST_CITY_BLOCK:
-    pdist_city_block(X, dm, m, n);
-    break;
-  case CPY_PDIST_MINKOWSKI:
-    pdist_minkowski(X, dm, m, n, p);
-    break;
-  }
-}
-
 void dist_to_squareform_from_vector(double *M, const double *v, int n) {
   double *it;
   const double *cit;
