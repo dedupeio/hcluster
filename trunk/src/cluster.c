@@ -435,7 +435,6 @@ void dist_complete(cinfo *info, int mini, int minj, int np, int n) {
   }
 }
 
-/** BROKEN **/
 void dist_average(cinfo *info, int mini, int minj, int np, int n) {
   double **rows = info->rows, *buf = info->buf, *bit;
   int *inds = info->ind;
@@ -478,13 +477,26 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n) {
   }
 }
 
-void recompute_centroid(const cnode *lnode, const cnode *rnode,
-			const double *lv, const double *rv,
-			double *result, int n) {
-  int i;
-  for (i = 0; i < n;  i++) {
-    result[i] = (lv[i] * (double)lnode->n) + (rv[i] * (double)rnode->n);
-    result[i] = result[i] * 1 / ((double)(lnode->n + rnode->n));
+void dist_centroid(cinfo *info, int mini, int minj, int np, int n) {
+  double **rows = info->rows, *buf = info->buf, *bit;
+  int *inds = info->ind;
+  double drx, dsx;
+  const double *centroid_tq, *centroid_x;
+  int i, m, xi, xn, rind, sind;
+  rind = inds[mini];
+  sind = inds[minj];
+  centroid_tq = info->centroids[info->nid];
+  bit = buf;
+  m = info->m;
+  for (i = 0; i < m; i++, bit++) {
+    /** d(r,x) **/
+    if (i == mini || i == minj) {
+      continue;
+    }
+    drx = *(rows[i] + mini - i - 1);
+    dsx = *(rows[i] + minj - i - 1);
+    xi = inds[i];
+    *bit = euclidean_distance(info->centroids[xi], centroid_tq, m);
   }
 }
 
@@ -515,16 +527,18 @@ void print_ind(const int *inds, int np) {
 }
 
 /**
- *
- * dm:    The distance matrix
- * Z:     The result of the linkage, a (n-1) x 3 matrix
- * n:     The number of objects
+ * notes to self:
+ * dm:    The distance matrix.
+ * Z:     The result of the linkage, a (n-1) x 3 matrix.
+ * X:     The original observations as row vectors (=NULL if not needed).
+ * n:     The number of objects.
  * ml:    A boolean indicating whether a list of objects in the forest
  *        clusters should be maintained.
- * euc:   Euclidean space distances.
+ * kc:    Keep track of the centroids.
  */
-void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
-  int i, j, k, np, nid, mini, minj;
+void linkage(double *dm, double *Z, const double *X,
+	     int m, int n, int ml, int kc, distfunc dfunc) {
+  int i, j, k, t, np, nid, mini, minj;
   double min;
   int *ind;
   /** An iterator through the distance matrix. */
@@ -534,6 +548,10 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
 
   /** Temporary array to store modified distance matrix. */
   double *dmt, **rows;
+  double *centroidsData;
+  double **centroids;
+  const double *centroidL, *centroidR;
+  double *centroid;
   clist *lists, *listL, *listR, *listC;
   clnode *lnodes;
   cnode *nodes, *node;
@@ -550,6 +568,19 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
     lists = 0;
     lnodes = 0;
   }
+  if (kc) {
+    centroids = malloc(sizeof(double*) * (2 * n - 1));
+    centroidsData = malloc(sizeof(double) * (n - 1) * m);
+    for (i = 0; i < n; i++) {
+      centroids[i] = X + i * n;
+      centroids[i+n] = centroidsData + i * n;
+    }
+  }
+  else {
+    centroids = 0;
+    centroidsData = 0;
+  }
+
   nodes = (cnode*)malloc(sizeof(cnode) * (n * 2) - 1);
   ind = (int*)malloc(sizeof(int) * n);
   dmt = (double*)malloc(sizeof(double) * NCHOOSE2(n));
@@ -558,6 +589,9 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
   rowsize = (int*)malloc(sizeof(int) * n);
   memcpy(dmt, dm, sizeof(double) * NCHOOSE2(n));
 
+  info.X = X;
+  info.m = m;
+  info.n = n;
   info.nodes = nodes;
   info.ind = ind;
   info.dmt = dmt;
@@ -565,6 +599,7 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
   info.rows = rows;
   info.rowsize = rowsize;
   info.dm = dm;
+  info.centroids = centroids;
 
   for (i = 0; i < n; i++) {
     ind[i] = i;
@@ -589,6 +624,7 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
   }
 
   for (k = 0, nid = n; k < n - 1; k++, nid++) {
+    info.nid = nid;
     np = n - k;
     /**    fprintf(stderr, "k=%d, nid=%d, n=%d np=%d\n", k, nid, n, np);**/
     min = dmt[0];
@@ -621,6 +657,15 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
 	    "[lid=%d, rid=%d, llid=%d, rrid=%d m=%5.8f]",
 	    node->left->id, node->right->id, ind[mini], ind[minj], min);**/
 
+    if (kc) {
+      centroidL = centroids[ind[mini]];
+      centroidR = centroids[ind[minj]];
+      centroid = centroids + (m * k);
+      for (t = 0; t < m; t++) {
+	centroid[i] = ((centroidL[i] * node->left->n
+			+ centroidR[i] * node->right->n)) / node->n;
+      }
+    }
     if (ml) {
       listC = GETCLUSTER(nid);
       if (ISCLUSTER(node->left) != 0) {
@@ -708,6 +753,8 @@ void linkage(double *dm, double *Z, int n, int ml, distfunc dfunc) {
   free(buf);
   free(rows);
   free(rowsize);
+  free(centroidsData);
+  free(centroids);
 }
 
 /**

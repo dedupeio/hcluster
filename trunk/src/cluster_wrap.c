@@ -40,11 +40,11 @@
 #include <numpy/arrayobject.h>
 #include <stdio.h>
 
-PyObject *chopmin_ns_ij_wrapper(PyObject *self, PyObject *args);
-PyObject *chopmin_ns_i_wrapper(PyObject *self, PyObject *args);
-PyObject *chopmins_wrapper(PyObject *self, PyObject *args);
+PyObject *chopmin_ns_ij_wrap(PyObject *self, PyObject *args);
+PyObject *chopmin_ns_i_wrap(PyObject *self, PyObject *args);
+PyObject *chopmins_wrap(PyObject *self, PyObject *args);
 
-extern PyObject *cluster_wrapper(PyObject *self, PyObject *args) {
+extern PyObject *linkage_wrap(PyObject *self, PyObject *args) {
   int method, n;
   PyArrayObject *dm, *Z;
   distfunc *df;
@@ -71,12 +71,41 @@ extern PyObject *cluster_wrapper(PyObject *self, PyObject *args) {
       df = 0;
       break;
     }
-    linkage((double*)dm->data, (double*)Z->data, n, 1, df);
+    linkage((double*)dm->data, (double*)Z->data, 0, 0, n, 0, 0, df);
   }
   return Py_BuildValue("d", 0.0);
 }
 
-extern PyObject *chopmin_ns_ij_wrapper(PyObject *self, PyObject *args) {
+extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
+  int method, m, n;
+  PyArrayObject *dm, *Z, *X;
+  distfunc *df;
+  if (!PyArg_ParseTuple(args, "O!O!O!iii",
+			&PyArray_Type, &dm,
+			&PyArray_Type, &Z,
+			&PyArray_Type, &X,
+			&m,
+			&n,
+			&method)) {
+    return 0;
+  }
+  else {
+    switch (method) {
+    case CPY_LINKAGE_CENTROID:
+      df = dist_centroid;
+      break;
+    default:
+      /** Report an error. */
+      df = 0;
+      break;
+    }
+    linkage((double*)dm->data, (double*)Z->data, (const double*)X->data,
+	    m, n, 0, 1, df);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
+extern PyObject *chopmin_ns_ij_wrap(PyObject *self, PyObject *args) {
   int mini, minj, n;
   PyArrayObject *row;
   if (!PyArg_ParseTuple(args, "O!iii",
@@ -90,7 +119,7 @@ extern PyObject *chopmin_ns_ij_wrapper(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
-extern PyObject *chopmin_ns_i_wrapper(PyObject *self, PyObject *args) {
+extern PyObject *chopmin_ns_i_wrap(PyObject *self, PyObject *args) {
   int mini, n;
   PyArrayObject *row;
   if (!PyArg_ParseTuple(args, "O!ii",
@@ -103,7 +132,7 @@ extern PyObject *chopmin_ns_i_wrapper(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
-extern PyObject *chopmins_wrapper(PyObject *self, PyObject *args) {
+extern PyObject *chopmins_wrap(PyObject *self, PyObject *args) {
   int mini, minj, n;
   PyArrayObject *row;
   if (!PyArg_ParseTuple(args, "O!iii",
@@ -129,7 +158,7 @@ extern PyObject *dot_product_wrap(PyObject *self, PyObject *args) {
 					_d1->dimensions[0]));
 }
 
-extern PyObject *to_squareform_from_vector(PyObject *self, PyObject *args) {
+extern PyObject *to_squareform_from_vector_wrap(PyObject *self, PyObject *args) {
   PyArrayObject *_M, *_v;
   int n;
   const double *v;
@@ -148,7 +177,7 @@ extern PyObject *to_squareform_from_vector(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
-extern PyObject *to_vector_from_squareform(PyObject *self, PyObject *args) {
+extern PyObject *to_vector_from_squareform_wrap(PyObject *self, PyObject *args) {
   PyArrayObject *_M, *_v;
   int n;
   double *v;
@@ -385,10 +414,11 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef _clusterWrapMethods[] = {
-  {"cluster_impl", cluster_wrapper, METH_VARARGS},
-  {"chopmins_ns_ij", chopmin_ns_ij_wrapper, METH_VARARGS},
-  {"chopmins_ns_i", chopmin_ns_i_wrapper, METH_VARARGS},
-  {"chopmins", chopmins_wrapper, METH_VARARGS},
+  {"linkage_wrap", linkage_wrap, METH_VARARGS},
+  {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
+  {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
+  {"chopmins_ns_i", chopmin_ns_i_wrap, METH_VARARGS},
+  {"chopmins", chopmins_wrap, METH_VARARGS},
   {"dot_product_wrap", dot_product_wrap, METH_VARARGS},
   {"pdist_euclidean_wrap", pdist_euclidean_wrap, METH_VARARGS},
   {"pdist_hamming_wrap", pdist_hamming_wrap, METH_VARARGS},
@@ -400,8 +430,10 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"pdist_city_block_wrap", pdist_city_block_wrap, METH_VARARGS},
   {"pdist_minkowski_wrap", pdist_minkowski_wrap, METH_VARARGS},
   {"pdist_cosine_wrap", pdist_cosine_wrap, METH_VARARGS},
-  {"to_squareform_from_vector", to_squareform_from_vector, METH_VARARGS},
-  {"to_vector_from_squareform", to_vector_from_squareform, METH_VARARGS},
+  {"to_squareform_from_vector_wrap",
+   to_squareform_from_vector_wrap, METH_VARARGS},
+  {"to_vector_from_squareform_wrap",
+   to_vector_from_squareform_wrap, METH_VARARGS},
   {NULL, NULL}     /* Sentinel - marks the end of this structure */
 };
 

@@ -52,8 +52,10 @@ def randdm(pnts):
         raise AttributeError("The number of points in the distance matrix must be at least 2.")
     return D
 
-def linkage(y, method='single'):
-    """ Performs hierarchical clustering on the condensed distance matrix y.
+def linkage(y, method='single', metric):
+    """ linkage(y, method)
+
+        Performs hierarchical clustering on the condensed distance matrix y.
         y must be a n * (n - 1) sized vector where n is the number of points
         paired in the distance matrix. The behavior of this function is
         very similar to the MATLAB linkage function.
@@ -78,6 +80,13 @@ def linkage(y, method='single'):
 
           * method='average' assigns dist(s,t) =
                sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|).
+
+        linkage(X, method, metric)
+
+        Performs hierarchical clustering on the objects defined by the
+        n by m observation matrix X.
+
+        
         """
     s = y.shape
     d = scipy.ceil(scipy.sqrt(s[0] * 2))
@@ -86,7 +95,7 @@ def linkage(y, method='single'):
     if d * (d - 1)/2 != s[0]:
         raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
     Z = scipy.zeros((d - 1, 3))
-    _cluster_wrap.cluster_impl(y, Z, int(d), int(__method_ids[method]))
+    _cluster_wrap.linkage_wrap(y, Z, int(d), int(__method_ids[method]))
     return Z
 
 class cnode:
@@ -226,7 +235,7 @@ def squareform(X, force="no", checks=True):
         M = scipy.zeros((d, d), 'double')
 
         # Fill in the values of the distance matrix.
-        _cluster_wrap.to_squareform_from_vector(M, X)
+        _cluster_wrap.to_squareform_from_vector_wrap(M, X)
 
         # Return the distance matrix.
         M = M + M.transpose()
@@ -249,7 +258,7 @@ def squareform(X, force="no", checks=True):
         v = scipy.zeros(((d * (d - 1) / 2),), 'double')
 
         # Convert the vector to squareform.
-        _cluster_wrap.to_vector_from_squareform(X, v)
+        _cluster_wrap.to_vector_from_squareform_wrap(X, v)
         return v
     elif len(s) != 2 and force.lower() == 'tomatrix':
         raise AttributeError("Forcing 'tomatrix' but input X is not a distance vector.")

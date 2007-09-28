@@ -68,7 +68,12 @@ typedef struct cinfo {
   double *dm;
   double *buf;
   double **rows;
+  const double **centroids;
+  const double *X;
   int *rowsize;
+  int m;
+  int n;
+  int nid;
 } cinfo;
 
 typedef void (distfunc) (cinfo *info, int mini, int minj, int np, int n); 
@@ -98,7 +103,8 @@ void chopmins_ns_ij(double *ind, int mini, int minj, int np);
 void dist_single(cinfo *info, int mini, int minj, int np, int n);
 void dist_average(cinfo *info, int mini, int minj, int np, int n);
 void dist_complete(cinfo *info, int mini, int minj, int np, int n);
+void dist_centroid(cinfo *info, int mini, int minj, int np, int n);
 
-void linkage(double *dm, double *Z, int n, int method, distfunc dfunc);
+void linkage(double *dm, double *Z, const double *X, int m, int n, int ml, int kc, distfunc dfunc);
 
 #endif
