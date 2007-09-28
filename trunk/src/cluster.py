@@ -337,6 +337,25 @@ def pdist(X, metric='euclidean', p=2):
         Computes the distance between all pairs of vectors in X
         using the distance metric Y but with a more succint,
         verifiable, but less efficient implementation.
+
+        NOT IMPLEMENTED:
+        
+        12. pdist(X, 'canberra')
+
+        13. pdist(X, 'bray-curtis')
+
+        14. pdist(X, 'matching') [bools]
+
+        15. pdist(X, 'dice') [bools]
+
+        16. pdist(X, 'rogers-tanimoto')
+
+        17. pdist(X, 'russell-rao')
+
+        18. pdist(X, 'sokal-sneath')
+
+        19. pdist(X, 'yule')
+        
     """
     a = scipy.array(())
 
