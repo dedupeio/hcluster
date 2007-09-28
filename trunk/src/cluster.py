@@ -170,9 +170,9 @@ def totree(Z, return_dict=False):
 
     return nd
 
-def squareform(X, force=None):
+def squareform(X, force="no", checks=True):
     """ Converts a vectorform distance vector to a squareform distance
-    matrix, and vice-versa.
+    matrix, and vice-versa. 
 
     v = squareform(X)
 
@@ -192,6 +192,12 @@ def squareform(X, force=None):
     As with MATLAB, if force is equal to 'tovector' or 'tomatrix',
     the input will be treated as a distance matrix or distance vector
     respectively.
+
+    If checks is set to False, no checks will be made for matrix
+    symmetry nor zero diaganols. This is useful if it is known that
+    X - X.T is small and diag(X) is close to zero. These values are
+    ignored any way so they do not disrupt the squareform
+    transformation.
     """
     a = scipy.array(())
     
@@ -202,7 +208,7 @@ def squareform(X, force=None):
         raise AttributeError('A double array must be passed.')
 
     s = X.shape
-    
+
     # X = squareform(v)
     if len(s) == 1 and force != 'tomatrix':
         # Grab the closest value to the square root of the number
@@ -229,10 +235,11 @@ def squareform(X, force=None):
     elif len(s) == 2 and force.lower() != 'tovector':
         if s[0] != s[1]:
             raise AttributeError('The matrix argument must be square.')
-        if scipy.sum(scipy.sum(X == X.transpose())) != scipy.product(X.shape):
-            raise AttributeError('The distance matrix must be symmetrical.')
-        if (X.diagonal() != 0).any():
-            raise AttributeError('The distance matrix must have zeros along the diagonal.')
+        if checks:
+            if scipy.sum(scipy.sum(X == X.transpose())) != scipy.product(X.shape):
+                raise AttributeError('The distance matrix must be symmetrical.')
+            if (X.diagonal() != 0).any():
+                raise AttributeError('The distance matrix must have zeros along the diagonal.')
 
         # One-side of the dimensions is set here.
         d = s[0]
@@ -332,6 +339,8 @@ def pdist(X, metric='euclidean', p=2):
         verifiable, but less efficient implementation.
     """
     a = scipy.array(())
+
+    # FIXME: need more efficient mahalanobis distance.
     
     if type(X) != type(a):
         raise AttributeError('The parameter passed must be an array.')
@@ -373,7 +382,7 @@ def pdist(X, metric='euclidean', p=2):
             elif X.dtype == 'bool':
                 _cluster_wrap.pdist_hamming_bool_wrap(X, dm)
             else:
-                raise AttributeError('Invalid input matrix type %s for hamming.' % str(X.dtype))
+                raise AttributeError('Invalid input matrix type %s for jaccard.' % str(X.dtype))
         elif mstr in set(['chebyshev', 'cheby', 'cheb', 'ch']):
             _cluster_wrap.pdist_chebyshev_wrap(X, dm)            
         elif mstr in set(['minkowski', 'mi', 'm']):
@@ -381,25 +390,46 @@ def pdist(X, metric='euclidean', p=2):
         elif mstr in set(['seuclidean', 'se', 's']):
             VV = scipy.stats.var(X, axis=0)
             _cluster_wrap.pdist_seuclidean_wrap(X, VV, dm)
-        elif mstr in set(['cosine', 'cos']):
+        # Need to test whether vectorized cosine works better.
+        # Find out: Is there a dot subtraction operator so I can
+        # subtract matrices in a similar way to multiplying them?
+        # Need to get rid of as much unnecessary C code as possible.
+        elif mstr in set(['cosine_old', 'cos_old']):
             norms = scipy.sqrt(scipy.sum(X * X, axis=1))
             _cluster_wrap.pdist_cosine_wrap(X, dm, norms)
+        elif mstr in set(['cosine', 'cos']):
+            norms = scipy.sqrt(scipy.sum(X * X, axis=1))
+            nV = norms.reshape(m, 1)
+            # The numerator u * v
+            nm = scipy.dot(X, X.T)
+            
+            # The denom. ||u||*||v||
+            de = scipy.dot(nV, nV.T);
+
+            dm = 1 - (nm / de)
+            dm[xrange(0,m),xrange(0,m)] = 0
+            dm = squareform(dm)
         elif mstr in set(['correlation', 'co']):
             X2 = X - scipy.repmat(scipy.mean(X, axis=1).reshape(m, 1), 1, n)
             norms = scipy.sqrt(scipy.sum(X2 * X2, axis=1))
             _cluster_wrap.pdist_cosine_wrap(X2, dm, norms)
-        elif mstr in set(['mahalanobis']):
-            dm = pdist(X, 'test_' + mstr)
+        elif mstr in set(['stub_mahalanobis']):
+            k = 0;
+            XV = scipy.dot(X, scipy.cov(X.T))
+            dm = scipy.dot(XV, X.T)
+            print dm.shape
+            dm[xrange(0,m),xrange(0,m)] = 0
+            dm = squareform(dm, checks=False)
         elif metric == 'test_euclidean':
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
         elif metric == 'test_seuclidean':
             D = scipy.diagflat(scipy.stats.var(X, axis=0))
             DI = scipy.linalg.inv(D)
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*DI*(u-v).T).sum())))
-        elif metric == 'test_mahalanobis':
+        elif metric == 'mahalanobis':
             V = scipy.cov(X.T)
             VI = scipy.linalg.inv(V)
-            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*VI*(u-v).T).sum())))            
+            dm = pdist(X, (lambda u, v: scipy.sqrt(scipy.dot(scipy.dot((u-v),VI),(u-v).T).sum())))
         elif metric == 'test_cityblock':
             dm = pdist(X, (lambda u, v: abs(u-v).sum()))
         elif metric == 'test_minkowski':
