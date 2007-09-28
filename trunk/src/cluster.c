@@ -437,22 +437,44 @@ void dist_complete(cinfo *info, int mini, int minj, int np, int n) {
 
 /** BROKEN **/
 void dist_average(cinfo *info, int mini, int minj, int np, int n) {
-  double **rows = info->rows;
-  double *buf = info->buf;
-  double *bit;
-  int i;
+  double **rows = info->rows, *buf = info->buf, *bit;
+  int *inds = info->ind;
+  double drx, dsx, denom, mply, rscnt, rc, sc;
+  int i, xi, xn;
+  cnode *rn = info->nodes + inds[mini];
+  cnode *sn = info->nodes + inds[minj];
   bit = buf;
-  /**  double ni = (double)info->nodes[info->ind[mini]].n;
-       double nj = (double)info->nodes[info->ind[minj]].n;**/
+  rc = (double)rn->n;
+  sc = (double)sn->n;
+  rscnt = rc + sc;
 
   for (i = 0; i < mini; i++, bit++) {
-    *bit = CPY_MAX(*(rows[i] + mini - i - 1), *(rows[i] + minj - i - 1));
+    /** d(r,x) **/
+    drx = *(rows[i] + mini - i - 1);
+    dsx = *(rows[i] + minj - i - 1);
+    xi = inds[i];
+    cnode *xnd = info->nodes + xi;
+    xn = xnd->n;
+    mply = 1.0 / (((double)xn) * rscnt);
+    *bit = mply * ((drx * (rc * xn)) + (dsx * (sc * xn)));
   }
   for (i = mini + 1; i < minj; i++, bit++) {
-    *bit = CPY_MAX(*(rows[mini] + i - mini - 1), *(rows[i] + minj - i - 1));
+    drx = *(rows[mini] + i - mini - 1);
+    dsx = *(rows[i] + minj - i - 1);
+    xi = inds[i];
+    cnode *xnd = info->nodes + xi;
+    xn = xnd->n;
+    mply = 1.0 / (((double)xn) * rscnt);
+    *bit = mply * ((drx * (rc * xn)) + (dsx * (sc * xn)));
   }
   for (i = minj + 1; i < np; i++, bit++) {
-    *bit = CPY_MAX(*(rows[mini] + i - mini - 1), *(rows[minj] + i - minj - 1));
+    drx = *(rows[mini] + i - mini - 1);
+    dsx = *(rows[minj] + i - minj - 1);
+    xi = inds[i];
+    cnode *xnd = info->nodes + xi;
+    xn = xnd->n;
+    mply = 1.0 / (((double)xn) * rscnt);
+    *bit = mply * ((drx * (rc * xn)) + (dsx * (sc * xn)));
   }
 }
 

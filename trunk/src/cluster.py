@@ -76,7 +76,8 @@ def linkage(y, method='single'):
           * method='complete' assigns dist(s,t) = MAX(dist(s[i],t[j]) for
             all points i in cluster s and j in cluster t.
 
-          * other methods are still not implemented.
+          * method='average' assigns dist(s,t) =
+               sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|).
         """
     s = y.shape
     d = scipy.ceil(scipy.sqrt(s[0] * 2))

@@ -63,6 +63,9 @@ extern PyObject *cluster_wrapper(PyObject *self, PyObject *args) {
     case CPY_LINKAGE_COMPLETE:
       df = dist_complete;
       break;
+    case CPY_LINKAGE_AVERAGE:
+      df = dist_average;
+      break;
     default:
       /** Report an error. */
       df = 0;
