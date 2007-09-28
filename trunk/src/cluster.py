@@ -34,7 +34,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import _cluster_wrap
-import scipy
+import scipy, scipy.stats
 import types
 import math
 
@@ -285,11 +285,12 @@ def pdist(X, metric='euclidean', p=2):
 
         Computes the correlation distance between vectors u and v. This is
 
-           1 - (u - |u|_1)(v - |v|_1)^T
-           -------------------------------
-           |(u - |u|_1)|_2 |(v - |v|_1)|^T
+           1 - (u - n|u|_1)(v - n|v|_1)^T
+           --------------------------------- ,
+           |(u - n|u|_1)|_2 |(v - n|v|_1)|^T
 
-        where |*|_1 is the Manhattan (or 1-norm) of its argument *.
+        where |*|_1 is the Manhattan (or 1-norm) of its argument *,
+        and n is the common dimensionality of the vectors.
 
         7. pdist(X, 'hamming')
 
@@ -334,10 +335,7 @@ def pdist(X, metric='euclidean', p=2):
     
     if type(X) != type(a):
         raise AttributeError('The parameter passed must be an array.')
-
-    if X.dtype != 'double':
-        raise AttributeError('A double array must be passed.')
-
+    
     s = X.shape
 
     if len(s) != 2:
@@ -347,27 +345,55 @@ def pdist(X, metric='euclidean', p=2):
     n = s[1]
     dm = scipy.zeros((m * (m - 1) / 2,), dtype='double')
 
-    if type(metric) is types.FunctionType:
+    mtype = type(metric)
+    if mtype is types.FunctionType:
         k = 0
         for i in xrange(0, m - 1):
             for j in xrange(i+1, m):
                 dm[k] = metric(X[i, :], X[j, :])
                 k = k + 1
-    elif type(metric) is types.StringType:
-        if metric.lower() in set(['euclidean', 'euclid', 'eu', 'e']):
+    elif mtype is types.StringType:
+        mstr = metric.lower()
+        if X.dtype != 'double' and (mstr != 'hamming' and mstr != 'jaccard'):
+            AttributeError('A double array must be passed.')
+        if mstr in set(['euclidean', 'euclid', 'eu', 'e']):
             _cluster_wrap.pdist_euclidean_wrap(X, dm)
-        elif metric.lower() in set(['cityblock', 'cblock', 'cb', 'c']):
+        elif mstr in set(['cityblock', 'cblock', 'cb', 'c']):
             _cluster_wrap.pdist_city_block_wrap(X, dm)
-        elif metric.lower() in set(['minkowski', 'mi', 'm']):
+        elif mstr in set(['hamming', 'hamm', 'ha', 'h']):
+            if X.dtype == 'double':
+                _cluster_wrap.pdist_hamming_wrap(X, dm)
+            elif X.dtype == 'bool':
+                _cluster_wrap.pdist_hamming_bool_wrap(X, dm)
+            else:
+                raise AttributeError('Invalid input matrix type %s for hamming.' % str(X.dtype))
+        elif mstr in set(['jaccard', 'jacc', 'ja', 'j']):
+            if X.dtype == 'double':
+                _cluster_wrap.pdist_hamming_wrap(X, dm)
+            elif X.dtype == 'bool':
+                _cluster_wrap.pdist_hamming_bool_wrap(X, dm)
+            else:
+                raise AttributeError('Invalid input matrix type %s for hamming.' % str(X.dtype))
+        elif mstr in set(['chebyshev', 'cheby', 'cheb', 'ch']):
+            _cluster_wrap.pdist_chebyshev_wrap(X, dm)            
+        elif mstr in set(['minkowski', 'mi', 'm']):
             _cluster_wrap.pdist_minkowski_wrap(X, dm, p)
-        elif metric.lower() in set(['seuclidean', 'mahalanobis', \
-                                    'cosine', 'correlation', 'hamming', \
-                                    'jaccard', 'chebychev']):
-            dm = pdist(X, 'test_' + metric.lower())
+        elif mstr in set(['seuclidean', 'se', 's']):
+            VV = scipy.stats.var(X, axis=0)
+            _cluster_wrap.pdist_seuclidean_wrap(X, VV, dm)
+        elif mstr in set(['cosine', 'cos']):
+            norms = scipy.sqrt(scipy.sum(X * X, axis=1))
+            _cluster_wrap.pdist_cosine_wrap(X, dm, norms)
+        elif mstr in set(['correlation', 'co']):
+            X2 = X - scipy.repmat(scipy.mean(X, axis=1).reshape(m, 1), 1, n)
+            norms = scipy.sqrt(scipy.sum(X2 * X2, axis=1))
+            _cluster_wrap.pdist_cosine_wrap(X2, dm, norms)
+        elif mstr in set(['mahalanobis']):
+            dm = pdist(X, 'test_' + mstr)
         elif metric == 'test_euclidean':
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
         elif metric == 'test_seuclidean':
-            D = scipy.diagflat(scipy.var(X, axis=0))
+            D = scipy.diagflat(scipy.stats.var(X, axis=0))
             DI = scipy.linalg.inv(D)
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*DI*(u-v).T).sum())))
         elif metric == 'test_mahalanobis':
@@ -381,17 +407,17 @@ def pdist(X, metric='euclidean', p=2):
         elif metric == 'test_cosine':
             dm = pdist(X, \
                        (lambda u, v: \
-                        (1 - scipy.dot(u, v)) / \
-                        (math.sqrt(scipy.dot(u, u)) * \
-                         math.sqrt(scipy.dot(v, v)))))
+                        (1.0 - (scipy.dot(u, v.T) / \
+                                (math.sqrt(scipy.dot(u, u.T)) * \
+                                 math.sqrt(scipy.dot(v, v.T)))))))
         elif metric == 'test_correlation':
             dm = pdist(X, \
-                       (lambda u, v: 1 - \
-                        scipy.dot(u - u.mean(), v - v.mean()) / \
-                        math.sqrt(scipy.dot(u - u.mean(), \
-                                            u - u.mean())) \
-                        * math.sqrt(scipy.dot(v - v.mean(), \
-                                              v - v.mean()))))
+                       (lambda u, v: 1.0 - \
+                        (scipy.dot(u - u.mean(), (v - v.mean()).T) / \
+                         (math.sqrt(scipy.dot(u - u.mean(), \
+                                              (u - u.mean()).T)) \
+                          * math.sqrt(scipy.dot(v - v.mean(), \
+                                                (v - v.mean()).T))))))
         elif metric == 'test_hamming':
             dm = pdist(X, (lambda u, v: (u != v).mean()))
         elif metric == 'test_jaccard':
@@ -404,7 +430,7 @@ def pdist(X, metric='euclidean', p=2):
         elif metric == 'test_chebyshev':
             dm = pdist(X, lambda u, v: max(abs(u-v)))
         else:
-            raise AttributeError('Unknown Distance Metric: %s' % chebyshev)
+            raise AttributeError('Unknown Distance Metric: %s' % mstr)
     else:
         raise AttributeError('2nd argument metric must be a string identifier or a function.')
     return dm

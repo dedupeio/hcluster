@@ -50,7 +50,7 @@
 
 #include "cluster.h"
 
-double euclidean_distance(const double *u, const double *v, int n) {
+inline double euclidean_distance(const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -60,7 +60,114 @@ double euclidean_distance(const double *u, const double *v, int n) {
   return sqrt(s);
 }
 
-double city_block_distance(const double *u, const double *v, int n) {
+inline double chebyshev_distance(const double *u, const double *v, int n) {
+  int i = 0;
+  double d, maxv = 0.0;
+  for (i = 0; i < n; i++) {
+    d = fabs(u[i] - v[i]);
+    if (d > maxv) {
+      maxv = d;
+    }
+  }
+  return maxv;
+}
+
+inline double mahalanobis_distance(const double *u, const double *v, int n) {
+  int i = 0;
+  double s = 0.0, d;
+  for (i = 0; i < n; i++) {
+    d = fabs(u[i] - v[i]);
+    s = s + d;
+  }
+  return sqrt(s);
+}
+
+inline double hamming_distance(const double *u, const double *v, int n) {
+  int i = 0;
+  double s = 0.0, d;
+  for (i = 0; i < n; i++) {
+    s = s + (u[i] != v[i]);
+  }
+  return s / (double)n;
+}
+
+inline double hamming_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  double s = 0.0, d;
+  for (i = 0; i < n; i++) {
+    s = s + (u[i] != v[i]);
+  }
+  return s / (double)n;
+}
+
+inline double jaccard_distance(const double *u, const double *v, int n) {
+  int i = 0;
+  double denom = 0.0, num = 0.0;
+  for (i = 0; i < n; i++) {
+    num += (u[i] != v[i]) && (u[i] != 0) || (v[i] != 0);
+    denom += (u[i] != 0) || (v[i] != 0);
+  }
+  return num / denom;
+}
+
+inline double jaccard_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  double s = 0.0, d;
+  for (i = 0; i < n; i++) {
+    s = s + (u[i] != v[i]);
+  }
+  return s / (double)n;
+}
+
+inline double dot_product(const double *u, const double *v, int n) {
+  int i;
+  double s = 0.0;
+  for (i = 0; i < n; i++) {
+    s += u[i] * v[i];
+  }
+  return s;
+}
+
+inline double dot_product_sub(const double *u, double ub,
+		       const double *v, double vb, int n) {
+  int i;
+  double s = 0.0;
+  for (i = 0; i < n; i++) {
+    s = s + ((u[i] - ub) * (v[i] - vb));
+  }
+  return s;
+}
+
+inline double vector_2norm(const double *u, int n) {
+  return sqrt(dot_product(u, u, n));
+}
+
+inline double vector_mean(const double *u, int n) {
+  int i;
+  double s = 0.0;
+  for (i = 0; i < n; i++) {
+    s = s + u[i];
+  }
+  return s / (double)n;
+}
+
+inline double cosine_distance(const double *u, const double *v, int n,
+		       const double nu, const double nv) {
+  return 1.0 - (dot_product(u, v, n) / (nu * nv));
+}
+
+inline double seuclidean_distance(const double *var,
+			   const double *u, const double *v, int n) {
+  int i = 0;
+  double s = 0.0, d;
+  for (i = 0; i < n; i++) {
+    d = u[i] - v[i];
+    s = s + (d * d) / var[i];
+  }
+  return sqrt(s);
+}
+
+inline double city_block_distance(const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -70,7 +177,7 @@ double city_block_distance(const double *u, const double *v, int n) {
   return s;
 }
 
-double minkowski_distance(const double *u, const double *v, int n, double p) {
+inline double minkowski_distance(const double *u, const double *v, int n, double p) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -80,7 +187,7 @@ double minkowski_distance(const double *u, const double *v, int n, double p) {
   return pow(s, 1.0 / p);
 }
 
-void compute_mean_vector(double *res, const double *X, int m, int n) {
+inline void compute_mean_vector(double *res, const double *X, int m, int n) {
   int i, j;
   const double *v;
   for (i = 0; i < n; i++) {
@@ -98,7 +205,7 @@ void compute_mean_vector(double *res, const double *X, int m, int n) {
   }
 }
 
-void vector_subtract(double *result, const double *u, const double *v, int n) {
+inline void vector_subtract(double *result, const double *u, const double *v, int n) {
   int i;
   for (i = 0; i < n; i++) {
     result[i] = u[i] - v[i];
@@ -114,6 +221,99 @@ void pdist_euclidean(const double *X, double *dm, int m, int n) {
       u = X + (n * i);
       v = X + (n * j);
       *it = euclidean_distance(u, v, n);
+    }
+  }
+}
+
+void pdist_hamming(const double *X, double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = hamming_distance(u, v, n);
+    }
+  }
+}
+
+void pdist_hamming_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = hamming_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_jaccard(const double *X, double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = jaccard_distance(u, v, n);
+    }
+  }
+}
+
+void pdist_jaccard_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = jaccard_distance_bool(u, v, n);
+    }
+  }
+}
+
+
+void pdist_chebyshev(const double *X, double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = chebyshev_distance(u, v, n);
+    }
+  }
+}
+
+void pdist_cosine(const double *X, double *dm, int m, int n, const double *norms) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = cosine_distance(u, v, n, norms[i], norms[j]);
+    }
+  }
+}
+
+void pdist_seuclidean(const double *X, const double *var,
+		     double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = seuclidean_distance(var, u, v, n);
     }
   }
 }

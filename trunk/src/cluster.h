@@ -89,10 +89,19 @@ void dist_to_squareform_from_vector(double *M, const double *v, int n);
 void dist_to_vector_from_squareform(const double *M, double *v, int n);
 
 void pdist_euclidean(const double *X, double *dm, int m, int n);
+void pdist_seuclidean(const double *X,
+		      const double *var, double *dm, int m, int n);
+void pdist_hamming(const double *X, double *dm, int m, int n);
+void pdist_hamming_bool(const char *X, double *dm, int m, int n);
 void pdist_city_block(const double *X, double *dm, int m, int n);
+void pdist_cosine(const double *X, double *dm, int m, int n, const double *norms);
+void pdist_chebyshev(const double *X, double *dm, int m, int n);
+void pdist_jaccard(const double *X, double *dm, int m, int n);
 void pdist_minkowski(const double *X, double *dm, int m, int n, double p);
 
 void compute_inconsistency_coefficient(const double *Z, double *Y, int d);
+
+double dot_product(const double *u, const double *v, int n);
 
 void chopmins(int *ind, int mini, int minj, int np);
 void chopmins_ns_i(double *ind, int mini, int np);
