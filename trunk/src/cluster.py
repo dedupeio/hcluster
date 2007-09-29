@@ -41,7 +41,7 @@ import scipy, scipy.stats
 import types
 import math
 
-cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2}
+cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2, 'weighted': 6}
 cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
 cpy_linkage_methods = set(cpy_non_euclid_methods.keys()).union(set(cpy_euclid_methods.keys()))
 
@@ -78,13 +78,27 @@ def linkage(y, method='single', metric='euclidean'):
           * method='single' assigns dist(s,t) = MIN(dist(s[i],t[j]) for
             all points i in cluster s and j in cluster t.
 
+               (also called Nearest Point Algorithm)
+
           * method='complete' assigns dist(s,t) = MAX(dist(s[i],t[j]) for
             all points i in cluster s and j in cluster t.
+
+               (also called Farthest Point Algorithm or Voor Hees)
 
           * method='average' assigns dist(s,t) =
                sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|)
             for all points i and j where |s| and |t| are the
             cardinalities of clusters s and t, respectively.
+
+               (also called UPGMA)
+
+          * method='weighted' assigns
+
+               dist(q,u) = (dist(s,u) + dist(t,u))/2
+
+            where q is the newly formed cluster consisting of s and t,
+            and u is a remaining cluster in the unused forest of
+            clusters. (also called WPGMA)
 
         linkage(X, method, metric='euclidean')
 
@@ -98,14 +112,14 @@ def linkage(y, method='single', metric='euclidean'):
             c_s and c_t are the centroids of clusters s and t,
             respectively. When two clusters s and t are combined into a new
             cluster q, the new centroid is computed over all the original
-            objects in clusters s and t.
+            objects in clusters s and t. (also called UPGMC)
 
           * method='median' assigns dist(s,t) as above. When two clusters
             s and t are combined into a new cluster q, the average of
-            centroids s and t give the new centroid q.
+            centroids s and t give the new centroid q. (also called WPGMC)
            
           * method='ward' uses the Ward variance minimization algorithm.
-            The new entry dist(q, u) is computed by,
+            The new entry dist(q, u) is computed as follows,
 
                  dist(q,u) =
 
@@ -116,7 +130,7 @@ def linkage(y, method='single', metric='euclidean'):
 
             where q is the newly formed cluster consisting of clusters
             s and t, u is an unused cluster in the forest, and |*|
-            is the cardinality of its argument.
+            is the cardinality of its argument. (also called incremental)
         """
     a = scipy.array([])
     if type(y) != type(a):

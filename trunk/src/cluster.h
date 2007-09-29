@@ -44,6 +44,7 @@
 #define CPY_LINKAGE_CENTROID 3
 #define CPY_LINKAGE_MEDIAN 4
 #define CPY_LINKAGE_WARD 5
+#define CPY_LINKAGE_WEIGHTED 6
 
 typedef struct cnode {
   int n;
@@ -110,6 +111,7 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n);
 void dist_complete(cinfo *info, int mini, int minj, int np, int n);
 void dist_centroid(cinfo *info, int mini, int minj, int np, int n);
 void dist_ward(cinfo *info, int mini, int minj, int np, int n);
+void dist_weighted(cinfo *info, int mini, int minj, int np, int n);
 
 void linkage(double *dm, double *Z, double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);
 

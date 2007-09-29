@@ -518,6 +518,32 @@ void combine_centroids(double *centroidResult,
   }
 }
 
+void dist_weighted(cinfo *info, int mini, int minj, int np, int n) {
+  double **rows = info->rows, *buf = info->buf, *bit;
+  int i;
+  double drx, dsx;
+
+  bit = buf;
+
+  for (i = 0; i < mini; i++, bit++) {
+    /** d(r,x) **/
+    drx = *(rows[i] + mini - i - 1);
+    dsx = *(rows[i] + minj - i - 1);
+    *bit = (drx + dsx) / 2;
+  }
+  for (i = mini + 1; i < minj; i++, bit++) {
+    drx = *(rows[mini] + i - mini - 1);
+    dsx = *(rows[i] + minj - i - 1);
+    *bit = (drx + dsx) / 2;
+  }
+  for (i = minj + 1; i < np; i++, bit++) {
+    drx = *(rows[mini] + i - mini - 1);
+    dsx = *(rows[minj] + i - minj - 1);
+    *bit = (drx + dsx) / 2;
+  }
+  /**  fprintf(stderr, "\n");**/
+}
+
 void dist_ward(cinfo *info, int mini, int minj, int np, int n) {
   double **rows = info->rows, *buf = info->buf, *bit;
   int *inds = info->ind;
@@ -694,7 +720,12 @@ void linkage(double *dm, double *Z, double *X,
   info.rowsize = rowsize;
   info.dm = dm;
   info.centroids = centroids;
-  info.centroidBuffer = centroids[2*n - 1];
+  if (kc) {
+    info.centroidBuffer = centroids[2*n - 1];
+  }
+  else {
+    info.centroidBuffer = 0;
+  }
   info.lists = lists;
   for (i = 0; i < n; i++) {
     ind[i] = i;

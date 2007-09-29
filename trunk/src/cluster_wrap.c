@@ -66,6 +66,9 @@ extern PyObject *linkage_wrap(PyObject *self, PyObject *args) {
     case CPY_LINKAGE_AVERAGE:
       df = dist_average;
       break;
+    case CPY_LINKAGE_WEIGHTED:
+      df = dist_weighted;
+      break;
     default:
       /** Report an error. */
       df = 0;
