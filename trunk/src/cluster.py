@@ -38,9 +38,9 @@ import scipy, scipy.stats
 import types
 import math
 
-__method_ids = {'single': 0, 'complete': 1, 'average': 2}
-
-__unavailable_method_id = {'centroid': 3, 'ward': 4}
+cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2}
+cpy_euclid_methods = {'centroid': 3, 'weighted': 4, 'ward': 5}
+cpy_linkage_methods = cpy_non_euclid_method_ids.union(cpy_euclid_method_ids)
 
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
@@ -52,7 +52,7 @@ def randdm(pnts):
         raise AttributeError("The number of points in the distance matrix must be at least 2.")
     return D
 
-def linkage(y, method='single', metric):
+def linkage(y, method='single', metric='euclidean'):
     """ linkage(y, method)
 
         Performs hierarchical clustering on the condensed distance matrix y.
@@ -81,21 +81,42 @@ def linkage(y, method='single', metric):
           * method='average' assigns dist(s,t) =
                sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|).
 
-        linkage(X, method, metric)
+        linkage(X, method, metric='euclidean')
 
         Performs hierarchical clustering on the objects defined by the
-        n by m observation matrix X.
-
-        
+        n by m observation matrix X.        
         """
+    a = scipy.array([])
+    if y.type != a.type:
+        raise AttributeError('Incompatible data type. y must be an array.')
     s = y.shape
-    d = scipy.ceil(scipy.sqrt(s[0] * 2))
+    if method.type != types.StringType:
+        raise AttributeError("Argument 'method' must be a string.")
     if y.dtype != 'double':
         raise AttributeError('Incompatible data type. y must be a matrix of doubles.')
-    if d * (d - 1)/2 != s[0]:
-        raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
-    Z = scipy.zeros((d - 1, 3))
-    _cluster_wrap.linkage_wrap(y, Z, int(d), int(__method_ids[method]))
+
+    if len(s) == 1:
+        d = scipy.ceil(scipy.sqrt(s[0] * 2))
+        if d * (d - 1)/2 != s[0]:
+            raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
+        if method not in cpy_euclid_methods.keys():
+            raise AttributeError("Valid methods when the raw data is omitted are 'single', 'complete', and 'average'."
+        Z = scipy.zeros((d - 1, 3))
+        _cluster_wrap.linkage_wrap(y, Z, int(d), \
+                                   int(cpy_euclid_methods[method]))
+    elif len(s) == 2:
+        X = y
+        n = s[0]
+        m = s[1]
+        if method not in cpy_linkages_methods.keys():
+            raise AttributeError('Invalid method: %s' % method)
+        if method in cpy_noneuclid_methods.keys():
+            dm = pdist(X, metric)
+            Z = scipy.zeros((d - 1, 3))
+            _cluster_wrap.linkage_wrap(dm, Z, int(d), \
+                                       int(cpy_euclid_methods[method]))
+            
+        
     return Z
 
 class cnode:
