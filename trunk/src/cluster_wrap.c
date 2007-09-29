@@ -77,7 +77,7 @@ extern PyObject *linkage_wrap(PyObject *self, PyObject *args) {
 }
 
 extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
-  int method, m, n;
+  int method, m, n, ml;
   PyArrayObject *dm, *Z, *X;
   distfunc *df;
   if (!PyArg_ParseTuple(args, "O!O!O!iii",
@@ -90,6 +90,7 @@ extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
     return 0;
   }
   else {
+    ml = 0;
     /**    fprintf(stderr, "m: %d, n: %d\n", m, n);**/
     switch (method) {
     case CPY_LINKAGE_CENTROID:
@@ -100,14 +101,15 @@ extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
       break;
     case CPY_LINKAGE_WARD:
       df = dist_ward;
+      //      ml = 1;
       break;
     default:
       /** Report an error. */
       df = 0;
       break;
     }
-    linkage((double*)dm->data, (double*)Z->data, (const double*)X->data,
-	    m, n, 0, 1, df, method);
+    linkage((double*)dm->data, (double*)Z->data, (double*)X->data,
+	    m, n, 1, 1, df, method);
   }
   return Py_BuildValue("d", 0.0);
 }

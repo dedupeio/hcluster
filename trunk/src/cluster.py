@@ -143,8 +143,9 @@ def linkage(y, method='single', metric='euclidean'):
             if metric != 'euclidean':
                 raise AttributeError('Method %s requires the distance metric to be euclidean' % s)
             dm = pdist(X, metric)
-            if method == 'ward':
-                dm = scipy.sqrt((dm ** 2.0) / 1.0)
+#            if method == 'ward':
+#                dm = scipy.sqrt((dm ** 2.0))
+#                dm = (dm ** 2.0) / 2.0
             Z = scipy.zeros((n - 1, 3))
             _cluster_wrap.linkage_euclid_wrap(dm, Z, X, m, n,
                                               int(cpy_euclid_methods[method]))

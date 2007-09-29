@@ -60,6 +60,16 @@ double euclidean_distance(const double *u, const double *v, int n) {
   return sqrt(s);
 }
 
+double ess_distance(const double *u, const double *v, int n) {
+  int i = 0;
+  double s = 0.0, d;
+  for (i = 0; i < n; i++) {
+    d = fabs(u[i] - v[i]);
+    s = s + d * d;
+  }
+  return s;
+}
+
 double chebyshev_distance(const double *u, const double *v, int n) {
   int i = 0;
   double d, maxv = 0.0;
@@ -84,7 +94,7 @@ double mahalanobis_distance(const double *u, const double *v, int n) {
 
 double hamming_distance(const double *u, const double *v, int n) {
   int i = 0;
-  double s = 0.0, d;
+  double s = 0.0;
   for (i = 0; i < n; i++) {
     s = s + (u[i] != v[i]);
   }
@@ -93,7 +103,7 @@ double hamming_distance(const double *u, const double *v, int n) {
 
 double hamming_distance_bool(const char *u, const char *v, int n) {
   int i = 0;
-  double s = 0.0, d;
+  double s = 0.0;
   for (i = 0; i < n; i++) {
     s = s + (u[i] != v[i]);
   }
@@ -104,7 +114,7 @@ double jaccard_distance(const double *u, const double *v, int n) {
   int i = 0;
   double denom = 0.0, num = 0.0;
   for (i = 0; i < n; i++) {
-    num += (u[i] != v[i]) && (u[i] != 0) || (v[i] != 0);
+    num += (u[i] != v[i]) && ((u[i] != 0) || (v[i] != 0));
     denom += (u[i] != 0) || (v[i] != 0);
   }
   return num / denom;
@@ -112,7 +122,7 @@ double jaccard_distance(const double *u, const double *v, int n) {
 
 double jaccard_distance_bool(const char *u, const char *v, int n) {
   int i = 0;
-  double s = 0.0, d;
+  double s = 0.0;
   for (i = 0; i < n; i++) {
     s = s + (u[i] != v[i]);
   }
@@ -438,7 +448,7 @@ void dist_complete(cinfo *info, int mini, int minj, int np, int n) {
 void dist_average(cinfo *info, int mini, int minj, int np, int n) {
   double **rows = info->rows, *buf = info->buf, *bit;
   int *inds = info->ind;
-  double drx, dsx, denom, mply, rscnt, rc, sc;
+  double drx, dsx, mply, rscnt, rc, sc;
   int i, xi, xn;
   cnode *rn = info->nodes + inds[mini];
   cnode *sn = info->nodes + inds[minj];
@@ -478,7 +488,7 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n) {
 }
 
 void dist_centroid(cinfo *info, int mini, int minj, int np, int n) {
-  double **rows = info->rows, *buf = info->buf, *bit;
+  double *buf = info->buf, *bit;
   int *inds = info->ind;
   const double *centroid_tq;
   int i, m, xi;
@@ -498,34 +508,79 @@ void dist_centroid(cinfo *info, int mini, int minj, int np, int n) {
   /**  fprintf(stderr, "\n");**/
 }
 
+void combine_centroids(double *centroidResult,
+		       const double *centroidA, const double *centroidB,
+		       double na, double nb, int n) {
+  int i;
+  double nr = (double)na + (double)nb;
+  for (i = 0; i < n; i++) {
+    centroidResult[i] = ((centroidA[i] * na) + (centroidB[i] * nb)) / nr;
+  }
+}
+
 void dist_ward(cinfo *info, int mini, int minj, int np, int n) {
   double **rows = info->rows, *buf = info->buf, *bit;
   int *inds = info->ind;
   const double *centroid_tq;
-  int i, m, xi, xn, rind, sind;
-  double rn, sn, qn, num;
-  cnode *left, *right;
+  int i, m, xi, rind, sind;
+  double drx, dsx, rf, sf, xf, xn, rn, sn, drsSq;
+  cnode *newNode;
+
   rind = inds[mini];
   sind = inds[minj];
   rn = (double)info->nodes[rind].n;
   sn = (double)info->nodes[sind].n;
+  newNode = info->nodes + info->nid;
+  drsSq = newNode->d;
+  drsSq = drsSq * drsSq;
   centroid_tq = info->centroids[info->nid];
   bit = buf;
   m = info->m;
-  for (i = 0; i < np; i++, bit++) {
+
+  for (i = 0; i < mini; i++, bit++) {
     /** d(r,x) **/
-    if (i == mini || i == minj) {
-      bit--;
-      continue;
-    }
+    drx = *(rows[i] + mini - i - 1);
+    dsx = *(rows[i] + minj - i - 1);
     xi = inds[i];
-    qn = (double)info->nodes[xi].n;
-    num = euclidean_distance(info->centroids[xi], centroid_tq, m);
-    *bit = sqrt(((rn + sn) * qn) * ((num * num) / (qn + rn + sn)));
-    /**    fprintf(stderr, "%5.5f ", *bit);**/
+    cnode *xnd = info->nodes + xi;
+    xn = xnd->n;
+    rf = (rn + xn) / (rn + sn + xn);
+    sf = (sn + xn) / (rn + sn + xn);
+    xf = -xn / (rn + sn + xn);
+    *bit = sqrt(rf * (drx * drx) +
+		sf * (dsx * dsx) +
+		xf * drsSq);
+		
+  }
+  for (i = mini + 1; i < minj; i++, bit++) {
+    drx = *(rows[mini] + i - mini - 1);
+    dsx = *(rows[i] + minj - i - 1);
+    xi = inds[i];
+    cnode *xnd = info->nodes + xi;
+    xn = xnd->n;
+    rf = (rn + xn) / (rn + sn + xn);
+    sf = (sn + xn) / (rn + sn + xn);
+    xf = -xn / (rn + sn + xn);
+    *bit = sqrt(rf * (drx * drx) +
+		sf * (dsx * dsx) +
+		xf * drsSq);
+  }
+  for (i = minj + 1; i < np; i++, bit++) {
+    drx = *(rows[mini] + i - mini - 1);
+    dsx = *(rows[minj] + i - minj - 1);
+    xi = inds[i];
+    cnode *xnd = info->nodes + xi;
+    xn = xnd->n;
+    rf = (rn + xn) / (rn + sn + xn);
+    sf = (sn + xn) / (rn + sn + xn);
+    xf = -xn / (rn + sn + xn);
+    *bit = sqrt(rf * (drx * drx) +
+		sf * (dsx * dsx) +
+		xf * drsSq);
   }
   /**  fprintf(stderr, "\n");**/
 }
+
 
 void print_dm(const double **rows, int np) {
   int i, j, k;
@@ -572,7 +627,7 @@ void print_vec(const double *d, int n) {
  *        clusters should be maintained.
  * kc:    Keep track of the centroids.
  */
-void linkage(double *dm, double *Z, const double *X,
+void linkage(double *dm, double *Z, double *X,
 	     int m, int n, int ml, int kc, distfunc dfunc,
 	     int method) {
   int i, j, k, t, np, nid, mini, minj;
@@ -639,7 +694,8 @@ void linkage(double *dm, double *Z, const double *X,
   info.rowsize = rowsize;
   info.dm = dm;
   info.centroids = centroids;
-
+  info.centroidBuffer = centroids[2*n - 1];
+  info.lists = lists;
   for (i = 0; i < n; i++) {
     ind[i] = i;
     node = nodes + i;
@@ -699,31 +755,6 @@ void linkage(double *dm, double *Z, const double *X,
 	    "[lid=%d, rid=%d, llid=%d, rrid=%d m=%5.8f]",
 	    node->left->id, node->right->id, ind[mini], ind[minj], min);**/
 
-    if (kc) {
-      centroidL = centroids[ind[mini]];
-      centroidR = centroids[ind[minj]];
-      centroid = centroids[nid];
-      switch(method) {
-      case CPY_LINKAGE_MEDIAN:
-	for (t = 0; t < m; t++) {
-	  centroid[t] = (centroidL[t] * 0.5 + centroidR[t] * 0.5);
-	}
-	break;
-      case CPY_LINKAGE_CENTROID:
-      case CPY_LINKAGE_WARD:
-      default:
-	for (t = 0; t < m; t++) {
-	  centroid[t] = (centroidL[t] * ln + centroidR[t] * rn) / qn;
-	}
-	break;
-      }
-      /**      fprintf(stderr, "L: ");
-      print_vec(centroidL, m);
-      fprintf(stderr, "\nR: ");
-      print_vec(centroidR, m);
-      fprintf(stderr, "\nT: ");
-      print_vec(centroid, m);**/
-    }
     if (ml) {
       listC = GETCLUSTER(nid);
       if (ISCLUSTER(node->left) != 0) {
@@ -756,6 +787,32 @@ void linkage(double *dm, double *Z, const double *X,
 	}
       }
     }
+    if (kc) {
+      centroidL = centroids[ind[mini]];
+      centroidR = centroids[ind[minj]];
+      centroid = centroids[nid];
+      switch(method) {
+      case CPY_LINKAGE_MEDIAN:
+	for (t = 0; t < m; t++) {
+	  centroid[t] = (centroidL[t] * 0.5 + centroidR[t] * 0.5);
+	}
+	break;
+      case CPY_LINKAGE_CENTROID:
+      case CPY_LINKAGE_WARD:
+      default:
+	for (t = 0; t < m; t++) {
+	  centroid[t] = (centroidL[t] * ln + centroidR[t] * rn) / qn;
+	}
+	break;
+      }
+      /**      fprintf(stderr, "L: ");
+      print_vec(centroidL, m);
+      fprintf(stderr, "\nR: ");
+      print_vec(centroidR, m);
+      fprintf(stderr, "\nT: ");
+      print_vec(centroid, m);**/
+    }
+
     /**    print_dm(rows, np);**/
     /**    dfunc(buf, rows, mini, minj, np, dm, n, ind, nodes);**/
     dfunc(&info, mini, minj, np, n);

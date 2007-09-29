@@ -2,7 +2,7 @@
 #	gcc -shared align.o align_wrap.o -o _align.so
 
 # Debug ops
-OPTS = -g
+OPTS = -g -Wall
 # Optimizer ops
 
 #OPTS = -O3

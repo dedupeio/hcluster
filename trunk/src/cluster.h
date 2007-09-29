@@ -65,12 +65,14 @@ typedef struct clist {
 
 typedef struct cinfo {
   struct cnode *nodes;
+  struct clist *lists;
   int *ind;
   double *dmt;
   double *dm;
   double *buf;
   double **rows;
   double **centroids;
+  double *centroidBuffer;
   const double *X;
   int *rowsize;
   int m;
@@ -92,6 +94,7 @@ void pdist_city_block(const double *X, double *dm, int m, int n);
 void pdist_cosine(const double *X, double *dm, int m, int n, const double *norms);
 void pdist_chebyshev(const double *X, double *dm, int m, int n);
 void pdist_jaccard(const double *X, double *dm, int m, int n);
+void pdist_jaccard_bool(const char *X, double *dm, int m, int n);
 void pdist_minkowski(const double *X, double *dm, int m, int n, double p);
 
 void compute_inconsistency_coefficient(const double *Z, double *Y, int d);
@@ -108,6 +111,6 @@ void dist_complete(cinfo *info, int mini, int minj, int np, int n);
 void dist_centroid(cinfo *info, int mini, int minj, int np, int n);
 void dist_ward(cinfo *info, int mini, int minj, int np, int n);
 
-void linkage(double *dm, double *Z, const double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);
+void linkage(double *dm, double *Z, double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);
 
 #endif
