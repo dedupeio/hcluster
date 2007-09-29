@@ -50,7 +50,7 @@
 
 #include "cluster.h"
 
-inline double euclidean_distance(const double *u, const double *v, int n) {
+double euclidean_distance(const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -60,7 +60,7 @@ inline double euclidean_distance(const double *u, const double *v, int n) {
   return sqrt(s);
 }
 
-inline double chebyshev_distance(const double *u, const double *v, int n) {
+double chebyshev_distance(const double *u, const double *v, int n) {
   int i = 0;
   double d, maxv = 0.0;
   for (i = 0; i < n; i++) {
@@ -72,7 +72,7 @@ inline double chebyshev_distance(const double *u, const double *v, int n) {
   return maxv;
 }
 
-inline double mahalanobis_distance(const double *u, const double *v, int n) {
+double mahalanobis_distance(const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -82,7 +82,7 @@ inline double mahalanobis_distance(const double *u, const double *v, int n) {
   return sqrt(s);
 }
 
-inline double hamming_distance(const double *u, const double *v, int n) {
+double hamming_distance(const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -91,7 +91,7 @@ inline double hamming_distance(const double *u, const double *v, int n) {
   return s / (double)n;
 }
 
-inline double hamming_distance_bool(const char *u, const char *v, int n) {
+double hamming_distance_bool(const char *u, const char *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -100,7 +100,7 @@ inline double hamming_distance_bool(const char *u, const char *v, int n) {
   return s / (double)n;
 }
 
-inline double jaccard_distance(const double *u, const double *v, int n) {
+double jaccard_distance(const double *u, const double *v, int n) {
   int i = 0;
   double denom = 0.0, num = 0.0;
   for (i = 0; i < n; i++) {
@@ -110,7 +110,7 @@ inline double jaccard_distance(const double *u, const double *v, int n) {
   return num / denom;
 }
 
-inline double jaccard_distance_bool(const char *u, const char *v, int n) {
+double jaccard_distance_bool(const char *u, const char *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -119,7 +119,7 @@ inline double jaccard_distance_bool(const char *u, const char *v, int n) {
   return s / (double)n;
 }
 
-inline double dot_product(const double *u, const double *v, int n) {
+double dot_product(const double *u, const double *v, int n) {
   int i;
   double s = 0.0;
   for (i = 0; i < n; i++) {
@@ -128,7 +128,7 @@ inline double dot_product(const double *u, const double *v, int n) {
   return s;
 }
 
-inline double dot_product_sub(const double *u, double ub,
+double dot_product_sub(const double *u, double ub,
 		       const double *v, double vb, int n) {
   int i;
   double s = 0.0;
@@ -138,11 +138,11 @@ inline double dot_product_sub(const double *u, double ub,
   return s;
 }
 
-inline double vector_2norm(const double *u, int n) {
+double vector_2norm(const double *u, int n) {
   return sqrt(dot_product(u, u, n));
 }
 
-inline double vector_mean(const double *u, int n) {
+double vector_mean(const double *u, int n) {
   int i;
   double s = 0.0;
   for (i = 0; i < n; i++) {
@@ -151,12 +151,12 @@ inline double vector_mean(const double *u, int n) {
   return s / (double)n;
 }
 
-inline double cosine_distance(const double *u, const double *v, int n,
+double cosine_distance(const double *u, const double *v, int n,
 		       const double nu, const double nv) {
   return 1.0 - (dot_product(u, v, n) / (nu * nv));
 }
 
-inline double seuclidean_distance(const double *var,
+double seuclidean_distance(const double *var,
 			   const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
@@ -167,7 +167,7 @@ inline double seuclidean_distance(const double *var,
   return sqrt(s);
 }
 
-inline double city_block_distance(const double *u, const double *v, int n) {
+double city_block_distance(const double *u, const double *v, int n) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -177,7 +177,7 @@ inline double city_block_distance(const double *u, const double *v, int n) {
   return s;
 }
 
-inline double minkowski_distance(const double *u, const double *v, int n, double p) {
+double minkowski_distance(const double *u, const double *v, int n, double p) {
   int i = 0;
   double s = 0.0, d;
   for (i = 0; i < n; i++) {
@@ -187,7 +187,7 @@ inline double minkowski_distance(const double *u, const double *v, int n, double
   return pow(s, 1.0 / p);
 }
 
-inline void compute_mean_vector(double *res, const double *X, int m, int n) {
+void compute_mean_vector(double *res, const double *X, int m, int n) {
   int i, j;
   const double *v;
   for (i = 0; i < n; i++) {
@@ -205,7 +205,7 @@ inline void compute_mean_vector(double *res, const double *X, int m, int n) {
   }
 }
 
-inline void vector_subtract(double *result, const double *u, const double *v, int n) {
+void vector_subtract(double *result, const double *u, const double *v, int n) {
   int i;
   for (i = 0; i < n; i++) {
     result[i] = u[i] - v[i];
@@ -480,24 +480,51 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n) {
 void dist_centroid(cinfo *info, int mini, int minj, int np, int n) {
   double **rows = info->rows, *buf = info->buf, *bit;
   int *inds = info->ind;
-  double drx, dsx;
-  const double *centroid_tq, *centroid_x;
-  int i, m, xi, xn, rind, sind;
-  rind = inds[mini];
-  sind = inds[minj];
+  const double *centroid_tq;
+  int i, m, xi;
   centroid_tq = info->centroids[info->nid];
   bit = buf;
   m = info->m;
-  for (i = 0; i < m; i++, bit++) {
+  for (i = 0; i < np; i++, bit++) {
     /** d(r,x) **/
     if (i == mini || i == minj) {
+      bit--;
       continue;
     }
-    drx = *(rows[i] + mini - i - 1);
-    dsx = *(rows[i] + minj - i - 1);
     xi = inds[i];
     *bit = euclidean_distance(info->centroids[xi], centroid_tq, m);
+    /**    fprintf(stderr, "%5.5f ", *bit);**/
   }
+  /**  fprintf(stderr, "\n");**/
+}
+
+void dist_ward(cinfo *info, int mini, int minj, int np, int n) {
+  double **rows = info->rows, *buf = info->buf, *bit;
+  int *inds = info->ind;
+  const double *centroid_tq;
+  int i, m, xi, xn, rind, sind;
+  double rn, sn, qn, num;
+  cnode *left, *right;
+  rind = inds[mini];
+  sind = inds[minj];
+  rn = (double)info->nodes[rind].n;
+  sn = (double)info->nodes[sind].n;
+  centroid_tq = info->centroids[info->nid];
+  bit = buf;
+  m = info->m;
+  for (i = 0; i < np; i++, bit++) {
+    /** d(r,x) **/
+    if (i == mini || i == minj) {
+      bit--;
+      continue;
+    }
+    xi = inds[i];
+    qn = (double)info->nodes[xi].n;
+    num = euclidean_distance(info->centroids[xi], centroid_tq, m);
+    *bit = sqrt(((rn + sn) * qn) * ((num * num) / (qn + rn + sn)));
+    /**    fprintf(stderr, "%5.5f ", *bit);**/
+  }
+  /**  fprintf(stderr, "\n");**/
 }
 
 void print_dm(const double **rows, int np) {
@@ -511,7 +538,7 @@ void print_dm(const double **rows, int np) {
     }
 
     for (k = 0, j = i + 1; j < np; j++, k++) {
-      fprintf(stderr, "%5.5f ", *(row + k)/1000000.0);
+      fprintf(stderr, "%5.5f ", *(row + k));
     }
     fprintf(stderr, "|j=%d|\n", i + 1);
   }
@@ -526,6 +553,15 @@ void print_ind(const int *inds, int np) {
   fprintf(stderr, "]\n");
 }
 
+void print_vec(const double *d, int n) {
+  int i;
+  fprintf(stderr, "[");
+  for (i = 0; i < n; i++) {
+    fprintf(stderr, "%5.5f ", d[i]);
+  }
+  fprintf(stderr, "]");
+}
+
 /**
  * notes to self:
  * dm:    The distance matrix.
@@ -537,9 +573,10 @@ void print_ind(const int *inds, int np) {
  * kc:    Keep track of the centroids.
  */
 void linkage(double *dm, double *Z, const double *X,
-	     int m, int n, int ml, int kc, distfunc dfunc) {
+	     int m, int n, int ml, int kc, distfunc dfunc,
+	     int method) {
   int i, j, k, t, np, nid, mini, minj;
-  double min;
+  double min, ln, rn, qn;
   int *ind;
   /** An iterator through the distance matrix. */
   double *dmit, *buf;
@@ -569,11 +606,13 @@ void linkage(double *dm, double *Z, const double *X,
     lnodes = 0;
   }
   if (kc) {
-    centroids = malloc(sizeof(double*) * (2 * n - 1));
-    centroidsData = malloc(sizeof(double) * (n - 1) * m);
+    centroids = (double**)malloc(sizeof(double*) * (2 * n));
+    centroidsData = (double*)malloc(sizeof(double) * n * m);
     for (i = 0; i < n; i++) {
-      centroids[i] = X + i * n;
-      centroids[i+n] = centroidsData + i * n;
+      centroids[i] = X + i * m;
+    }
+    for (i = 0; i < n; i++) {
+      centroids[i+n] = centroidsData + i * m;
     }
   }
   else {
@@ -645,6 +684,9 @@ void linkage(double *dm, double *Z, const double *X,
     node = nodes + nid;
     node->left = nodes + ind[mini];
     node->right = nodes + ind[minj];
+    ln = (double)node->left->n;
+    rn = (double)node->right->n;
+    qn = ln + rn;
     node->n = node->left->n + node->right->n;
     node->d = min;
     node->id = nid;
@@ -660,11 +702,27 @@ void linkage(double *dm, double *Z, const double *X,
     if (kc) {
       centroidL = centroids[ind[mini]];
       centroidR = centroids[ind[minj]];
-      centroid = centroids + (m * k);
-      for (t = 0; t < m; t++) {
-	centroid[i] = ((centroidL[i] * node->left->n
-			+ centroidR[i] * node->right->n)) / node->n;
+      centroid = centroids[nid];
+      switch(method) {
+      case CPY_LINKAGE_MEDIAN:
+	for (t = 0; t < m; t++) {
+	  centroid[t] = (centroidL[t] * 0.5 + centroidR[t] * 0.5);
+	}
+	break;
+      case CPY_LINKAGE_CENTROID:
+      case CPY_LINKAGE_WARD:
+      default:
+	for (t = 0; t < m; t++) {
+	  centroid[t] = (centroidL[t] * ln + centroidR[t] * rn) / qn;
+	}
+	break;
       }
+      /**      fprintf(stderr, "L: ");
+      print_vec(centroidL, m);
+      fprintf(stderr, "\nR: ");
+      print_vec(centroidR, m);
+      fprintf(stderr, "\nT: ");
+      print_vec(centroid, m);**/
     }
     if (ml) {
       listC = GETCLUSTER(nid);

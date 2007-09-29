@@ -2,10 +2,10 @@
 #	gcc -shared align.o align_wrap.o -o _align.so
 
 # Debug ops
-#OPTS = -g
+OPTS = -g
 # Optimizer ops
 
-OPTS = -O3
+#OPTS = -O3
 
 all: _cluster_wrap.so
 

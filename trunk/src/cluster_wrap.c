@@ -71,7 +71,7 @@ extern PyObject *linkage_wrap(PyObject *self, PyObject *args) {
       df = 0;
       break;
     }
-    linkage((double*)dm->data, (double*)Z->data, 0, 0, n, 0, 0, df);
+    linkage((double*)dm->data, (double*)Z->data, 0, 0, n, 0, 0, df, method);
   }
   return Py_BuildValue("d", 0.0);
 }
@@ -90,9 +90,16 @@ extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
     return 0;
   }
   else {
+    /**    fprintf(stderr, "m: %d, n: %d\n", m, n);**/
     switch (method) {
     case CPY_LINKAGE_CENTROID:
       df = dist_centroid;
+      break;
+    case CPY_LINKAGE_MEDIAN:
+      df = dist_centroid;
+      break;
+    case CPY_LINKAGE_WARD:
+      df = dist_ward;
       break;
     default:
       /** Report an error. */
@@ -100,7 +107,7 @@ extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
       break;
     }
     linkage((double*)dm->data, (double*)Z->data, (const double*)X->data,
-	    m, n, 0, 1, df);
+	    m, n, 0, 1, df, method);
   }
   return Py_BuildValue("d", 0.0);
 }

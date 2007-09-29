@@ -32,6 +32,9 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Portions of the documentation make reference to the product MATLAB.
+# MATLAB is a Registered Trademark of The MathWorks Corporation.
 
 import _cluster_wrap
 import scipy, scipy.stats
@@ -39,8 +42,8 @@ import types
 import math
 
 cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2}
-cpy_euclid_methods = {'centroid': 3, 'weighted': 4, 'ward': 5}
-cpy_linkage_methods = cpy_non_euclid_method_ids.union(cpy_euclid_method_ids)
+cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
+cpy_linkage_methods = set(cpy_non_euclid_methods.keys()).union(set(cpy_euclid_methods.keys()))
 
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
@@ -79,18 +82,39 @@ def linkage(y, method='single', metric='euclidean'):
             all points i in cluster s and j in cluster t.
 
           * method='average' assigns dist(s,t) =
-               sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|).
+               sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|)
+            for all points i and j where |s| and |t| are the
+            cardinalities of clusters s and t, respectively.
 
         linkage(X, method, metric='euclidean')
 
         Performs hierarchical clustering on the objects defined by the
-        n by m observation matrix X.        
+        n by m observation matrix X.
+
+        If the metric is 'euclidean' then the following methods may be
+        used:
+
+          * method='centroid' assigns dist(s,t) = euclid(c_s, c_t) where
+            c_s and c_t are the centroids of clusters s and t,
+            respectively. When two clusters s and t are combined into a new
+            cluster q, the new centroid is computed over all the original
+            objects in clusters s and t.
+
+          * method='median' assigns dist(s,t) as above. When two clusters
+            s and t are combined into a new cluster q, the average of
+            centroids s and t give the new centroid q.
+           
+          * method='ward' assigns dist(s,t) =
+          
+               |s||t| euclid(c_s, c_t)^2
+               ------------------------- .
+                       |s| + |t|
         """
     a = scipy.array([])
-    if y.type != a.type:
+    if type(y) != type(a):
         raise AttributeError('Incompatible data type. y must be an array.')
     s = y.shape
-    if method.type != types.StringType:
+    if type(method) != types.StringType:
         raise AttributeError("Argument 'method' must be a string.")
     if y.dtype != 'double':
         raise AttributeError('Incompatible data type. y must be a matrix of doubles.')
@@ -99,24 +123,31 @@ def linkage(y, method='single', metric='euclidean'):
         d = scipy.ceil(scipy.sqrt(s[0] * 2))
         if d * (d - 1)/2 != s[0]:
             raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
-        if method not in cpy_euclid_methods.keys():
-            raise AttributeError("Valid methods when the raw data is omitted are 'single', 'complete', and 'average'."
+        if method not in cpy_non_euclid_methods.keys():
+            raise AttributeError("Valid methods when the raw observations are omitted are 'single', 'complete', and 'average'.")
         Z = scipy.zeros((d - 1, 3))
         _cluster_wrap.linkage_wrap(y, Z, int(d), \
-                                   int(cpy_euclid_methods[method]))
+                                   int(cpy_non_euclid_methods[method]))
     elif len(s) == 2:
         X = y
         n = s[0]
         m = s[1]
-        if method not in cpy_linkages_methods.keys():
+        if method not in cpy_linkage_methods:
             raise AttributeError('Invalid method: %s' % method)
-        if method in cpy_noneuclid_methods.keys():
+        if method in cpy_non_euclid_methods.keys():
             dm = pdist(X, metric)
-            Z = scipy.zeros((d - 1, 3))
-            _cluster_wrap.linkage_wrap(dm, Z, int(d), \
-                                       int(cpy_euclid_methods[method]))
-            
-        
+            Z = scipy.zeros((n - 1, 3))
+            _cluster_wrap.linkage_wrap(dm, Z, n, \
+                                       int(cpy_non_euclid_methods[method]))
+        elif method in cpy_euclid_methods.keys():
+            if metric != 'euclidean':
+                raise AttributeError('Method %s requires the distance metric to be euclidean' % s)
+            dm = pdist(X, metric)
+            if method == 'ward':
+                dm = scipy.sqrt((dm ** 2.0) / 1.0)
+            Z = scipy.zeros((n - 1, 3))
+            _cluster_wrap.linkage_euclid_wrap(dm, Z, X, m, n,
+                                              int(cpy_euclid_methods[method]))
     return Z
 
 class cnode:
@@ -369,28 +400,12 @@ def pdist(X, metric='euclidean', p=2):
         using the distance metric Y but with a more succint,
         verifiable, but less efficient implementation.
 
-        NOT IMPLEMENTED:
-        
-        12. pdist(X, 'canberra')
-
-        13. pdist(X, 'bray-curtis')
-
-        14. pdist(X, 'matching') [bools]
-
-        15. pdist(X, 'dice') [bools]
-
-        16. pdist(X, 'rogers-tanimoto')
-
-        17. pdist(X, 'russell-rao')
-
-        18. pdist(X, 'sokal-sneath')
-
-        19. pdist(X, 'yule')
-        
-    """
+       """
     a = scipy.array(())
 
     # FIXME: need more efficient mahalanobis distance.
+    # TODO: canberra, bray-curtis, matching, dice, rogers-tanimoto,
+    #       russell-rao, sokal-sneath, yule
     
     if type(X) != type(a):
         raise AttributeError('The parameter passed must be an array.')
