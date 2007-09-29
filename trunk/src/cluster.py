@@ -104,11 +104,19 @@ def linkage(y, method='single', metric='euclidean'):
             s and t are combined into a new cluster q, the average of
             centroids s and t give the new centroid q.
            
-          * method='ward' assigns dist(s,t) =
-          
-               |s||t| euclid(c_s, c_t)^2
-               ------------------------- .
-                       |s| + |t|
+          * method='ward' uses the Ward variance minimization algorithm.
+            The new entry dist(q, u) is computed by,
+
+                 dist(q,u) =
+
+             ----------------------------------------------------
+             | |u|+|s|            |u|+|t|            |u|
+             | ------- d(u,s)^2 + ------- d(u,t)^2 - --- d(s,t)^2
+            \|    T                  T                T
+
+            where q is the newly formed cluster consisting of clusters
+            s and t, u is an unused cluster in the forest, and |*|
+            is the cardinality of its argument.
         """
     a = scipy.array([])
     if type(y) != type(a):
