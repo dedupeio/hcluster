@@ -44,6 +44,7 @@ import math
 cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2, 'weighted': 6}
 cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
 cpy_linkage_methods = set(cpy_non_euclid_methods.keys()).union(set(cpy_euclid_methods.keys()))
+array_type = type(scipy.array([]))
 
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
@@ -132,8 +133,7 @@ def linkage(y, method='single', metric='euclidean'):
             s and t, u is an unused cluster in the forest, and |*|
             is the cardinality of its argument. (also called incremental)
         """
-    a = scipy.array([])
-    if type(y) != type(a):
+    if type(y) != array_type:
         raise AttributeError('Incompatible data type. y must be an array.')
     s = y.shape
     if type(method) != types.StringType:
@@ -200,9 +200,7 @@ def totree(Z, return_dict=False):
     If return_dict is True the object returned is a tuple (t,Z) where
     """
 
-    a = scipy.array(())
-
-    if type(a) != type(Z):
+    if type(Z) is not array_type:
         raise AttributeError('Z must be a numpy.ndarray')
 
     if Z.dtype != 'double':
@@ -284,9 +282,8 @@ def squareform(X, force="no", checks=True):
     ignored any way so they do not disrupt the squareform
     transformation.
     """
-    a = scipy.array(())
     
-    if type(X) != type(a):
+    if type(X) is not array_type:
         raise AttributeError('The parameter passed must be an array.')
 
     if X.dtype != 'double':
@@ -424,13 +421,12 @@ def pdist(X, metric='euclidean', p=2):
         verifiable, but less efficient implementation.
 
        """
-    a = scipy.array(())
 
     # FIXME: need more efficient mahalanobis distance.
     # TODO: canberra, bray-curtis, matching, dice, rogers-tanimoto,
     #       russell-rao, sokal-sneath, yule
     
-    if type(X) != type(a):
+    if type(X) is not array_type:
         raise AttributeError('The parameter passed must be an array.')
     
     s = X.shape
@@ -558,14 +554,14 @@ def cophenet(*args, **kwargs):
     d = cophenet(Z)
 
       Calculates the cophenetic distances between each observation in a
-      hierarchical clustering defined by the linkage Z and the original
-      distance matrix Y. Y must be in the condensed distance matrix format
-      described in pdist. Suppose p and q are original observations in
-      disjoint clusters s and t, respectively and that s and t are joined
-      by a direct parent cluster u. The cophenetic distance between
-      observations i and j is simply the distance between clusters s and t.
+      hierarchical clustering defined by the linkage Z.
 
-      Returns the cophenetic distance matrix in condensed form. The ij'th
+      Suppose p and q are original observations in disjoint clusters
+      s and t, respectively and that s and t are joined by a direct
+      parent cluster u. The cophenetic distance between observations
+      i and j is simply the distance between clusters s and t.
+
+      d is cophenetic distance matrix in condensed form. The ij'th
       entry is the cophenetic distance between original observations
       i and j.
 
@@ -573,26 +569,50 @@ def cophenet(*args, **kwargs):
 
       Calculates the cophenetic correlation coefficient of a hierarchical
       clustering of a set of n observations in m dimensions. Returns the
-      distance as a scalar.
+      distance as a scalar. Y is the condensed distance matrix generated
+      by pdist.
 
     (c, d) = cophenet(Z, Y, [])
 
       Same as cophenet(Z, Y) except the distance matrix is returned as
       the second element of a tuple.
-    
+      
     """
     nargs = len(args)
 
     if nargs < 1:
         raise AttributeError('At least one argument must be passed to cophenet.')
     Z = args[0]
-    n = Z.shape[0] + 1
+
+    if (type(Z) is not array_type) or Z.dtype != 'double':
+        raise AttributeError('First argument Z must be an array of doubles.')
+    Zs = Z.shape
+
+    if len(Zs) != 2:
+        raise AttributeError('First argument Z must be a 2-dimensional array.')
+
+    if Zs[1] != 4:
+        raise AttributeError('First argument Z must have exactly 4 columns.')
+    
+    n = Zs[0] + 1
+
     zz = scipy.zeros((n*(n-1)/2,), dtype='double')
     _cluster_wrap.cophenetic_distances_wrap(Z, zz, int(n))
     if nargs == 1:
         return zz
 
     Y = args[1]
+    if (type(Y) is not array_type) and Y.dtype != 'double':
+        raise AttributeError('Second argument Y must be an array of doubles.')
+
+    Ys = Y.shape
+
+    if len(Ys) != 1:
+        raise AttributeError('Second argument Y must be a 1-D array.')
+
+    if Ys[0] != n*(n-1)/2:
+        raise AttributeError('Incorrect size of Y. It must be a distance vector containing n*(n-1) elements.')
+    
     z = zz.mean()
     y = Y.mean()
     Yy = Y - y
@@ -608,4 +628,74 @@ def cophenet(*args, **kwargs):
 
     if nargs == 3:
         return (c, zz)
+
+def inconsistent(Z, d=2):
+    """
+    Calculates the inconsistency coefficient for all ...
+    """
+
+def from_mlab_linkage(Z):
+    """
+    Z2 = from_mlab_linkage(Z)
     
+    Converts a linkage matrix Z generated by MATLAB to a new linkage
+    matrix Z2 compatible with this module. The conversion does two
+    things:
+
+     * the indices are converted from 1..N to 0..(N-1) form, and
+    
+     * a fourth column Z[:,3] is added where Z[i,3] is equal to
+       the number of original observations (leaves) in the non-singleton
+       cluster i.
+    """
+
+    if type(Z) is not array_type:
+        raise AttributeError('First argument Z must be a two-dimensional array.')
+    if Z.dtype != 'double':
+        raise AttributeError('First argument Z must contain doubles.')
+    if Z.shape[1] != 3:
+        raise AttributeError('First argument Z must have 3 columns.')
+    if Z.shape[0] < 1:
+        raise AttributeError('First argument Z must have at least one row.')
+
+    Zs = Z.shape
+    Zpart = Z[:,0:2]
+    Zd = Z[:,2].reshape(Zs[0], 1)
+    if Zpart.min() != 1.0 and Zpart.max() != 2 * Zs[0]:
+        raise AttributeError('The format of the indices is not 1..N');
+    CS = scipy.zeros((Zs[0], 1), dtype='double')
+    Zpart = Zpart - 1
+    _cluster_wrap.calculate_cluster_sizes_wrap(scipy.hstack([Zpart, \
+                                                             Zd]), \
+                                               CS, int(Zs[0]) + 1)
+    return scipy.hstack([Zpart, Zd, CS])
+
+def to_mlab_linkage(Z):
+    """
+    Z2 = to_mlab_linkage(Z)
+
+    Converts a linkage matrix Z generated by the linkage function of this
+    module to one compatible with matlab. Z2 is the same as Z with the last
+    column removed and the indices converted to 1.N form.
+    """
+    if type(Z) is not array_type:
+        raise AttributeError('First argument Z must be a two-dimensional array.')
+    if Z.dtype != 'double':
+        raise AttributeError('First argument Z must contain doubles.')
+    if Z.shape[1] != 4:
+        raise AttributeError('First argument Z must have 4 columns.')
+    if Z.shape[0] < 1:
+        raise AttributeError('First argument Z must have at least one row.')
+    
+    return scipy.hstack([Z[:,0:2] + 1, Z[:,2]])
+
+# To write...
+
+def is_valid_linkage(Z):
+    pass
+
+def is_valid_y(y):
+    pass
+
+def is_valid_dm(D):
+    pass

@@ -117,5 +117,6 @@ void linkage(double *dm, double *Z, double *X, int m, int n, int ml, int kc, dis
 
 void cophenetic_distances(const double *Z, double *d, int n);
 void cpy_to_tree(const double *Z, cnode **tnodes, int n);
+void calculate_cluster_sizes(const double *Z, double *CS, int n);
 
 #endif

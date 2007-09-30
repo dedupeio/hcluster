@@ -1049,6 +1049,33 @@ void cophenetic_distances(const double *Z, double *d, int n) {
   /**  fprintf(stderr, "begin discover.\n");**/
   cophenetic_discover(d, n, root, members);
   /**  fprintf(stderr, "end discover.\n");**/
-  /**  free(members);
-       free(nodes);**/
+  free(members);
+  free(nodes);
+}
+
+void calculate_cluster_sizes(const double *Z, double *CS, int n) {
+  int i, j, k;
+  const double *row;
+  for (k = 0; k < n - 1; k++) {
+    row = Z + (k * 3);
+    i = (int)row[0];
+    j = (int)row[1];
+    /** If the left node is a non-singleton, add its count. */
+    if (i >= n) {
+      CS[k] = CS[i - n];
+    }
+    /** Otherwise just add 1 for the leaf. */
+    else {
+      CS[k] = 1.0;
+    }
+    /** If the right node is a non-singleton, add its count. */
+    if (j >= n) {
+      CS[k] = CS[k] + CS[j - n];
+    }
+    /** Otherwise just add 1 for the leaf. */
+    else {
+      CS[k] = CS[k] + 1.0;
+    }
+    /**    fprintf(stderr, "i=%d, j=%d, CS[%d]=%d\n", i, j, n+k, (int)CS[k]);**/
+  }
 }

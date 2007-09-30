@@ -117,6 +117,19 @@ extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *calculate_cluster_sizes_wrap(PyObject *self, PyObject *args) {
+  int n;
+  PyArrayObject *Z, *CS;
+  if (!PyArg_ParseTuple(args, "O!O!i",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &CS,
+			&n)) {
+    return 0;
+  }
+  calculate_cluster_sizes((const double*)Z->data, (double*)CS->data, n);
+  return Py_BuildValue("d", 0.0);
+}
+
 extern PyObject *cophenetic_distances_wrap(PyObject *self, PyObject *args) {
   int n;
   PyArrayObject *Z, *d;
@@ -442,6 +455,7 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 static PyMethodDef _clusterWrapMethods[] = {
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
+  {"calculate_cluster_sizes_wrap", calculate_cluster_sizes_wrap, METH_VARARGS},
   {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
   {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
   {"chopmins_ns_i", chopmin_ns_i_wrap, METH_VARARGS},
