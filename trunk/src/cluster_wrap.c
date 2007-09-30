@@ -117,6 +117,19 @@ extern PyObject *linkage_euclid_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *cophenetic_distances_wrap(PyObject *self, PyObject *args) {
+  int n;
+  PyArrayObject *Z, *d;
+  if (!PyArg_ParseTuple(args, "O!O!i",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &d,
+			&n)) {
+    return 0;
+  }
+  cophenetic_distances((const double*)Z->data, (double*)d->data, n);
+  return Py_BuildValue("d", 0.0);
+}
+
 extern PyObject *chopmin_ns_ij_wrap(PyObject *self, PyObject *args) {
   int mini, minj, n;
   PyArrayObject *row;
@@ -130,6 +143,7 @@ extern PyObject *chopmin_ns_ij_wrap(PyObject *self, PyObject *args) {
   chopmins_ns_ij((double*)row->data, mini, minj, n);
   return Py_BuildValue("d", 0.0);
 }
+
 
 extern PyObject *chopmin_ns_i_wrap(PyObject *self, PyObject *args) {
   int mini, n;
@@ -428,6 +442,7 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 static PyMethodDef _clusterWrapMethods[] = {
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
+  {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
   {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
   {"chopmins_ns_i", chopmin_ns_i_wrap, METH_VARARGS},
   {"chopmins", chopmins_wrap, METH_VARARGS},

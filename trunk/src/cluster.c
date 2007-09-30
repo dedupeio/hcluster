@@ -778,9 +778,10 @@ void linkage(double *dm, double *Z, double *X,
     node->d = min;
     node->id = nid;
 
-    *(Z + (k * 3)) = node->left->id;
-    *(Z + (k * 3) + 1) = node->right->id;
-    *(Z + (k * 3) + 2) = min;
+    *(Z + (k * 4)) = node->left->id;
+    *(Z + (k * 4) + 1) = node->right->id;
+    *(Z + (k * 4) + 2) = min;
+    *(Z + (k * 4) + 3) = node->n;
 
     /**    fprintf(stderr,
 	    "[lid=%d, rid=%d, llid=%d, rrid=%d m=%5.8f]",
@@ -961,4 +962,93 @@ void dist_to_vector_from_squareform(const double *M, double *v, int n) {
       *it = *cit;
     }
   }
+}
+
+void cpy_to_tree(const double *Z, cnode **tnodes, int n) {
+  const double *row;
+  cnode *node;
+  cnode *nodes;
+  int i;
+  nodes = (cnode*)malloc(sizeof(cnode) * (n * 2) - 1);
+  *tnodes = nodes;
+  for (i = 0; i < n; i++) {
+    node = nodes + i;
+    node->left = 0;
+    node->right = 0;
+    node->id = i;
+    node->n = 1;
+    node->d = 0.0;
+  }
+  for (i = 0; i < n - 1; i++) {
+    node = nodes + i + n;
+    row = Z + (i * 4);
+    node->id = i + n;
+    node->left = nodes + (int)row[0];
+    node->right = nodes + (int)row[1];
+    node->d = row[2];
+    node->n = (int)row[3];
+    /**    fprintf(stderr, "l: %d r: %d d: %5.5f n: %d\n", (int)row[0],
+	   (int)row[1], row[2], (int)row[3]);**/
+  }
+}
+
+inline void set_dist_entry(double *d, double val, int i, int j, int n) {
+  if (i < j) {
+    *(d + (NCHOOSE2(n)-NCHOOSE2(n - i)) + j) = val;
+  }
+  if (j < i) {
+    *(d + (NCHOOSE2(n)-NCHOOSE2(n - j)) + i) = val;
+  }
+}
+
+void cophenetic_discover(double *d, int n, const cnode *current, int *members) {
+  const cnode *left = current->left;
+  const cnode *right = current->right;
+  int *membersRight;
+  int ii, jj, i, j, k, ln, rn;
+  int nc2 = NCHOOSE2(n);
+  double dist;
+
+  /** If leaf node. */
+  if (current->id < n) {
+    *members = current->id;
+  }
+  else {
+    membersRight = members + left->n;
+    cophenetic_discover(d, n, left, members);
+    cophenetic_discover(d, n, right, membersRight);
+    dist = current->d;
+    ln = current->left->n;
+    rn = current->right->n;
+    for (ii = 0; ii < ln; ii++) {
+      i = members[ii];
+      for (jj = 0; jj < rn; jj++) {
+	j = membersRight[jj];
+	if (i < j) {
+	  k = nc2 - NCHOOSE2(n - i) + (j - i - 1);
+	}
+	if (j < i) {
+	  k = nc2 - NCHOOSE2(n - j) + (i - j - 1);
+	}
+	d[k] = dist;
+	/**	fprintf(stderr, "i=%d j=%d k=%d d=%5.5f \n", i, j, k, dist);**/
+      }
+    }
+  }
+
+}
+
+void cophenetic_distances(const double *Z, double *d, int n) {
+  int *members = (int*)malloc(n * sizeof(int));
+  cnode *nodes, *root;
+  /**  fprintf(stderr, "copying into tree.\n");**/
+  cpy_to_tree(Z, &nodes, n);
+  /**  fprintf(stderr, "done copying into tree.\n");**/
+  root = nodes + (n * 2) - 2; /** The root node is the 2*n-1'th node,
+				  or the last node in the array.*/
+  /**  fprintf(stderr, "begin discover.\n");**/
+  cophenetic_discover(d, n, root, members);
+  /**  fprintf(stderr, "end discover.\n");**/
+  /**  free(members);
+       free(nodes);**/
 }

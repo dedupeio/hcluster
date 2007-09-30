@@ -146,8 +146,8 @@ def linkage(y, method='single', metric='euclidean'):
         if d * (d - 1)/2 != s[0]:
             raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
         if method not in cpy_non_euclid_methods.keys():
-            raise AttributeError("Valid methods when the raw observations are omitted are 'single', 'complete', and 'average'.")
-        Z = scipy.zeros((d - 1, 3))
+            raise AttributeError("Valid methods when the raw observations are omitted are 'single', 'complete', 'weighted', and 'average'.")
+        Z = scipy.zeros((d - 1, 4))
         _cluster_wrap.linkage_wrap(y, Z, int(d), \
                                    int(cpy_non_euclid_methods[method]))
     elif len(s) == 2:
@@ -158,7 +158,7 @@ def linkage(y, method='single', metric='euclidean'):
             raise AttributeError('Invalid method: %s' % method)
         if method in cpy_non_euclid_methods.keys():
             dm = pdist(X, metric)
-            Z = scipy.zeros((n - 1, 3))
+            Z = scipy.zeros((n - 1, 4))
             _cluster_wrap.linkage_wrap(dm, Z, n, \
                                        int(cpy_non_euclid_methods[method]))
         elif method in cpy_euclid_methods.keys():
@@ -168,7 +168,7 @@ def linkage(y, method='single', metric='euclidean'):
 #            if method == 'ward':
 #                dm = scipy.sqrt((dm ** 2.0))
 #                dm = (dm ** 2.0) / 2.0
-            Z = scipy.zeros((n - 1, 3))
+            Z = scipy.zeros((n - 1, 4))
             _cluster_wrap.linkage_euclid_wrap(dm, Z, X, m, n,
                                               int(cpy_euclid_methods[method]))
     return Z
@@ -552,3 +552,60 @@ def pdist(X, metric='euclidean', p=2):
     else:
         raise AttributeError('2nd argument metric must be a string identifier or a function.')
     return dm
+
+def cophenet(*args, **kwargs):
+    """
+    d = cophenet(Z)
+
+      Calculates the cophenetic distances between each observation in a
+      hierarchical clustering defined by the linkage Z and the original
+      distance matrix Y. Y must be in the condensed distance matrix format
+      described in pdist. Suppose p and q are original observations in
+      disjoint clusters s and t, respectively and that s and t are joined
+      by a direct parent cluster u. The cophenetic distance between
+      observations i and j is simply the distance between clusters s and t.
+
+      Returns the cophenetic distance matrix in condensed form. The ij'th
+      entry is the cophenetic distance between original observations
+      i and j.
+
+    c = cophenet(Z, Y)
+
+      Calculates the cophenetic correlation coefficient of a hierarchical
+      clustering of a set of n observations in m dimensions. Returns the
+      distance as a scalar.
+
+    (c, d) = cophenet(Z, Y, [])
+
+      Same as cophenet(Z, Y) except the distance matrix is returned as
+      the second element of a tuple.
+    
+    """
+    nargs = len(args)
+
+    if nargs < 1:
+        raise AttributeError('At least one argument must be passed to cophenet.')
+    Z = args[0]
+    n = Z.shape[0] + 1
+    zz = scipy.zeros((n*(n-1)/2,), dtype='double')
+    _cluster_wrap.cophenetic_distances_wrap(Z, zz, int(n))
+    if nargs == 1:
+        return zz
+
+    Y = args[1]
+    z = zz.mean()
+    y = Y.mean()
+    Yy = Y - y
+    Zz = zz - z
+    #print Yy.shape, Zz.shape
+    numerator = (Yy * Zz)
+    denomA = Yy ** 2
+    denomB = Zz ** 2
+    c = numerator.sum() / scipy.sqrt((denomA.sum() * denomB.sum()))
+    #print c, numerator.sum()
+    if nargs == 2:
+        return c
+
+    if nargs == 3:
+        return (c, zz)
+    
