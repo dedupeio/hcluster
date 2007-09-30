@@ -1053,6 +1053,21 @@ void cophenetic_distances(const double *Z, double *d, int n) {
   free(nodes);
 }
 
+void inconsistency_calculation(const double *Z, double *d, int n) {
+  int *members = (int*)malloc(n * sizeof(int));
+  cnode *nodes, *root;
+  /**  fprintf(stderr, "copying into tree.\n");**/
+  cpy_to_tree(Z, &nodes, n);
+  /**  fprintf(stderr, "done copying into tree.\n");**/
+  root = nodes + (n * 2) - 2; /** The root node is the 2*n-1'th node,
+				  or the last node in the array.*/
+  /**  fprintf(stderr, "begin discover.\n");**/
+  cophenetic_discover(d, n, root, members);
+  /**  fprintf(stderr, "end discover.\n");**/
+  free(members);
+  free(nodes);
+}
+
 void calculate_cluster_sizes(const double *Z, double *CS, int n) {
   int i, j, k;
   const double *row;

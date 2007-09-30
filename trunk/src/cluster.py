@@ -1,50 +1,51 @@
-# cluster.py
-#
-# Author: Damian Eads
-# Date:   September 22, 2007
-#
-# Copyright (c) 2007, Damian Eads
-#
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-#   - Redistributions of source code must retain the above
-#     copyright notice, this list of conditions and the
-#     following disclaimer.
-#   - Redistributions in binary form must reproduce the above copyright
-#     notice, this list of conditions and the following disclaimer
-#     in the documentation and/or other materials provided with the
-#     distribution.
-#   - Neither the name of the author nor the names of its
-#     contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# Portions of the documentation make reference to the product MATLAB.
-# MATLAB is a Registered Trademark of The MathWorks Corporation.
+"""
+cluster.py
+
+Author: Damian Eads
+Date:   September 22, 2007
+
+Copyright (c) 2007, Damian Eads
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+  - Redistributions of source code must retain the above
+    copyright notice, this list of conditions and the
+    following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer
+    in the documentation and/or other materials provided with the
+    distribution.
+  - Neither the name of the author nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+MATLAB and MathWorks are registered trademarks of The MathWorks, Inc.
+"""
 
 import _cluster_wrap
 import scipy, scipy.stats
 import types
 import math
 
-cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2, 'weighted': 6}
-cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
-cpy_linkage_methods = set(cpy_non_euclid_methods.keys()).union(set(cpy_euclid_methods.keys()))
-array_type = type(scipy.array([]))
+_cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2, 'weighted': 6}
+_cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
+_cpy_linkage_methods = set(_cpy_non_euclid_methods.keys()).union(set(_cpy_euclid_methods.keys()))
+_array_type = type(scipy.array([]))
 
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
@@ -62,7 +63,7 @@ def linkage(y, method='single', metric='euclidean'):
         Performs hierarchical clustering on the condensed distance matrix y.
         y must be a n * (n - 1) sized vector where n is the number of points
         paired in the distance matrix. The behavior of this function is
-        very similar to the MATLAB linkage function.
+        very similar to the MATLAB(R) linkage function.
 
         A (n - 1) * 4 matrix Z is returned. At the i'th iteration, clusters
         with indices Z[i, 0] and Z[i, 1] are combined to form cluster n + i.
@@ -84,7 +85,8 @@ def linkage(y, method='single', metric='euclidean'):
           * method='complete' assigns dist(s,t) = MAX(dist(s[i],t[j]) for
             all points i in cluster s and j in cluster t.
 
-               (also called Farthest Point Algorithm or Voor Hees)
+               (also called Farthest Point Algorithm
+                     or the Voor Hees Algorithm)
 
           * method='average' assigns dist(s,t) =
                sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|)
@@ -130,10 +132,11 @@ def linkage(y, method='single', metric='euclidean'):
             \|    T                  T                T
 
             where q is the newly formed cluster consisting of clusters
-            s and t, u is an unused cluster in the forest, and |*|
-            is the cardinality of its argument. (also called incremental)
+            s and t, u is an unused cluster in the forest, T=|u|+|s|+|t|,
+            and |*| is the cardinality of its argument.
+            (also called incremental)
         """
-    if type(y) != array_type:
+    if type(y) != _array_type:
         raise AttributeError('Incompatible data type. y must be an array.')
     s = y.shape
     if type(method) != types.StringType:
@@ -145,62 +148,124 @@ def linkage(y, method='single', metric='euclidean'):
         d = scipy.ceil(scipy.sqrt(s[0] * 2))
         if d * (d - 1)/2 != s[0]:
             raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
-        if method not in cpy_non_euclid_methods.keys():
+        if method not in _cpy_non_euclid_methods.keys():
             raise AttributeError("Valid methods when the raw observations are omitted are 'single', 'complete', 'weighted', and 'average'.")
         Z = scipy.zeros((d - 1, 4))
         _cluster_wrap.linkage_wrap(y, Z, int(d), \
-                                   int(cpy_non_euclid_methods[method]))
+                                   int(_cpy_non_euclid_methods[method]))
     elif len(s) == 2:
         X = y
         n = s[0]
         m = s[1]
-        if method not in cpy_linkage_methods:
+        if method not in _cpy_linkage_methods:
             raise AttributeError('Invalid method: %s' % method)
-        if method in cpy_non_euclid_methods.keys():
+        if method in _cpy_non_euclid_methods.keys():
             dm = pdist(X, metric)
             Z = scipy.zeros((n - 1, 4))
             _cluster_wrap.linkage_wrap(dm, Z, n, \
-                                       int(cpy_non_euclid_methods[method]))
-        elif method in cpy_euclid_methods.keys():
+                                       int(_cpy_non_euclid_methods[method]))
+        elif method in _cpy_euclid_methods.keys():
             if metric != 'euclidean':
                 raise AttributeError('Method %s requires the distance metric to be euclidean' % s)
             dm = pdist(X, metric)
-#            if method == 'ward':
-#                dm = scipy.sqrt((dm ** 2.0))
-#                dm = (dm ** 2.0) / 2.0
             Z = scipy.zeros((n - 1, 4))
             _cluster_wrap.linkage_euclid_wrap(dm, Z, X, m, n,
-                                              int(cpy_euclid_methods[method]))
+                                              int(_cpy_euclid_methods[method]))
     return Z
 
 class cnode:
+    """
+    A tree node class for representing a cluster. Leaf nodes correspond
+    to original observations, while non-leaf nodes correspond to
+    non-singleton clusters.
+
+    The totree function converts a matrix returned by the linkage
+    function into a tree representation.
+    """
 
     def __init__(self, id, left=None, right=None, dist=0, count=1):
+        if id < 0:
+            raise AttributeError('The id must be non-negative.')
+        if dist < 0:
+            raise AttributeError('The distance must be non-negative.')
+        if (left is None and right is not None) or \
+           (left is not None and right is None):
+            raise AttributeError('Only full or proper binary trees are permitted. This node has one child.')
+        if count < 1:
+            raise AttributeError('A cluster must contain at least one original observation.')
         self.id = id
         self.left = left
         self.right = right
         self.dist = dist
         self.count = count
 
-def totree(Z, return_dict=False):
+    def getId(self):
+        """
+        i = nd.getId()
+        
+        Returns the id number of the node nd. For 0 <= i < n, i
+        corresponds to original observation i. For n <= i < 2n - 1,
+        i corresponds to non-singleton cluster formed at iteration i-n.
+        """
+        return self.id
+
+    def getCount(self):
+        """
+        c = nd.getCount()
+
+        Returns the number of leaf nodes below and including nd. This
+        represents the number of original observations in the cluster
+        represented by the node. If the nd is a leaf, this number is
+        1.
+        """
+        return self.count
+
+    def getLeft(self):
+        """
+        left = nd.getLeft()
+
+        Returns a reference to the left child. If the node is a
+        leaf, None is returned.
+        """
+        return self.left
+
+    def getRight(self):
+        """
+        left = nd.getLeft()
+
+        Returns a reference to the right child. If the node is a
+        leaf, None is returned.
+        """
+        return self.right
+
+    def isLeaf(self):
+        """
+        Returns True if the node is a leaf.
+        """
+        return self.left is None
+
+def totree(Z, rd=False):
     """
-    t = totree(Z)
+    r = totree(Z)
     
-    Converts a hierarchical clustering encoded in the matrix Z (by linkage)
-    into a tree. The root cnode object is returned.
+      Converts a hierarchical clustering encoded in the matrix Z (by linkage)
+      into a tree. The reference r to the root cnode object is returned.
     
-    Each cnode object has a left, right, dist, id, and count attribute. The
-    left and right attributes point to cnode objects that were combined to
-    generate the cluster. If both are None then the cnode object is a
-    leaf node, its count must be 1, and its distance is meaningless but
-    set to 0.0.
+      Each cnode object has a left, right, dist, id, and count attribute. The
+      left and right attributes point to cnode objects that were combined to
+      generate the cluster. If both are None then the cnode object is a
+      leaf node, its count must be 1, and its distance is meaningless but
+      set to 0.
 
-    A reference to the root of the tree is returned.
+    (r, d) = totree(Z, rd=True)
 
-    If return_dict is True the object returned is a tuple (t,Z) where
+      Same as totree(Z) except a tuple is returned where r is the reference
+      to the root cnode and d is a reference to a dictionary mapping
+      cluster ids to cnodes. If a cluster id is less than n, then it
+      corresponds to a singleton cluster (leaf node).      
     """
 
-    if type(Z) is not array_type:
+    if type(Z) is not _array_type:
         raise AttributeError('Z must be a numpy.ndarray')
 
     if Z.dtype != 'double':
@@ -251,7 +316,11 @@ def totree(Z, return_dict=False):
             raise AttributeError('Corrupt matrix Z. The count Z[%d,3] is incorrect.' % i)
         d[n + i] = nd
 
-    return nd
+    if rd:
+        return (nd, d)
+    
+    else:
+        return nd
 
 def squareform(X, force="no", checks=True):
     """ Converts a vectorform distance vector to a squareform distance
@@ -272,7 +341,7 @@ def squareform(X, force="no", checks=True):
       X[i, j] and X[j, i] value equals v[(i + 1) \choose 2 + j] and all
       diagonal elements are zero.
 
-    As with MATLAB, if force is equal to 'tovector' or 'tomatrix',
+    As with MATLAB(R), if force is equal to 'tovector' or 'tomatrix',
     the input will be treated as a distance matrix or distance vector
     respectively.
 
@@ -283,7 +352,7 @@ def squareform(X, force="no", checks=True):
     transformation.
     """
     
-    if type(X) is not array_type:
+    if type(X) is not _array_type:
         raise AttributeError('The parameter passed must be an array.')
 
     if X.dtype != 'double':
@@ -410,9 +479,7 @@ def pdist(X, metric='euclidean', p=2):
         Euclidean distance between the vectors could be computed
         as follows,
 
-            dm = pdist(X, \
-                       (lambda u, v: \
-                        scipy.sqrt(((u-v)*(u-v).T).sum())))
+            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
 
         11. pdist(X, 'test_Y')
 
@@ -426,7 +493,7 @@ def pdist(X, metric='euclidean', p=2):
     # TODO: canberra, bray-curtis, matching, dice, rogers-tanimoto,
     #       russell-rao, sokal-sneath, yule
     
-    if type(X) is not array_type:
+    if type(X) is not _array_type:
         raise AttributeError('The parameter passed must be an array.')
     
     s = X.shape
@@ -584,7 +651,7 @@ def cophenet(*args, **kwargs):
         raise AttributeError('At least one argument must be passed to cophenet.')
     Z = args[0]
 
-    if (type(Z) is not array_type) or Z.dtype != 'double':
+    if (type(Z) is not _array_type) or Z.dtype != 'double':
         raise AttributeError('First argument Z must be an array of doubles.')
     Zs = Z.shape
 
@@ -602,7 +669,7 @@ def cophenet(*args, **kwargs):
         return zz
 
     Y = args[1]
-    if (type(Y) is not array_type) and Y.dtype != 'double':
+    if (type(Y) is not _array_type) and Y.dtype != 'double':
         raise AttributeError('Second argument Y must be an array of doubles.')
 
     Ys = Y.shape
@@ -631,14 +698,22 @@ def cophenet(*args, **kwargs):
 
 def inconsistent(Z, d=2):
     """
-    Calculates the inconsistency coefficient for all ...
+    R = inconsistent(Z, d=2)
+    
+    Calculates statistics on links up to d levels below each non-singleton
+    cluster defined in the (n-1)x4 linkage matrix Z. The behavior of this
+    function is very similar to the MATLAB(R) linkage function.
+
+    R is a (n-1)x4 matrix where the i'th row contains the link
+    statistics for non-singleton cluster i. The link height between a
+    cluster s and its parent t is the difference.
     """
 
 def from_mlab_linkage(Z):
     """
     Z2 = from_mlab_linkage(Z)
     
-    Converts a linkage matrix Z generated by MATLAB to a new linkage
+    Converts a linkage matrix Z generated by MATLAB(R) to a new linkage
     matrix Z2 compatible with this module. The conversion does two
     things:
 
@@ -649,7 +724,7 @@ def from_mlab_linkage(Z):
        cluster i.
     """
 
-    if type(Z) is not array_type:
+    if type(Z) is not _array_type:
         raise AttributeError('First argument Z must be a two-dimensional array.')
     if Z.dtype != 'double':
         raise AttributeError('First argument Z must contain doubles.')
@@ -676,9 +751,9 @@ def to_mlab_linkage(Z):
 
     Converts a linkage matrix Z generated by the linkage function of this
     module to one compatible with matlab. Z2 is the same as Z with the last
-    column removed and the indices converted to 1.N form.
+    column removed and the indices converted to 1..N form.
     """
-    if type(Z) is not array_type:
+    if type(Z) is not _array_type:
         raise AttributeError('First argument Z must be a two-dimensional array.')
     if Z.dtype != 'double':
         raise AttributeError('First argument Z must contain doubles.')
@@ -689,13 +764,120 @@ def to_mlab_linkage(Z):
     
     return scipy.hstack([Z[:,0:2] + 1, Z[:,2]])
 
-# To write...
+def is_linkage_monotonic(Z):
+    """
+      Returns True if the linkage Z is monotonic. The linkage is monotonic
+      if for every cluster s and t joined, the distance between them is
+      no less than the distance between any previously joined clusters.
+    """
+    if not is_valid_linkage(Z):
+        raise AttributeError("The variable Z passed is not a valid linkage.")
+    return (Z[:-1,2]-Z[1:,2] >= 0).any()
 
 def is_valid_linkage(Z):
-    pass
+    """
+    is_valid_linkage(Z, t)
+
+      Returns True if Z is a valid linkage matrix. The variable must
+      be a 2-dimensional double numpy array with n rows and 4 columns.
+      The first two columns must contain indices between 0 and 2n-1. For a
+      given row i, 0 <= Z[i,0] <= i+n-1 and 0 <= Z[i,1] <= i+n-1 (i.e.
+      a cluster cannot join another cluster unless the cluster being joined
+      has been generated.)
+    """
+    valid = type(Z) is array_type
+    valid = valid and Z.dtype == 'double'
+    if valid:
+        s = Z.shape
+    valid = valid and len(s) == 2
+    valid = valid and s[1] == 4
+    if valid:
+        n = s[0]
+        valid = valid and (Z[:,0]-xrange(n-1, n*2-2) <= 0).any()
+        valid = valid and (Z[:,1]-xrange(n-1, n*2-2) <= 0).any()
+    return valid
 
 def is_valid_y(y):
-    pass
+    """
+    is_valid_y(y)
 
-def is_valid_dm(D):
-    pass
+      Returns True if the variable y passed is a valid condensed
+      distance matrix. Condensed distance matrices must be
+      1-dimensional numpy arrays containing doubles. Their length
+      must be a binomial coefficient (n choose 2) for some positive
+      integer n.
+    """
+    valid = type(y) is array_type
+    valid = valid and y.dtype == 'double'
+    if valid:
+        s = y.shape
+    valid = valid and len(s) == 1
+    if valid:
+        d = int(scipy.ceil(scipy.sqrt(s[0] * 2)))
+        valid = valid and (d*(d-1)/2) == s[0]
+    return valid
+
+def is_valid_dm(D, t=0.0):
+    """
+    is_valid_dm(D)
+    
+      Returns True if the variable D passed is a valid distance matrix.
+      Distance matrices must be 2-dimensional numpy arrays containing
+      doubles. They must have a zero-diagnoal, and they must be symmetric.
+
+    is_valid_dm(D, t)
+
+      Returns True if the variable D passed is a valid distance matrix.
+      Small numerical differences in D and D.T and non-zeroness of the
+      diagonal are ignored if they are within the tolerance specified
+      by t.
+    """
+    valid = type(D) is array_type
+    if valid:
+        s = D.shape
+    valid = valid and len(s) == 2
+    valid = valid and s[0] == s[1]
+    if t == 0.0:
+        valid = valid and (D == D.T).all()
+        valid = valid and (D[xrange(0, s[0]), xrange(0, s[0])] == 0).all()
+    else:
+        valid = valid and (D - D.T <= t).all()
+        valid = valid and (D[xrange(0, s[0]), xrange(0, s[0])] <= t).all()
+    return valid
+
+def numobs_linkage(Z):
+    """
+    Returns the number of original observations that correspond to a
+    linkage matrix Z.
+    """
+    if not is_valid_linkage(Z):
+        raise AttributeError('Z is not a valid linkage.')
+    return (Z.shape[0] - 1)
+
+def numobs_dm(D):
+    """
+    Returns the number of original observations that correspond to a
+    square, non-condensed distance matrix D.
+    """
+    if not is_valid_dm(D, tol=Inf):
+        raise AttributeError('Z is not a valid linkage.')
+    return D.shape[0]
+
+def numobs_y(Y):
+    """
+    Returns the number of original observations that correspond to a
+    condensed distance matrix Y.
+    """
+    if not is_valid_y(y):
+        raise AttributeError('Z is not a valid condensed distance matrix.')
+    d = int(scipy.ceil(scipy.sqrt(y.shape[0] * 2)))
+    return d
+
+def Z_y_correspond(Z, Y):
+    """
+    Returns True if a linkage matrix Z and condensed distance matrix
+    Y could possibly correspond to one another. They must have the same
+    number of original observations. This function is useful as a sanity
+    check in algorithms that make use of many linkage and distance matrices.
+    """
+    return numobs_y(Y) == numobs_Z(Z)
