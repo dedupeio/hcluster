@@ -881,3 +881,95 @@ def Z_y_correspond(Z, Y):
     check in algorithms that make use of many linkage and distance matrices.
     """
     return numobs_y(Y) == numobs_Z(Z)
+
+def clusterdata(*args, **kwargs):
+    """
+    T = clusterdata(X, cutoff)
+
+      Clusters the original observations in the n by m data matrix X
+      (n observations in m dimensions) using the euclidean distance
+      metric to calculate distances between original observations,
+      the single linkage algorithm for hierarchical clustering, and
+      the cut-off cluster formation algorithm to transform the linkage
+      into flat clusters. The cutoff threshold is the maximum
+      inconsistent value a node can have for membership in a cluster.
+
+      A one-dimensional numpy array T of length n is returned. T[i]
+      is the cluster group to which original observation i belongs.
+
+    T = clusterdata(X, param1, val1, param2, val2, ...)
+
+      Valid parameters (for paramX) include:
+      
+        'criterion': either 'inconsistent' or 'distance' cluster formation
+                     algorithms. See cluster for descriptions.
+           
+        'linkage':   the linkage method to use. See linkage for
+                     descriptions.
+
+        'distance':  the distance metric for calculating pairwise
+                     distances. See pdist for descriptions and
+                     linkage to verify compatibility with the linkage
+                     method.
+                     
+        'maxclust':  the maximum number of clusters to form. This
+                     parameter is only valid for the distance
+                     cluster formation algorithm.
+
+        'depth':     the maximum depth for the inconsistency
+                     calculation. See inconsistent for more information.
+
+        'cutoff':    the threshold value to use for the cut-off cluster
+                     formation algorithm. This value is ignored when the
+                     'distance' algorithm is used instead.
+    """
+    if len(args) < 2:
+        raise AttributeError('At least 2 arguments are needed.')
+
+    if len(args == 2):
+        X = args[0]
+        cutoff = args[1]
+        Y = pdist(X, 'euclidean')
+        Z = linkage(Y, 'single')
+        T = cluster(Z, 'cutoff', cutoff)
+    else:
+        X = args[0]
+        remArgs = args[1:]
+        validParams = set(['criterion', 'linkage', 'distance', 'maxclust', \
+                           'depth', 'cutoff'])
+        parm = {'criterion': 'inconsistent',
+                'linkage': 'single',
+                'distance': 'euclidean',
+                'maxclust': None,
+                'depth': None,
+                'cutoff': None}
+        for i in xrange(0, len(remArgs), 2):
+            param = validParams[i]
+            val = validParams[i+1]
+            if type(param) is not StringType:
+                raise AttributeError('Expecting string for paramX argument to clusterdata.')
+            if param not in validParams:
+                raise AttributeError('Invalid parameter: %s valid ones are %s' % (param, str(validParams)))
+            parm[param] = val
+        metric = parm['distance']
+        method = parm['linkage']
+        Y = pdist(X, metric)
+        Z = linkage(Y, method)
+        if parm['criterion'] == 'inconsistent':
+            if parm['cutoff'] is None:
+                raise AttributeError("A cut-off threshold must be supplied if inconsistent criterion algorithm is used for cluster formation.")
+            cutoff = parm['cutoff']
+            if parm['depth'] is None:
+                T = cluster(Z, 'cutoff', cutoff)
+            else:
+                depth = parm['depth']
+                T = cluster(Z, 'cutoff', cutoff, 'depth', depth)
+        else:
+            if parm['maxclust'] is None:
+                raise AttributeError("The maximum number of clusters must be supplied if the distance algorithm is used for cluster formation.")
+            maxclust = parm['maxclust']
+            T = cluster(Z, 'maxclust', maxclust)
+    return T
+
+            
+            
