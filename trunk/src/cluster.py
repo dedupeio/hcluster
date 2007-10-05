@@ -38,7 +38,7 @@ MATLAB and MathWorks are registered trademarks of The MathWorks, Inc.
 """
 
 import _cluster_wrap
-import scipy, scipy.stats
+import scipy, scipy.stats, numpy
 import types
 import math
 
@@ -197,7 +197,10 @@ class cnode:
         self.left = left
         self.right = right
         self.dist = dist
-        self.count = count
+        if self.left is None:
+            self.count = count
+        else:
+            self.count = left.count + right.count
 
     def getId(self):
         """
@@ -244,6 +247,57 @@ class cnode:
         """
         return self.left is None
 
+    def preOrder(self, func=(lambda x: x.id)):
+        """
+        vlst = preOrder(func)
+    
+        Performs preorder traversal but without recursive function calls.
+        When a leaf node is first encountered, func is called with the
+        leaf node as the argument, and its result is appended to the list vlst.
+    
+        For example, the statement
+        
+        ids = root.preOrder(lambda x: x.id)
+    
+        returns a list of the node ids corresponding to the leaf nodes of
+        the tree starting at the root defin.
+        """
+    
+        # Do a preorder traversal, caching the result. To avoid having to do
+        # recursion, we'll store the previous index we've visited in a vector.
+        n = self.count
+        
+        curNode = [None] * (2 * n)
+        lvisited = scipy.zeros((2 * n,), dtype='bool')
+        rvisited = scipy.zeros((2 * n,), dtype='bool')
+        curNode[0] = self
+        k = 0
+        preorder = []
+        while k >= 0:
+            nd = curNode[k]
+            ndid = nd.id
+            if nd.isLeaf():
+                preorder.append(func(nd))
+                k = k - 1
+            else:
+                if not lvisited[ndid]:
+                    curNode[k + 1] = nd.left
+                    lvisited[ndid] = True
+                    k = k + 1
+                elif not rvisited[ndid]:
+                    curNode[k + 1] = nd.right
+                    rvisited[ndid] = True
+                    k = k + 1
+                # If we've visited the left and right of this non-leaf
+                # node already, go up in the tree.
+                else:
+                    k = k - 1
+            
+        return preorder
+
+_cnode_bare = cnode(0)
+_cnode_type = type(cnode)
+
 def totree(Z, rd=False):
     """
     r = totree(Z)
@@ -280,22 +334,22 @@ def totree(Z, rd=False):
     # 1.
     n = Z.shape[0] + 1
 
-    # Create an empty dictionary.
-    d = {}
+    # Create a list full of None's to store the node objects
+    d = [None] * (n*2-1)
 
     # If we encounter a cluster being combined more than once, the matrix
     # must be corrupt.
-    if scipy.unique(Z[:, 0:2].reshape((2 * (n - 1),))) != 2 * (n - 1):
+    if len(scipy.unique(Z[:, 0:2].reshape((2 * (n - 1),)))) != 2 * (n - 1):
         raise AttributeError('Corrupt matrix Z. Some clusters are more than once.')
     # If a cluster index is out of bounds, report an error.
-    if (Z[:, 0:2] >= 2 * n - 1).sum() > 0:
+    if (Z[:, 0:2] >= 2 * n - 1).any():
         raise AttributeError('Corrupt matrix Z. Some cluster indices (first and second) are out of bounds.')
-    if (Z[:, 0:2] < 0).sum() > 0:
+    if (Z[:, 0:2] < 0).any():
         raise AttributeError('Corrupt matrix Z. Some cluster indices (first and second columns) are negative.')
-    if Z[:, 2] < 0:
+    if (Z[:, 2] < 0).any():
         raise AttributeError('Corrupt matrix Z. Some distances (third column) are negative.')
 
-    if Z[:, 3] < 0:
+    if (Z[:, 3] < 0).any():
         raise AttributeError('Counts (fourth column) are invalid.')
 
     # Create the nodes corresponding to the n original objects.
@@ -305,22 +359,24 @@ def totree(Z, rd=False):
     nd = None
 
     for i in xrange(0, n - 1):
-        fi = Z[i, 0]
-        fj = Z[i, 1]
-        if fi < i + n:
+        fi = int(Z[i, 0])
+        fj = int(Z[i, 1])
+        if fi > i + n:
             raise AttributeError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 0' % fi)
-        if fi < i + n:
+        if fj > i + n:
             raise AttributeError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 1' % fj)
-        nd = cnode(i + n, d[Z[i, 0]], d[Z[i, 1]])
-        if d[int(Z[i, 0])].count + d[int(Z[i, 1])].count != nd.count:
+        nd = cnode(i + n, d[fi], d[fj],  Z[i, 2])
+        #          ^ id   ^ left ^ right ^ dist
+        if Z[i,3] != nd.count:
             raise AttributeError('Corrupt matrix Z. The count Z[%d,3] is incorrect.' % i)
         d[n + i] = nd
 
     if rd:
         return (nd, d)
-    
     else:
         return nd
+
+    
 
 def squareform(X, force="no", checks=True):
     """ Converts a vectorform distance vector to a squareform distance
@@ -702,15 +758,32 @@ def inconsistent(Z, d=2):
     """
     R = inconsistent(Z, d=2)
     
-    Calculates statistics on links up to d levels below each non-singleton
-    cluster defined in the (n-1)x4 linkage matrix Z. The behavior of this
-    function is very similar to the MATLAB(R) linkage function.
+      Calculates statistics on links up to d levels below each
+      non-singleton cluster defined in the (n-1)x4 linkage matrix Z.
 
-    R is a (n-1)x4 matrix where the i'th row contains the link
-    statistics for non-singleton cluster i. The link height between a
-    cluster s and its parent t is the difference.
+      R is a (n-1)x5 matrix where the i'th row contains the link
+      statistics for the non-singleton cluster i. The link statistics
+      are computed over the link heights for links d levels below the
+      cluster i. Z[i,0] and Z[i,1] are the mean and standard deviation of
+      the link heights, respectively; Z[i,2] is the number of links
+      included in the calculation; and Z[i,3] is the inconsistency
+      coefficient, (Z[i, 2]-R[i,0])/R[i,2].
+
+      The behavior of this function is very similar to the MATLAB(R)
+      inconsistent function.
     """
 
+    Zs = Z.shape
+    if not is_valid_linkage(Z):
+        raise AttributeError('The first argument Z is not a valid linkage.')
+    if (not d == numpy.floor(d)) or d < 0:
+        raise AttributeError('The second argument d must be a nonnegative integer value.')
+    n = Zs[0] + 1
+    R = scipy.zeros((n - 1, 4), dtype='double')
+
+    _cluster_wrap.inconsistent_wrap(Z, R, int(n), int(d));
+    return R
+    
 def from_mlab_linkage(Z):
     """
     Z2 = from_mlab_linkage(Z)
@@ -776,7 +849,7 @@ def is_linkage_monotonic(Z):
         raise AttributeError("The variable Z passed is not a valid linkage.")
     return (Z[:-1,2]-Z[1:,2] >= 0).any()
 
-def is_valid_linkage(Z):
+def is_valid_linkage(Z, warning=False, throw=False):
     """
     is_valid_linkage(Z, t)
 
@@ -787,7 +860,7 @@ def is_valid_linkage(Z):
       a cluster cannot join another cluster unless the cluster being joined
       has been generated.)
     """
-    valid = type(Z) is array_type
+    valid = type(Z) is _array_type
     valid = valid and Z.dtype == 'double'
     if valid:
         s = Z.shape
@@ -795,8 +868,8 @@ def is_valid_linkage(Z):
     valid = valid and s[1] == 4
     if valid:
         n = s[0]
-        valid = valid and (Z[:,0]-xrange(n-1, n*2-2) <= 0).any()
-        valid = valid and (Z[:,1]-xrange(n-1, n*2-2) <= 0).any()
+        valid = valid and (Z[:,0]-xrange(n-1, n*2-1) <= 0).any()
+        valid = valid and (Z[:,1]-xrange(n-1, n*2-1) <= 0).any()
     return valid
 
 def is_valid_y(y):
@@ -809,7 +882,7 @@ def is_valid_y(y):
       must be a binomial coefficient (n choose 2) for some positive
       integer n.
     """
-    valid = type(y) is array_type
+    valid = type(y) is _array_type
     valid = valid and y.dtype == 'double'
     if valid:
         s = y.shape
@@ -834,7 +907,7 @@ def is_valid_dm(D, t=0.0):
       diagonal are ignored if they are within the tolerance specified
       by t.
     """
-    valid = type(D) is array_type
+    valid = type(D) is _array_type
     if valid:
         s = D.shape
     valid = valid and len(s) == 2
@@ -884,6 +957,19 @@ def Z_y_correspond(Z, Y):
     """
     return numobs_y(Y) == numobs_Z(Z)
 
+def cluster(*args, **kwargs):
+    """
+    T = cluster(Z, 'cutoff', c)
+    T = cluster(Z, cutoff=c)
+    T = cluster(Z, 'cutoff', c, 'depth', d)
+    T = cluster(Z, cutoff=c, depth=d)
+
+    T = cluster(..., inconsistency=Q)
+
+    T = cluster(
+    """
+    pass
+
 def clusterdata(*args, **kwargs):
     """
     T = clusterdata(X, cutoff)
@@ -899,7 +985,7 @@ def clusterdata(*args, **kwargs):
       A one-dimensional numpy array T of length n is returned. T[i]
       is the cluster group to which original observation i belongs.
 
-    T = clusterdata(X, param1, val1, param2, val2, ...)
+    T = clusterdata(X, 'param1', val1, 'param2', val2, ...)
 
       Valid parameters (for paramX) include:
       
@@ -924,6 +1010,13 @@ def clusterdata(*args, **kwargs):
         'cutoff':    the threshold value to use for the cut-off cluster
                      formation algorithm. This value is ignored when the
                      'distance' algorithm is used instead.
+
+     T = clusterdata(X, criterion='inconsistent', linkage='single', \
+                     distance='euclidean', maxclust=X, depth=2, )
+
+       Similar to the above but uses Python's more conveinent named
+       argument syntax.
+
     """
     if len(args) < 2:
         raise AttributeError('At least 2 arguments are needed.')
@@ -973,5 +1066,137 @@ def clusterdata(*args, **kwargs):
             T = cluster(Z, 'maxclust', maxclust)
     return T
 
-            
-            
+def dendrogram(*args, **kwargs):
+    """
+    H = dendrogram(root, p=30)
+    H = dendrogram(Z, p=30)
+
+      Plots the hiearchical clustering defined by the linkage Z as a
+      dendrogram. The dendrogram illustrates how each cluster is
+      composed by drawing a U-shaped link between a non-singleton
+      cluster and its descendents. The height of the top of a node
+      is the distance between its descendents. It is also the cophenetic
+      distance between original observations in the two descendent
+      clusters.
+
+      Corresponding to MATLAB behavior, if there are more than p
+      leaf nodes in the data set, some nodes and their descendents
+      are contracted into leaf nodes, leaving exactly p nodes in the
+      plot.
+
+      Returns a reference H to the list of line objects for this
+      dendrogram.
+
+    H = dendrogram(..., 'colorthreshold', t)
+    H = dendrogram(..., colorthreshold=t)
+
+      Colors all the links below a cluster node a unique color if it is
+      the first node among its ancestors to have a distance below the
+      threshold t. (An alternative named-argument syntax can be used.)
+
+    (H,T) = dendrogram(..., 'get_leaves')
+    (H,T) = dendrogram(..., get_leaves=True)
+    
+      Returns a tuple with the handle H and a m-sized int32 array T.
+      The T[i] value is the leaf node index to which original observation
+      with index i appears. This vector has duplicates only if m > p.
+      (An alternative named-argument syntax can be used.)
+
+    ... = dendrogram(..., 'orientation', 'orient')
+    ... = dendrogram(..., orientation='top')
+
+      Plots the dendrogram in a particular direction. The orientation
+      parameter can be any of:
+
+        * 'top': plots the root at the top, and plot descendent
+          links going downwards. (default).
+           
+        * 'bottom': plots the root at the bottom, and plot descendent
+          links going upwards.
+           
+        * 'left': plots the root at the left, and plot descendent
+          links going right.
+
+        * 'right': plots the root at the right, and plot descendent
+          links going left.
+
+    ... = dendrogram(..., 'labels', S)
+    ... = dendrogram(..., labels=None)
+
+        S is a p-sized list (or tuple) passed with the text of the labels
+        to render by the leaf nodes. Passing None causes the index of
+        the original observation to be used. A label only appears if
+        its associated.
+
+        (MLab features end here.)
+        
+    ... = dendrogram(..., leaves_order=None)
+
+        Plots the leaves in the order specified by a vector of
+        original observation indices. If the vector contains duplicates
+        or results in a crossing, an exception will be thrown. Passing
+        None orders leaf nodes based on the order they appear in the
+        pre-order traversal.
+
+    ... = dendrogram(..., count_sort=False)
+
+        When plotting a cluster node and its directly descendent links,
+        the order the two descendent links and their descendents are
+        plotted is determined by the count_sort parameter. Valid values
+        of count_sort are:
+
+          * 'no'/False: nothing is done.
+          
+          * 'ascending'/True: the descendent with the minimum number of
+          original objects in its cluster is plotted first.
+
+          * 'descendent': the descendent with the maximum number of
+          original objects in its cluster is plotted first.
+
+    ... = dendrogram(..., distance_sort='no')
+
+        When plotting a cluster node and its directly descendent links,
+        the order the two descendent links and their descendents are
+        plotted is determined by the distance_sort parameter. Valid
+        values of count_sort are:
+
+          * 'no'/False: nothing is done.
+
+          * 'ascending'/True: the descendent with the minimum distance
+          between its direct descendents is plotted first.
+
+          * 'descending': the descendent with the maximum distance
+          between its direct descendents is plotted first.
+
+    ... = dendrogram(..., show_leaf_counts=False)
+
+        When show_leaf_counts=True, leaf nodes representing k>1
+        original observation are labeled with the number of observations
+        they contain in parenthesis.
+        
+    """
+    nargs = len(args)
+    if nargs == 0:
+        raise AttributeError('At least one argument is needed.')
+    if nargs >= 1:
+        if type(arg[0]) is _array_type:
+            Z = arg[0]
+            if not is_valid_linkage(Z):
+                raise AttributeError('If the first argument is an array, it must be a valid linkage.')
+            root = totree(Z)
+        elif type(arg[0]) is _cnode_type:
+            root = arg[0]
+        else:
+            raise AttributeError('The first argument must be a linkage array Z or a cnode of the root cluster.')
+    restArgs = []
+    ks = kwargs.keys()
+    n = root.count
+    p = min(30, n)
+    if nargs >= 2:
+        if type(arg[0]) is IntType:
+            p = arg[0]
+        elif type(arg[0]) is FloatType:
+            p = int(arg[0])
+        else:
+            raise AttributeError('The second argument must be a number')
+        restArgs = args[2:]

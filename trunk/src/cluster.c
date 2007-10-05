@@ -933,11 +933,6 @@ void get_dendrogram_line_endpoints(const double *Z,
   }
   }**/
 
-/** Stub. **/
-void compute_inconsistency_coefficient(const double *Z, double *Y, int d) {
-  return;
-}
-
 void dist_to_squareform_from_vector(double *M, const double *v, int n) {
   double *it;
   const double *cit;
@@ -1038,6 +1033,7 @@ void cophenetic_discover(double *d, int n, const cnode *current, int *members) {
 
 }
 
+/** need non-recursive implementation. */
 void cophenetic_distances(const double *Z, double *d, int n) {
   int *members = (int*)malloc(n * sizeof(int));
   cnode *nodes, *root;
@@ -1053,19 +1049,207 @@ void cophenetic_distances(const double *Z, double *d, int n) {
   free(nodes);
 }
 
-void inconsistency_calculation(const double *Z, double *d, int n) {
+void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
+  int *curNode, *levelCnt, *left;
+  int ndid, lid, rid, i, j, k, t, ln, rn, ii, jj, nc2;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow;
+  double *levelSum;
   int *members = (int*)malloc(n * sizeof(int));
-  cnode *nodes, *root;
-  /**  fprintf(stderr, "copying into tree.\n");**/
-  cpy_to_tree(Z, &nodes, n);
-  /**  fprintf(stderr, "done copying into tree.\n");**/
-  root = nodes + (n * 2) - 2; /** The root node is the 2*n-1'th node,
-				  or the last node in the array.*/
-  /**  fprintf(stderr, "begin discover.\n");**/
-  cophenetic_discover(d, n, root, members);
-  /**  fprintf(stderr, "end discover.\n");**/
-  free(members);
-  free(nodes);
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  left = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  levelSum = (double*)malloc(n * sizeof(double));
+  levelCnt = (int*)malloc(n * sizeof(int));
+  curNode[k] = (n * 2) - 2;
+  left[k] = 0;
+  nc2 = NCHOOSE2(n);
+  bzero(lvisited, n * sizeof(unsigned char));
+  bzero(rvisited, n * sizeof(unsigned char));
+  bzero(levelSum, n * sizeof(double));
+  bzero(levelCnt, n * sizeof(int));
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * 4);
+    lid = (int)Zrow[0];
+    rid = (int)Zrow[1];
+    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	    ndid, ndid-n, k, lid, rid);
+    if (lid >= n && !lvisited[ndid-n]) {
+      lvisited[ndid-n] = 0xFF;
+      curNode[k+1] = lid;
+      left[k+1] = left[k];
+      k++;
+      continue;
+    }
+    else if (lid < n) {
+      members[left[k]] = lid;
+    }
+    if (rid >= n && !rvisited[ndid-n]) {
+      rvisited[ndid-n] = 0xFF;
+      curNode[k+1] = rid;
+      if (lid >= n) {
+	left[k+1] = left[k] + (int)*(Z + (4 * (lid-n)) + 3);
+      }
+      else {
+	left[k+1] = left[k] + 1;
+      }
+      k++;
+      continue;
+    }
+    else if (rid < n) {
+      members[left[k]] = rid;
+    }
+    /** If it's not a leaf node, and we've visited both children,
+	record the final mean in the table. */
+    if (ndid >= n) {
+      if (lid >= n) {
+	ln = (int)*(Z + (4 * (lid-n)) + 3);
+      }
+      else {
+	ln = 1;
+      }
+      if (rid >= n) {
+	rn = (int)*(Z + (4 * (rid-n)) + 3);
+      }
+      else {
+	rn = 1;
+      }
+
+      for (ii = 0; ii < ln; ii++) {
+	i = *(members + left[k]);
+	for (jj = 0; jj < rn; jj++) {
+	  j = *(members + left[k] + ln);
+	  if (i < j) {
+	    t = nc2 - NCHOOSE2(n - i) + (j - i - 1);
+	  }
+	  if (j < i) {
+	    t = nc2 - NCHOOSE2(n - j) + (i - j - 1);
+	  }
+	  d[t] = Zrow[2];
+	  /**	fprintf(stderr, "i=%d j=%d k=%d d=%5.5f \n", i, j, k, dist);**/
+	}
+      }
+    }
+    k--;
+  }
+}
+
+void inconsistency_calculation(const double *Z, double *R, int n, int d) {
+  int *curNode, *levelCnt;
+  int ndid, lid, rid, i, k;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow;
+  double *Rrow, *levelSum;
+  double tmp, lb;
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  levelSum = (double*)malloc(n * sizeof(double));
+  levelCnt = (int*)malloc(n * sizeof(int));
+  curNode[k] = (n * 2) - 2;
+  bzero(lvisited, n * sizeof(unsigned char));
+  bzero(rvisited, n * sizeof(unsigned char));
+  bzero(levelSum, n * sizeof(double));
+  bzero(levelCnt, n * sizeof(int));
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * 4);
+    lid = (int)Zrow[0];
+    rid = (int)Zrow[1];
+    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	    ndid, ndid-n, k, lid, rid);
+    if (lid >= n && !lvisited[ndid-n]) {
+      lvisited[ndid-n] = 0xFF;
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !rvisited[ndid-n]) {
+      rvisited[ndid-n] = 0xFF;
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    /** If it's not a leaf node, and we've visited both children,
+	record the final mean in the table. */
+    if (ndid >= n) {
+      lb = CPY_MAX(k - d, 0);
+      fprintf(stderr, "  Using range %d to %d\n", CPY_MAX(k - d, 0), k);
+      for (i = k; i >= lb; i--) {
+	levelSum[i] += Zrow[2];
+	levelCnt[i]++;
+      }
+      Rrow = R + (4 * (ndid-n));
+      Rrow[2] = (double)levelCnt[k];
+      Rrow[0] = levelSum[k] / Rrow[2];
+      /** Let the count and sum slots be used for the next newly visited
+          node. */
+      levelSum[k] = 0;
+      levelCnt[k] = 0;
+    }
+    k--;
+  }
+
+  /** Next calculate the standard deviations. */
+  bzero(lvisited, n*sizeof(char));
+  bzero(rvisited, n*sizeof(char));
+  k = 0;
+  curNode[k] = (n * 2) - 2;
+  while (k >= 0) {
+    ndid = curNode[k];
+    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	    ndid, ndid-n, k, lid, rid);
+    Zrow = Z + ((ndid-n) * 4);
+    lid = (int)Zrow[0];
+    if (lid >= n && !lvisited[ndid-n]) {
+      lvisited[ndid-n] = 0xFF;
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    rid = (int)Zrow[1];
+    if (rid >= n && !rvisited[ndid-n]) {
+      rvisited[ndid-n] = 0xFF;
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    /** If it's not a leaf node, and we've visited both children,
+	record the final mean in the table. */
+    if (lid >= n || rid >= n) {
+      Rrow = R + (4 * (ndid-n));
+      lb = CPY_MAX(k - d, 0);
+      for (i = k; i >= lb; i--) {
+	tmp = (Zrow[2] - Rrow[0]);
+	levelSum[i] += (tmp * tmp);
+      }
+      Rrow[1] = sqrt(levelSum[k] / Rrow[2]);
+      /** Let the count and sum slots be used for the next newly visited
+          node. */
+      levelSum[k] = 0.0;
+      levelCnt[k] = 0;
+    }
+    k--;
+  }
+  for (k = 0; k < n - 1; k++) {
+    Rrow = R + (4 * k);
+    if (Rrow[1] != 0.0) {
+      Rrow[3] = (*(Z + (4 * k) + 2) - Rrow[0])/Rrow[1];
+    }
+    else {
+      Rrow[3] = 0.0;
+    }
+  }
+  
+  free(curNode);
+  free(levelSum);
+  free(levelCnt);
+  free(lvisited);
+  free(rvisited);
 }
 
 void calculate_cluster_sizes(const double *Z, double *CS, int n) {

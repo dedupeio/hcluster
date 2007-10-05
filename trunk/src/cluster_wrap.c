@@ -130,6 +130,19 @@ extern PyObject *calculate_cluster_sizes_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *inconsistent_wrap(PyObject *self, PyObject *args) {
+  int n, d;
+  PyArrayObject *Z, *R;
+  if (!PyArg_ParseTuple(args, "O!O!ii",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &R,
+			&n, &d)) {
+    return 0;
+  }
+  inconsistency_calculation((const double*)Z->data, (double*)R->data, n, d);
+  return Py_BuildValue("d", 0.0);
+}
+
 extern PyObject *cophenetic_distances_wrap(PyObject *self, PyObject *args) {
   int n;
   PyArrayObject *Z, *d;
@@ -455,6 +468,7 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 static PyMethodDef _clusterWrapMethods[] = {
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
+  {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
   {"calculate_cluster_sizes_wrap", calculate_cluster_sizes_wrap, METH_VARARGS},
   {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
   {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
