@@ -1158,8 +1158,8 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     Zrow = Z + ((ndid-n) * 4);
     lid = (int)Zrow[0];
     rid = (int)Zrow[1];
-    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	    ndid, ndid-n, k, lid, rid);
+    /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	   ndid, ndid-n, k, lid, rid);**/
     if (lid >= n && !lvisited[ndid-n]) {
       lvisited[ndid-n] = 0xFF;
       curNode[k+1] = lid;
@@ -1176,7 +1176,7 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
 	record the final mean in the table. */
     if (ndid >= n) {
       lb = CPY_MAX(k - d + 1, 0);
-      fprintf(stderr, "  Using range %d to %d\n", CPY_MAX(k - d, 0), k);
+      /**      fprintf(stderr, "  Using range %d to %d\n", CPY_MAX(k - d, 0), k);**/
       for (i = k; i >= lb; i--) {
 	levelSum[i] += Zrow[2];
 	levelCnt[i]++;
@@ -1199,8 +1199,8 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
   curNode[k] = (n * 2) - 2;
   while (k >= 0) {
     ndid = curNode[k];
-    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	    ndid, ndid-n, k, lid, rid);
+    /**    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	   ndid, ndid-n, k, lid, rid);**/
     Zrow = Z + ((ndid-n) * 4);
     lid = (int)Zrow[0];
     if (lid >= n && !lvisited[ndid-n]) {
