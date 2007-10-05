@@ -116,6 +116,7 @@ void dist_weighted(cinfo *info, int mini, int minj, int np, int n);
 void linkage(double *dm, double *Z, double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);
 
 void cophenetic_distances(const double *Z, double *d, int n);
+void cophenetic_distances_nonrecursive(const double *Z, double *d, int n);
 void cpy_to_tree(const double *Z, cnode **tnodes, int n);
 void calculate_cluster_sizes(const double *Z, double *CS, int n);
 
