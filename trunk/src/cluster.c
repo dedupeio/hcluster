@@ -1175,7 +1175,7 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     /** If it's not a leaf node, and we've visited both children,
 	record the final mean in the table. */
     if (ndid >= n) {
-      lb = CPY_MAX(k - d, 0);
+      lb = CPY_MAX(k - d + 1, 0);
       fprintf(stderr, "  Using range %d to %d\n", CPY_MAX(k - d, 0), k);
       for (i = k; i >= lb; i--) {
 	levelSum[i] += Zrow[2];
@@ -1218,14 +1218,20 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     }
     /** If it's not a leaf node, and we've visited both children,
 	record the final mean in the table. */
-    if (lid >= n || rid >= n) {
+    if (ndid >= n) {
       Rrow = R + (4 * (ndid-n));
-      lb = CPY_MAX(k - d, 0);
+      lb = CPY_MAX(k - d + 1, 0);
       for (i = k; i >= lb; i--) {
-	tmp = (Zrow[2] - Rrow[0]);
-	levelSum[i] += (tmp * tmp);
+	tmp = (Zrow[2] - *(R + ((curNode[i]-n) * 4)));
+	levelSum[i] += tmp * tmp;
       }
-      Rrow[1] = sqrt(levelSum[k] / Rrow[2]);
+      /**      Rrow[1] = sqrt(levelSum[k] * levelSum[k] / Rrow[2]);**/
+      if (Rrow[2] < 2.0) {
+	Rrow[1] = 0.0;
+      }
+      else {
+	Rrow[1] = sqrt(levelSum[k] / (Rrow[2]-1));
+      }
       /** Let the count and sum slots be used for the next newly visited
           node. */
       levelSum[k] = 0.0;
