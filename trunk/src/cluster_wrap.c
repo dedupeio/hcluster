@@ -152,7 +152,7 @@ extern PyObject *cophenetic_distances_wrap(PyObject *self, PyObject *args) {
 			&n)) {
     return 0;
   }
-  cophenetic_distances((const double*)Z->data, (double*)d->data, n);
+  cophenetic_distances_nonrecursive((const double*)Z->data, (double*)d->data, n);
   return Py_BuildValue("d", 0.0);
 }
 

@@ -1050,33 +1050,43 @@ void cophenetic_distances(const double *Z, double *d, int n) {
 }
 
 void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
-  int *curNode, *levelCnt, *left;
+  int *curNode, *left;
   int ndid, lid, rid, i, j, k, t, ln, rn, ii, jj, nc2;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
-  double *levelSum;
   int *members = (int*)malloc(n * sizeof(int));
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   left = (int*)malloc(n * sizeof(int));
   lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
   rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  levelSum = (double*)malloc(n * sizeof(double));
-  levelCnt = (int*)malloc(n * sizeof(int));
   curNode[k] = (n * 2) - 2;
   left[k] = 0;
   nc2 = NCHOOSE2(n);
   bzero(lvisited, n * sizeof(unsigned char));
   bzero(rvisited, n * sizeof(unsigned char));
-  bzero(levelSum, n * sizeof(double));
-  bzero(levelCnt, n * sizeof(int));
+
   while (k >= 0) {
     ndid = curNode[k];
     Zrow = Z + ((ndid-n) * 4);
     lid = (int)Zrow[0];
     rid = (int)Zrow[1];
-    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	    ndid, ndid-n, k, lid, rid);
+    if (lid >= n) {
+      ln = (int)*(Z + (4 * (lid-n)) + 3);
+    }
+    else {
+      ln = 1;
+    }
+    if (rid >= n) {
+      rn = (int)*(Z + (4 * (rid-n)) + 3);
+    }
+    else {
+      rn = 1;
+    }
+    
+    /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	   ndid, ndid-n, k, lid, rid);**/
+
     if (lid >= n && !lvisited[ndid-n]) {
       lvisited[ndid-n] = 0xFF;
       curNode[k+1] = lid;
@@ -1090,38 +1100,21 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
     if (rid >= n && !rvisited[ndid-n]) {
       rvisited[ndid-n] = 0xFF;
       curNode[k+1] = rid;
-      if (lid >= n) {
-	left[k+1] = left[k] + (int)*(Z + (4 * (lid-n)) + 3);
-      }
-      else {
-	left[k+1] = left[k] + 1;
-      }
+      left[k+1] = left[k] + ln;
       k++;
       continue;
     }
     else if (rid < n) {
-      members[left[k]] = rid;
+      members[left[k]+ln] = rid;
     }
+
     /** If it's not a leaf node, and we've visited both children,
 	record the final mean in the table. */
     if (ndid >= n) {
-      if (lid >= n) {
-	ln = (int)*(Z + (4 * (lid-n)) + 3);
-      }
-      else {
-	ln = 1;
-      }
-      if (rid >= n) {
-	rn = (int)*(Z + (4 * (rid-n)) + 3);
-      }
-      else {
-	rn = 1;
-      }
-
       for (ii = 0; ii < ln; ii++) {
-	i = *(members + left[k]);
+	i = *(members + left[k] + ii);
 	for (jj = 0; jj < rn; jj++) {
-	  j = *(members + left[k] + ln);
+	  j = *(members + left[k] + ln + jj);
 	  if (i < j) {
 	    t = nc2 - NCHOOSE2(n - i) + (j - i - 1);
 	  }
@@ -1135,6 +1128,11 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
     }
     k--;
   }
+  free(members);
+  free(left);
+  free(curNode);
+  free(lvisited);
+  free(rvisited);
 }
 
 void inconsistency_calculation(const double *Z, double *R, int n, int d) {
