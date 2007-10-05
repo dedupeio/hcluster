@@ -41,6 +41,21 @@
 
 #define CPY_MAX(_x, _y) ((_x > _y) ? (_x) : (_y))
 #define CPY_MIN(_x, _y) ((_x < _y) ? (_x) : (_y))
+/** The number of link stats (for the inconsistency computation) for each
+    cluster. */
+
+#define CPY_NIS 4
+#define CPY_INS_MEAN 0
+#define CPY_INS_STD 1
+#define CPY_INS_N 2
+#define CPY_INS_INS 3
+
+/** The number of linkage stats for each cluster. */
+#define CPY_LIS 4
+#define CPY_LIN_LEFT 0
+#define CPY_LIN_RIGHT 1
+#define CPY_LIN_DIST 2
+#define CPY_LIN_CNT 3
 
 
 #include <malloc.h>
@@ -778,10 +793,10 @@ void linkage(double *dm, double *Z, double *X,
     node->d = min;
     node->id = nid;
 
-    *(Z + (k * 4)) = node->left->id;
-    *(Z + (k * 4) + 1) = node->right->id;
-    *(Z + (k * 4) + 2) = min;
-    *(Z + (k * 4) + 3) = node->n;
+    *(Z + (k * CPY_LIS) + CPY_LIN_LEFT) = node->left->id;
+    *(Z + (k * CPY_LIS) + CPY_LIN_RIGHT) = node->right->id;
+    *(Z + (k * CPY_LIS) + CPY_LIN_DIST) = min;
+    *(Z + (k * CPY_LIS) + CPY_LIN_CNT) = node->n;
 
     /**    fprintf(stderr,
 	    "[lid=%d, rid=%d, llid=%d, rrid=%d m=%5.8f]",
@@ -976,12 +991,12 @@ void cpy_to_tree(const double *Z, cnode **tnodes, int n) {
   }
   for (i = 0; i < n - 1; i++) {
     node = nodes + i + n;
-    row = Z + (i * 4);
+    row = Z + (i * CPY_LIS);
     node->id = i + n;
-    node->left = nodes + (int)row[0];
-    node->right = nodes + (int)row[1];
-    node->d = row[2];
-    node->n = (int)row[3];
+    node->left = nodes + (int)row[CPY_LIN_LEFT];
+    node->right = nodes + (int)row[CPY_LIN_RIGHT];
+    node->d = row[CPY_LIN_DIST];
+    node->n = (int)row[CPY_LIN_CNT];
     /**    fprintf(stderr, "l: %d r: %d d: %5.5f n: %d\n", (int)row[0],
 	   (int)row[1], row[2], (int)row[3]);**/
   }
@@ -1068,17 +1083,17 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
 
   while (k >= 0) {
     ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * 4);
-    lid = (int)Zrow[0];
-    rid = (int)Zrow[1];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
     if (lid >= n) {
-      ln = (int)*(Z + (4 * (lid-n)) + 3);
+      ln = (int)*(Z + (CPY_LIS * (lid-n)) + CPY_LIN_CNT);
     }
     else {
       ln = 1;
     }
     if (rid >= n) {
-      rn = (int)*(Z + (4 * (rid-n)) + 3);
+      rn = (int)*(Z + (CPY_LIS * (rid-n)) + CPY_LIN_CNT);
     }
     else {
       rn = 1;
@@ -1121,7 +1136,7 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
 	  if (j < i) {
 	    t = nc2 - NCHOOSE2(n - j) + (i - j - 1);
 	  }
-	  d[t] = Zrow[2];
+	  d[t] = Zrow[CPY_LIN_DIST];
 	  /**	fprintf(stderr, "i=%d j=%d k=%d d=%5.5f \n", i, j, k, dist);**/
 	}
       }
@@ -1155,9 +1170,9 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
   bzero(levelCnt, n * sizeof(int));
   while (k >= 0) {
     ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * 4);
-    lid = (int)Zrow[0];
-    rid = (int)Zrow[1];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
     /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
 	   ndid, ndid-n, k, lid, rid);**/
     if (lid >= n && !lvisited[ndid-n]) {
@@ -1181,9 +1196,9 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
 	levelSum[i] += Zrow[2];
 	levelCnt[i]++;
       }
-      Rrow = R + (4 * (ndid-n));
-      Rrow[2] = (double)levelCnt[k];
-      Rrow[0] = levelSum[k] / Rrow[2];
+      Rrow = R + (CPY_NIS * (ndid-n));
+      Rrow[CPY_INS_N] = (double)levelCnt[k];
+      Rrow[CPY_INS_MEAN] = levelSum[k] / Rrow[CPY_INS_N];
       /** Let the count and sum slots be used for the next newly visited
           node. */
       levelSum[k] = 0;
@@ -1201,15 +1216,15 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     ndid = curNode[k];
     /**    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
 	   ndid, ndid-n, k, lid, rid);**/
-    Zrow = Z + ((ndid-n) * 4);
-    lid = (int)Zrow[0];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
     if (lid >= n && !lvisited[ndid-n]) {
       lvisited[ndid-n] = 0xFF;
       curNode[k+1] = lid;
       k++;
       continue;
     }
-    rid = (int)Zrow[1];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
     if (rid >= n && !rvisited[ndid-n]) {
       rvisited[ndid-n] = 0xFF;
       curNode[k+1] = rid;
@@ -1219,18 +1234,18 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     /** If it's not a leaf node, and we've visited both children,
 	record the final mean in the table. */
     if (ndid >= n) {
-      Rrow = R + (4 * (ndid-n));
+      Rrow = R + (CPY_NIS * (ndid-n));
       lb = CPY_MAX(k - d + 1, 0);
       for (i = k; i >= lb; i--) {
-	tmp = (Zrow[2] - *(R + ((curNode[i]-n) * 4)));
+	tmp = (Zrow[CPY_LIN_DIST] - *(R + ((curNode[i]-n) * CPY_NIS)));
 	levelSum[i] += tmp * tmp;
       }
       /**      Rrow[1] = sqrt(levelSum[k] * levelSum[k] / Rrow[2]);**/
-      if (Rrow[2] < 2.0) {
-	Rrow[1] = 0.0;
+      if (Rrow[CPY_INS_N] < 2.0) {
+	Rrow[CPY_INS_STD] = 0.0;
       }
       else {
-	Rrow[1] = sqrt(levelSum[k] / (Rrow[2]-1));
+	Rrow[CPY_INS_STD] = sqrt(levelSum[k] / (Rrow[CPY_INS_N]-1));
       }
       /** Let the count and sum slots be used for the next newly visited
           node. */
@@ -1240,12 +1255,13 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     k--;
   }
   for (k = 0; k < n - 1; k++) {
-    Rrow = R + (4 * k);
-    if (Rrow[1] != 0.0) {
-      Rrow[3] = (*(Z + (4 * k) + 2) - Rrow[0])/Rrow[1];
+    Rrow = R + (CPY_NIS * k);
+    if (Rrow[CPY_INS_STD] != 0.0) {
+      Rrow[CPY_INS_INS] = (*(Z + (CPY_LIS * k) + CPY_LIN_DIST)
+			   - Rrow[CPY_INS_MEAN])/Rrow[CPY_INS_STD];
     }
     else {
-      Rrow[3] = 0.0;
+      Rrow[CPY_INS_INS] = 0.0;
     }
   }
   
@@ -1260,9 +1276,9 @@ void calculate_cluster_sizes(const double *Z, double *CS, int n) {
   int i, j, k;
   const double *row;
   for (k = 0; k < n - 1; k++) {
-    row = Z + (k * 3);
-    i = (int)row[0];
-    j = (int)row[1];
+    row = Z + (k * CPY_LIS);
+    i = (int)row[CPY_LIN_LEFT];
+    j = (int)row[CPY_LIN_RIGHT];
     /** If the left node is a non-singleton, add its count. */
     if (i >= n) {
       CS[k] = CS[i - n];
