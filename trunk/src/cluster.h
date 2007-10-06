@@ -120,4 +120,7 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n);
 void cpy_to_tree(const double *Z, cnode **tnodes, int n);
 void calculate_cluster_sizes(const double *Z, double *CS, int n);
 
+void form_member_list(const double *Z, int *members, int n);
+void form_flat_clusters_from_ic(const double *Z, const double *R,
+				int *T, double cutoff, int n);
 #endif

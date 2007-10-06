@@ -1305,12 +1305,11 @@ void calculate_cluster_sizes(const double *Z, double *CS, int n) {
 }
 
 /** Returns an array of original observation indices (pre-order traversal). */
-void form_member_list(const double *Z, int **member_list, int n) {
+void form_member_list(const double *Z, int *members, int n) {
   int *curNode, *left;
   int ndid, lid, rid, k, ln, rn, nc2;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
-  int *members = (int*)malloc(n * sizeof(int));
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   left = (int*)malloc(n * sizeof(int));
@@ -1365,7 +1364,6 @@ void form_member_list(const double *Z, int **member_list, int n) {
     }
     k--;
   }
-  *member_list = members;
   free(left);
   free(curNode);
   free(lvisited);
@@ -1373,10 +1371,9 @@ void form_member_list(const double *Z, int **member_list, int n) {
 }
 
 /** form flat cluster from inconsistency coefficient.
-    (assume monotonicity) */
+    (don't need to assume monotonicity) */
 void form_flat_clusters_from_ic(const double *Z, const double *R,
-				int *T,
-				double cutoff, int n) {
+				int *T, double cutoff, int n) {
   int *curNode;
   int ndid, lid, rid, k, nc2, ms, nc;
   unsigned char *lvisited, *rvisited;

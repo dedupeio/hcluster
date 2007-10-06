@@ -130,6 +130,38 @@ extern PyObject *calculate_cluster_sizes_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *prelist_wrap(PyObject *self, PyObject *args) {
+  int n;
+  PyArrayObject *Z, *ML;
+  if (!PyArg_ParseTuple(args, "O!O!i",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &ML,
+			&n)) {
+    return 0;
+  }
+  form_member_list((const double *)Z->data, (int *)ML->data, n);
+  return Py_BuildValue("d", 0.0);
+}
+
+
+extern PyObject *cluster_in_wrap(PyObject *self, PyObject *args) {
+  int n;
+  double cutoff;
+  PyArrayObject *Z, *ML;
+  if (!PyArg_ParseTuple(args, "O!O!O!di",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &R,
+			&PyArray_Type, &T,
+			&cutoff,
+			&n)) {
+    return 0;
+  }
+  form_flat_clusters_from_ic((const double *)Z->data, (const double *)R->data,
+			     (int *)T->data, cutoff, n);
+
+  return Py_BuildValue("d", 0.0);
+}
+
 extern PyObject *inconsistent_wrap(PyObject *self, PyObject *args) {
   int n, d;
   PyArrayObject *Z, *R;
@@ -469,6 +501,7 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
   {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
+  {"prelist_wrap", prelist_wrap, METH_VARARGS},
   {"calculate_cluster_sizes_wrap", calculate_cluster_sizes_wrap, METH_VARARGS},
   {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
   {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
