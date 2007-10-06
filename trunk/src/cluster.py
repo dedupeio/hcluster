@@ -971,7 +971,10 @@ def cluster(*args, **kwargs):
 
     T = cluster(
     """
-    pass
+    Z = args[0]
+
+def cluster_cutoff(Z, R, cutoff):
+    
 
 def clusterdata(*args, **kwargs):
     """

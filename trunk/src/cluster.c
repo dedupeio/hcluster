@@ -45,6 +45,9 @@
     cluster. */
 
 #define CPY_NIS 4
+
+/** The column offsets for the different link stats for the inconsistency
+    computation. */
 #define CPY_INS_MEAN 0
 #define CPY_INS_STD 1
 #define CPY_INS_N 2
@@ -52,6 +55,8 @@
 
 /** The number of linkage stats for each cluster. */
 #define CPY_LIS 4
+
+/** The column offsets for the different link stats for the linkage matrix. */
 #define CPY_LIN_LEFT 0
 #define CPY_LIN_RIGHT 1
 #define CPY_LIN_DIST 2
@@ -1297,4 +1302,181 @@ void calculate_cluster_sizes(const double *Z, double *CS, int n) {
     }
     /**    fprintf(stderr, "i=%d, j=%d, CS[%d]=%d\n", i, j, n+k, (int)CS[k]);**/
   }
+}
+
+/** Returns an array of original observation indices (pre-order traversal). */
+void form_member_list(const double *Z, int **member_list, int n) {
+  int *curNode, *left;
+  int ndid, lid, rid, k, ln, rn, nc2;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow;
+  int *members = (int*)malloc(n * sizeof(int));
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  left = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  curNode[k] = (n * 2) - 2;
+  left[k] = 0;
+  nc2 = NCHOOSE2(n);
+  bzero(lvisited, n * sizeof(unsigned char));
+  bzero(rvisited, n * sizeof(unsigned char));
+
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    if (lid >= n) {
+      ln = (int)*(Z + (CPY_LIS * (lid-n)) + CPY_LIN_CNT);
+    }
+    else {
+      ln = 1;
+    }
+    if (rid >= n) {
+      rn = (int)*(Z + (CPY_LIS * (rid-n)) + CPY_LIN_CNT);
+    }
+    else {
+      rn = 1;
+    }
+    
+    /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	   ndid, ndid-n, k, lid, rid);**/
+
+    if (lid >= n && !lvisited[ndid-n]) {
+      lvisited[ndid-n] = 0xFF;
+      curNode[k+1] = lid;
+      left[k+1] = left[k];
+      k++;
+      continue;
+    }
+    else if (lid < n) {
+      members[left[k]] = lid;
+    }
+    if (rid >= n && !rvisited[ndid-n]) {
+      rvisited[ndid-n] = 0xFF;
+      curNode[k+1] = rid;
+      left[k+1] = left[k] + ln;
+      k++;
+      continue;
+    }
+    else if (rid < n) {
+      members[left[k]+ln] = rid;
+    }
+    k--;
+  }
+  *member_list = members;
+  free(left);
+  free(curNode);
+  free(lvisited);
+  free(rvisited);
+}
+
+/** form flat cluster from inconsistency coefficient.
+    (assume monotonicity) */
+void form_flat_clusters_from_ic(const double *Z, const double *R,
+				int *T,
+				double cutoff, int n) {
+  int *curNode;
+  int ndid, lid, rid, k, nc2, ms, nc;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow, *Rrow;
+  double *maxsinconsist;
+  double maxinconsist;
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  maxsinconsist = (double*)malloc(n * sizeof(double));
+  curNode[k] = (n * 2) - 2;
+  nc2 = NCHOOSE2(n);
+  bzero(lvisited, n * sizeof(unsigned char));
+  bzero(rvisited, n * sizeof(unsigned char));
+  /** number of clusters formed so far. */
+  nc = 0;
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    Rrow = R + ((ndid-n) * CPY_NIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    maxinconsist = Rrow[CPY_INS_INS];
+    if (lid >= n && !lvisited[ndid-n]) {
+      lvisited[ndid-n] = 0xFF;
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !rvisited[ndid-n]) {
+      rvisited[ndid-n] = 0xFF;
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    if (ndid >= n) {
+      if (lid >= n) {
+	maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[lid-n]);
+      }
+      if (rid >= n) {
+	maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[rid-n]);
+      }
+      maxsinconsist[ndid-n] = maxinconsist;
+    }
+    k--;
+  }
+  curNode[k] = (n * 2) - 2;
+  bzero(lvisited, n * sizeof(unsigned char));
+  bzero(rvisited, n * sizeof(unsigned char));
+  ms = -1;
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    Rrow = R + ((ndid-n) * CPY_NIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    maxinconsist = maxsinconsist[ndid-n];
+    if (ms != -1 && maxinconsist < cutoff) {
+      ms = k;
+      nc++;
+    }
+    if (lid >= n && !lvisited[ndid-n]) {
+      lvisited[ndid-n] = 0xFF;
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !rvisited[ndid-n]) {
+      rvisited[ndid-n] = 0xFF;
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    if (ndid >= n) {
+      if (lid < n) {
+	if (ms == -1) {
+	  T[lid] = nc++;
+	}
+	else {
+	  T[lid] = nc;
+	}
+      }
+      if (rid < n) {
+	if (ms == -1) {
+	  T[rid] = nc++;
+	}
+	else {
+	  T[lid] = nc;
+	}
+      }
+      if (ms == k) {
+	ms = -1;
+      }
+    }
+    k--;
+  }
+
+  free(maxsinconsist);
+  free(curNode);
+  free(lvisited);
+  free(rvisited);  
 }
