@@ -1051,10 +1051,10 @@ def cluster(*args, **kwargs):
     if criterion=='inconsistent':
         R = inconsistent(Z, depth)
         T = scipy.zeros((n,), dtype='int32')
-        _cluster_wrap.cluster_in_wrap(Z, R, T, float(cutoff), int(n))
+        _cluster_wrap.cluster_in_wrap(Z, R, T, float(cutoff), int(n), 1)
     elif criterion=='distance':
         T = scipy.zeros((n,), dtype='int32')
-        _cluster_wrap.cluster_dist_wrap(Z, R, T, float(cutoff), int(n))
+        _cluster_wrap.cluster_in_wrap(Z, R, T, float(cutoff), int(n), 0)
     elif criterion=='distance':
         T = scipy.zeros((n,), dtype='int32')
         _cluster_wrap.cluster_maxclust_wrap(Z, R, T, float(maxclust), int(n))
