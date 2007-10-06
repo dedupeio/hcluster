@@ -145,19 +145,19 @@ extern PyObject *prelist_wrap(PyObject *self, PyObject *args) {
 
 
 extern PyObject *cluster_in_wrap(PyObject *self, PyObject *args) {
-  int n;
+  int n, method;
   double cutoff;
   PyArrayObject *Z, *R, *T;
-  if (!PyArg_ParseTuple(args, "O!O!O!di",
+  if (!PyArg_ParseTuple(args, "O!O!O!dii",
 			&PyArray_Type, &Z,
 			&PyArray_Type, &R,
 			&PyArray_Type, &T,
 			&cutoff,
-			&n)) {
+			&n, &method)) {
     return 0;
   }
   form_flat_clusters_from_ic((const double *)Z->data, (const double *)R->data,
-			     (int *)T->data, cutoff, n);
+			     (int *)T->data, cutoff, n, method);
 
   return Py_BuildValue("d", 0.0);
 }

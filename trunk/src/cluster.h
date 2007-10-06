@@ -46,6 +46,10 @@
 #define CPY_LINKAGE_WARD 5
 #define CPY_LINKAGE_WEIGHTED 6
 
+#define CPY_CRIT_DISTANCE 0
+#define CPY_CRIT_INCONSISTENT 1
+#define CPY_CRIT_MAXCLUST 2
+
 typedef struct cnode {
   int n;
   int id;
@@ -122,5 +126,5 @@ void calculate_cluster_sizes(const double *Z, double *CS, int n);
 
 void form_member_list(const double *Z, int *members, int n);
 void form_flat_clusters_from_ic(const double *Z, const double *R,
-				int *T, double cutoff, int n);
+				int *T, double cutoff, int n, int method);
 #endif

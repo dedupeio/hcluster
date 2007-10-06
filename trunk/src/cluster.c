@@ -1373,13 +1373,15 @@ void form_member_list(const double *Z, int *members, int n) {
 /** form flat cluster from inconsistency coefficient.
     (don't need to assume monotonicity) */
 void form_flat_clusters_from_ic(const double *Z, const double *R,
-				int *T, double cutoff, int n) {
+				int *T, double cutoff, int n, int method) {
   int *curNode;
   int ndid, lid, rid, k, nc2, ms, nc;
   unsigned char *lvisited, *rvisited;
   const double *Zrow, *Rrow;
   double *maxsinconsist;
   double maxinconsist;
+  const double * const *crit;
+  int crit_off;
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
@@ -1391,13 +1393,30 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
   bzero(rvisited, n * sizeof(unsigned char));
   /** number of clusters formed so far. */
   nc = 0;
+
+  /** I want to avoid an
+        if (criterion=='distance') {...} else if (criterion=='inconsistent'){...}
+	in the loop. So, I will store a pointer to the Zrow or Rrow where
+        the metric for either respective criterion is stored. I will also
+        store an offset. **/
+  
+  /** if method is distance. */
+  if (method == CPY_CRIT_DISTANCE) {
+    crit = &Zrow;
+    crit_off = CPY_LIN_DIST;
+  }
+  else if (method == CPY_CRIT_INCONSISTENT) {
+    crit = &Rrow;
+    crit_off = CPY_INS_INS;
+  }
   while (k >= 0) {
     ndid = curNode[k];
     Zrow = Z + ((ndid-n) * CPY_LIS);
     Rrow = R + ((ndid-n) * CPY_NIS);
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
-    maxinconsist = Rrow[CPY_INS_INS];
+    /**    maxinconsist = Rrow[CPY_INS_INS];**/
+    maxinconsist = *(*crit + crit_off);
     if (lid >= n && !lvisited[ndid-n]) {
       lvisited[ndid-n] = 0xFF;
       curNode[k+1] = lid;
@@ -1462,7 +1481,7 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
 	  T[rid] = nc++;
 	}
 	else {
-	  T[lid] = nc;
+	  T[rid] = nc;
 	}
       }
       if (ms == k) {
