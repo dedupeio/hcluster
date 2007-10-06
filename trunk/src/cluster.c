@@ -1396,9 +1396,9 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
 
   /** I want to avoid an
         if (criterion=='distance') {...} else if (criterion=='inconsistent'){...}
-	in the loop. So, I will store a pointer to the Zrow or Rrow where
-        the metric for either respective criterion is stored. I will also
-        store an offset. **/
+      in the loop. So, I will store a pointer to the Zrow or Rrow pointer
+      depending on the criterion as well as an offset to get to the
+      number. **/
   
   /** if method is distance. */
   if (method == CPY_CRIT_DISTANCE) {
@@ -1451,7 +1451,7 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
     maxinconsist = maxsinconsist[ndid-n];
-    if (ms != -1 && maxinconsist < cutoff) {
+    if (ms == -1 && maxinconsist < cutoff) {
       ms = k;
       nc++;
     }
