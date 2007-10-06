@@ -964,7 +964,7 @@ def Z_y_correspond(Z, Y):
     """
     return numobs_y(Y) == numobs_Z(Z)
 
-def cluster(*args, **varargs):
+def cluster(*args, **kwargs):
     """
     T = cluster(Z, c)
     T = cluster(Z, c, d)
@@ -995,7 +995,7 @@ def cluster(*args, **varargs):
       clusters are formed.
     """
     nargs = len(args)
-    kargs = varargs.keys();
+    kargs = kwargs.keys();
     if nargs < 1:
         raise AttributeError('Invalid parameter specification.')
     if nargs >= 1:
@@ -1142,7 +1142,7 @@ def clusterdata(*args, **kwargs):
            and not (criterion == 'distance' or criterion == 'inconsistent'
                     or criterion == 'default'):
             raise AttributeError('Parameter cutoff cannot be specified when criterion=%s' % str(criterion))
-        if 'cutoff' in kargs and criterion not in kargs:
+        if ('cutoff' in kargs and criterion not in kargs) or criterion == 'default':
             criterion='inconsistent'
         if criterion == 'maxclust':
             if 'maxclust' not in kargs:
@@ -1153,7 +1153,6 @@ def clusterdata(*args, **kwargs):
             if 'cutoff' not in kargs:
                 raise AttributeError('Parameter cutoff must be present when the distance or inconsistent criterion is used.')
             cutoff = kwargs['cutoff']
-
 
         depth=2
         if 'depth' in kargs:

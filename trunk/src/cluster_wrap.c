@@ -147,7 +147,7 @@ extern PyObject *prelist_wrap(PyObject *self, PyObject *args) {
 extern PyObject *cluster_in_wrap(PyObject *self, PyObject *args) {
   int n;
   double cutoff;
-  PyArrayObject *Z, *ML;
+  PyArrayObject *Z, *R, *T;
   if (!PyArg_ParseTuple(args, "O!O!O!di",
 			&PyArray_Type, &Z,
 			&PyArray_Type, &R,
@@ -498,6 +498,7 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef _clusterWrapMethods[] = {
+  {"cluster_in_wrap", cluster_in_wrap, METH_VARARGS},
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
   {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
