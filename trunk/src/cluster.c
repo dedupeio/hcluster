@@ -1415,8 +1415,8 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     Rrow = R + ((ndid-n) * CPY_NIS);
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
-    /**    maxinconsist = Rrow[CPY_INS_INS];**/
-    maxinconsist = *(*crit + crit_off);
+    maxinconsist = Rrow[CPY_INS_INS];
+    /**    maxinconsist = *(*crit + crit_off);**/
     if (lid >= n && !lvisited[ndid-n]) {
       lvisited[ndid-n] = 0xFF;
       curNode[k+1] = lid;
@@ -1440,6 +1440,7 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     }
     k--;
   }
+  k = 0;
   curNode[k] = (n * 2) - 2;
   bzero(lvisited, n * sizeof(unsigned char));
   bzero(rvisited, n * sizeof(unsigned char));
@@ -1451,6 +1452,7 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
     maxinconsist = maxsinconsist[ndid-n];
+    fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, maxinconsist, nc);
     if (ms == -1 && maxinconsist < cutoff) {
       ms = k;
       nc++;
@@ -1470,7 +1472,7 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     if (ndid >= n) {
       if (lid < n) {
 	if (ms == -1) {
-	  T[lid] = nc++;
+	  T[lid] = ++nc;
 	}
 	else {
 	  T[lid] = nc;
@@ -1478,7 +1480,7 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
       }
       if (rid < n) {
 	if (ms == -1) {
-	  T[rid] = nc++;
+	  T[rid] = ++nc;
 	}
 	else {
 	  T[rid] = nc;

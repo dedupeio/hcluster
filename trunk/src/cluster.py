@@ -856,6 +856,9 @@ def is_linkage_monotonic(Z):
         raise AttributeError("The variable Z passed is not a valid linkage.")
     return (Z[:-1,2]-Z[1:,2] >= 0).any()
 
+def is_valid_im(Z):
+    return True
+
 def is_valid_linkage(Z, warning=False, throw=False):
     """
     is_valid_linkage(Z, t)
@@ -964,151 +967,95 @@ def Z_y_correspond(Z, Y):
     """
     return numobs_y(Y) == numobs_Z(Z)
 
-def cluster(*args, **kwargs):
+#def cluster(*args, **kwargs):
+
+def cluster(Z, t, criterion='inconsistent', depth=2, R=None):
     """
-    T = cluster(Z, c)
-    T = cluster(Z, c, d)
-    T = cluster(Z, cutoff=c, criterion='inconsistent')
-    T = cluster(Z, cutoff=c, criterion='inconsistent', depth=d)
-    
-      Forms flat clusters from the linkage defined by the matrix Z
-      using the 'inconsistent' criterion. A cluster node and
-      all its decendents have an inconsistent value less than or
-      equal to c iff all their leaf descendents belong to the same
-      cluster. When no non-singleton cluster meets this criterion,
-      every node is assigned to its own cluster.
 
-      T is a vector of length n; T[i] is the cluster number to which
-      original observation i belongs.
+    T = cluster(Z, t, criterion='inconsistent', d=2, R=None):
 
-    T = cluster(Z, cutoff=c, criterion='distance')
+      Forms flat clusters from the hiearchical clustering defined by
+      the linkage matrix Z. The threshold t is a required parameter.
 
-      Uses the distance between two clusters as the number to
-      threshold. This distance is the height of the link that
-      joins them.
+      T is a vector of length n; T[i] is the cluster number to which the
+      original observation i belongs. 
 
-    T = cluster(Z, maxclust=maxn)
-    T = cluster(Z, maxclust=maxn, criterion='maxclust')
+      The criterion parameter can be any of the following values,
+      
+        * 'inconsistent': A cluster node and all its decendents have an
+        inconsistent value less than or equal to c iff all their leaf
+        descendents belong to the same cluster. When no non-singleton
+        cluster meets this criterion, every node is assigned to its
+        own cluster. The d parameter is the maximum depth to perform
+        the inconsistency calculation; it has no meaning for the other
+        criteria.
 
-      Forms at most maxn clusters using the 'maxclust' criterion.
-      The method minimizes a threshold c so that no more than maxn
-      clusters are formed.
+        * 'distance': Forms flat clusters so that the original
+        observations in each cluster has no greater a cophenetic
+        distance of c.
+
+        * 'maxclust': Finds a threshold r such that the cophenetic
+        distance between any two original observations in the same flat
+        cluster is no more than r and no more than t clusters are
+        formed.
     """
-    nargs = len(args)
-    kargs = kwargs.keys();
-    if nargs < 1:
-        raise AttributeError('Invalid parameter specification.')
-    if nargs >= 1:
-        Z = args[0]
-
-    if nargs >= 2:
-        cutoff = args[1]
-    depth = 2
-    if nargs >= 3:
-        depth = args[2]
-
     if not is_valid_linkage(Z):
-        raise AttributeError('The first argument must be a valid linkage matrix as described in help(linkage).')
+        raise AttributeError('Z is not a valid linkage matrix.')
+
     n = Z.shape[0] + 1
-
-    criterion='default'
-    if 'criterion' in kargs:
-        criterion=kwargs['criterion']
-    
-    if criterion not in ['distance', 'inconsistent', 'maxclust', 'default']:
-        raise AttributeError('Invalid criterion: %s' % d)
-
-    criterion = 'default'
-    validCriteria = set(['distance', 'inconsistent', 'maxclust'])
-    if 'criterion' in kargs:
-        criterion=kwargs['criterion']
-        if criterion not in validCriteria:
-            raise AttributeError('Invalid criterion: %s' % criterion)
-    if 'maxclust' in kargs \
-           and not (criterion == 'maxclust' or criterion == 'default'):
-        raise AttributeError('Parameter maxclust cannot be specified when criterion=%s' % str(criterion))
-    if 'maxclust' in kargs:
-        criterion='maxclust'
-    if 'cutoff' in kargs \
-           and not (criterion == 'distance' or criterion == 'inconsistent'
-                or criterion == 'default'):
-        raise AttributeError('Parameter cutoff cannot be specified when criterion=%s' % str(criterion))
-    if 'cutoff' in kargs and criterion not in kargs:
-        criterion='inconsistent'
-    if criterion == 'maxclust':
-        if 'maxclust' not in kargs:
-            raise AttributeError('Parameter maxclust must be present when the maxclust criterion is used.')                                     
-        maxclust = kwargs['maxclust']
-        
-    if criterion in ['inconsistent', 'distance']:
-        if 'cutoff' not in kargs:
-            raise AttributeError('Parameter cutoff must be present when the distance or inconsistent criterion is used.')
-        cutoff = kwargs['cutoff']
-
-    if 'depth' in kargs:
-        depth=int(kwargs['depth'])
-    
-    if criterion=='inconsistent':
-        R = inconsistent(Z, depth)
-        T = scipy.zeros((n,), dtype='int32')
-        _cluster_wrap.cluster_in_wrap(Z, R, T, float(cutoff), int(n), 1)
-    elif criterion=='distance':
-        T = scipy.zeros((n,), dtype='int32')
-        _cluster_wrap.cluster_in_wrap(Z, R, T, float(cutoff), int(n), 0)
-    elif criterion=='distance':
-        T = scipy.zeros((n,), dtype='int32')
-        _cluster_wrap.cluster_maxclust_wrap(Z, R, T, float(maxclust), int(n))
+    T = scipy.zeros((n,), dtype='int32')
+    if criterion == 'inconsistent':
+        if R is None:
+            R = inconsistent(Z, depth)
+        else:
+            if not is_valid_im(R):
+                raise AttributeError('R passed is not a valid inconsistency matrix.')
+        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(0))
     else:
-        T=cluster(Z, maxclust=maxclust, criterion=criterion)
+        raise AttributeError('Invalid cluster formation criterion: ' % criterion)
+    return T
 
-
-def clusterdata(*args, **kwargs):
+def clusterdata(X, t, criterion='inconsistent', linkage='single', \
+                distance='euclid', d=2):
     """
-    T = clusterdata(X, cutoff)
+    T = clusterdata(X, t)
 
       Clusters the original observations in the n by m data matrix X
       (n observations in m dimensions) using the euclidean distance
       metric to calculate distances between original observations,
       the single linkage algorithm for hierarchical clustering, and
       the cut-off cluster formation algorithm to transform the linkage
-      into flat clusters. The cutoff threshold is the maximum
-      inconsistent value a node can have for membership in a cluster.
+      into flat clusters. t is the cut-off threshold as specified
+      in the cluster function.
 
       A one-dimensional numpy array T of length n is returned. T[i]
-      is the cluster group to which original observation i belongs.
+      is the index of the flat cluster to which original observation
+      i belongs.
 
-    T = clusterdata(X, criterion='inconsistent', linkage='single',
-                    distance='euclid', maxclust=<fill in>,
-                    depth=2, cutoff=<fill in>)
+    T = clusterdata(X, t, criterion='inconsistent', linkage='single',
+                    dist='euclid', depth=2, R=None)
 
-      Valid parameters (for paramX) include:
+      Named parameters are described below.
       
         criterion:  specifies the criterion for forming flat clusters.
                     Valid values are 'inconsistent', 'distance', or
                     'maxclust' cluster formation algorithms. See
                     cluster for descriptions.
            
-        linkage:    the linkage method to use. See linkage for
+        lmethod:    the linkage method to use. See linkage for
                     descriptions.
 
-        distance:   the distance metric for calculating pairwise
+        dmethod:    the distance metric for calculating pairwise
                     distances. See pdist for descriptions and
                     linkage to verify compatibility with the linkage
                     method.
                      
-        maxclust:   the maximum number of clusters to form. This
-                    parameter is only valid for the distance
-                    cluster formation algorithm. Required when
-                    criterion='maxclust'.
+        t:          the cut-off threshold for the cluster function.
 
-        depth:      the maximum depth for the inconsistency
-                    calculation. See inconsistent for more information.
+        depth:      the maximum depth for the inconsistency calculation.
+                    See inconsistent for more information.
 
-        cutoff:     the threshold value to use for the 'inconsistent'
-                    or 'distance' cluster formation algorithms. This
-                    value is ignored when the 'maxclust' algorithm
-                    is used. Required when criterion='inconsistent'
-                    or criterion='distance'.
+        R:          the inconsistency matrix.
 
      T = clusterdata(X, criterion='inconsistent', linkage='single', \
                      distance='euclidean', maxclust=X, depth=2, )
@@ -1117,61 +1064,13 @@ def clusterdata(*args, **kwargs):
        argument syntax.
 
     """
-    if len(args) == 2:
-        X = args[0]
-        cutoff = args[1]
-        Y = pdist(X, 'euclidean')
-        Z = linkage(Y, 'single')
-        T = cluster(Z, 'cutoff', cutoff)
-    else:
-        X = args[0]
-        remArgs = args[1:]
-        kargs = kwargs.keys()
-        criterion = 'default'
-        validCriteria = set(['distance', 'inconsistent', 'maxclust'])
-        if 'criterion' in kargs:
-            criterion=kwargs['criterion']
-            if criterion not in validCriteria:
-                raise AttributeError('Invalid criterion: %s' % criterion)
-        if 'maxclust' in kargs \
-               and not (criterion == 'maxclust' or criterion == 'default'):
-            raise AttributeError('Parameter maxclust cannot be specified when criterion=%s' % str(criterion))
-        if 'maxclust' in kargs:
-            criterion='maxclust'
-        if 'cutoff' in kargs \
-           and not (criterion == 'distance' or criterion == 'inconsistent'
-                    or criterion == 'default'):
-            raise AttributeError('Parameter cutoff cannot be specified when criterion=%s' % str(criterion))
-        if ('cutoff' in kargs and criterion not in kargs) or criterion == 'default':
-            criterion='inconsistent'
-        if criterion == 'maxclust':
-            if 'maxclust' not in kargs:
-                raise AttributeError('Parameter maxclust must be present when the maxclust criterion is used.')                                     
-            maxclust = kwargs['maxclust']
-            
-        if criterion in ['inconsistent', 'distance']:
-            if 'cutoff' not in kargs:
-                raise AttributeError('Parameter cutoff must be present when the distance or inconsistent criterion is used.')
-            cutoff = kwargs['cutoff']
 
-        depth=2
-        if 'depth' in kargs:
-            depth=int(kwargs['depth'])
+    if type(X) is not _array_type or len(X.shape) != 2:
+        raise AttributeError('X must be an n by m numpy array.')
 
-        pdist_meth = 'euclid'
-        if 'distance' in kargs:
-            pdist_meth = kwargs['distance']
-        
-        linkage_meth='single'
-        if 'linkage' in kargs:
-            linkage_meth = kwargs['linkage']
-
-        Y=pdist(X, pdist_meth)
-        Z=linkage(Y, linkage_meth)
-        if criterion in ['distance', 'inconsistent']:
-            T=cluster(Z, cutoff=cutoff, criterion=criterion, depth=depth)
-        else:
-            T=cluster(Z, maxclust=maxclust, criterion=criterion)
+    Y = pdist(X, method=dmethod)
+    Z = linkage(Y, method=lmethod)
+    T = cluster(Z, criterion=criterion, depth=depth, R=R, t=t)
     return T
 
 def prelist(Z):
