@@ -774,9 +774,9 @@ def inconsistent(Z, d=2):
       R is a (n-1)x5 matrix where the i'th row contains the link
       statistics for the non-singleton cluster i. The link statistics
       are computed over the link heights for links d levels below the
-      cluster i. Z[i,0] and Z[i,1] are the mean and standard deviation of
-      the link heights, respectively; Z[i,2] is the number of links
-      included in the calculation; and Z[i,3] is the inconsistency
+      cluster i. R[i,0] and R[i,1] are the mean and standard deviation of
+      the link heights, respectively; R[i,2] is the number of links
+      included in the calculation; and R[i,3] is the inconsistency
       coefficient, (Z[i, 2]-R[i,0])/R[i,2].
 
       The behavior of this function is very similar to the MATLAB(R)
