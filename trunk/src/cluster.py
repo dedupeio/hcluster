@@ -1227,3 +1227,33 @@ def dendrogram(*args, **kwargs):
         else:
             raise AttributeError('The second argument must be a number')
         restArgs = args[2:]
+
+def is_cluster_isomorphic(T1, T2):
+    """
+      Returns True if two different cluster assignments T1 and T2 are
+      equivalent. T1 and T2 must be arrays of the same size.
+    """
+    if type(T1) is not array_type:
+        raise AttributeError('T1 must be a numpy array.')
+    if type(T2) is not array_type:
+        raise AttributeError('T2 must be a numpy array.')
+
+    T1S = T1.shape
+    T2S = T2.shape
+
+    if len(T1S) != 1:
+        raise AttributeError('T1 must be one-dimensional.')
+    if len(T2S) != 1:
+        raise AttributeError('T2 must be one-dimensional.')
+    if T1S[0] != T2S[0]:
+        raise AttributeError('T1 and T2 must have the same number of elements.')
+    n = T1S[0]
+    d = {}
+    for i in xrange(0,n):
+        if T1[i] in d.keys():
+            if d[T1[i]] != T2[i]:
+                return False
+        else:
+            d[T1[i]] = T2[i]
+    return True
+    
