@@ -62,6 +62,21 @@
 #define CPY_LIN_DIST 2
 #define CPY_LIN_CNT 3
 
+#define CPY_BITS_PER_CHAR (sizeof(unsigned char) * 8)
+#define CPY_FLAG_ARRAY_SIZE_BYTES(num_bits) (CPY_CEIL_DIV(num_bits, \
+                                                          CPY_BITS_PER_CHAR))
+#define CPY_GET_BIT(_xx, i) ((_xx[i / CPY_BITS_PER_CHAR] >> \
+                             ((CPY_BITS_PER_CHAR-1) - \
+                              (i % CPY_BITS_PER_CHAR))) & 0x1)
+#define CPY_SET_BIT(_xx, i) (_xx[i / CPY_BITS_PER_CHAR] |= \
+                              ((0x1) << ((CPY_BITS_PER_CHAR-1)-(i % 8))))
+#define CPY_CLEAR_BIT(_xx, i) (_xx[i / CPY_BITS_PER_CHAR] &= \
+                              ~((0x1) << ((CPY_BITS_PER_CHAR-1)-(i % 8))))
+
+#ifndef CPY_CEIL_DIV
+#define CPY_CEIL_DIV(x, y) ((((double)x)/(double)y) == \
+                            ((double)((x)/(y))) ? ((x)/(y)) : ((x)/(y) + 1))
+#endif
 
 #include <malloc.h>
 #include <string.h>
@@ -770,7 +785,6 @@ void linkage(double *dm, double *Z, double *X,
     node->n = 1;
     node->d = 0.0;
     rowsize[i] = n - 1 - i;
-    order[i] = i;
   }
   rows[0] = dmt;
   for (i = 1; i < n; i++) {
@@ -951,7 +965,7 @@ void linkage_alt(double *dm, double *Z, double *X,
   /** An iterator through the distance matrix. */
   double *dmit, *buf;
 
-  int *rowsize, *order;
+  int *rowsize;
 
   /** Temporary array to store modified distance matrix. */
   double *dmt, **rows, *Zrow;
@@ -989,7 +1003,6 @@ void linkage_alt(double *dm, double *Z, double *X,
     centroidsData = 0;
   }
 
-  order = (int*)malloc(n * sizeof(int));
   nodes = (cnode*)malloc(sizeof(cnode) * (n * 2) - 1);
   ind = (int*)malloc(sizeof(int) * n);
   dmt = (double*)malloc(sizeof(double) * NCHOOSE2(n));
@@ -1025,7 +1038,6 @@ void linkage_alt(double *dm, double *Z, double *X,
     node->n = 1;
     node->d = 0.0;
     rowsize[i] = n - 1 - i;
-    order[i] = i;
   }
   rows[0] = dmt;
   for (i = 1; i < n; i++) {
@@ -1324,16 +1336,17 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
   int *members = (int*)malloc(n * sizeof(int));
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   left = (int*)malloc(n * sizeof(int));
-  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
   curNode[k] = (n * 2) - 2;
   left[k] = 0;
   nc2 = NCHOOSE2(n);
-  bzero(lvisited, n * sizeof(unsigned char));
-  bzero(rvisited, n * sizeof(unsigned char));
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
 
   while (k >= 0) {
     ndid = curNode[k];
@@ -1356,8 +1369,8 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
     /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
 	   ndid, ndid-n, k, lid, rid);**/
 
-    if (lid >= n && !lvisited[ndid-n]) {
-      lvisited[ndid-n] = 0xFF;
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
       curNode[k+1] = lid;
       left[k+1] = left[k];
       k++;
@@ -1366,8 +1379,8 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
     else if (lid < n) {
       members[left[k]] = lid;
     }
-    if (rid >= n && !rvisited[ndid-n]) {
-      rvisited[ndid-n] = 0xFF;
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
       curNode[k+1] = rid;
       left[k+1] = left[k] + ln;
       k++;
@@ -1406,17 +1419,17 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
 
 void inconsistency_calculation_alt(const double *Z, double *R, int n, int d) {
   int *curNode;
-  int ndid, lid, rid, i, k, lb, ub, inc, j;
+  int ndid, lid, rid, i, k;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
   double *Rrow;
-  double tmp;
   double levelSum, levelStdSum;
   int levelCnt;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
-  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
   /** for each node in the original linkage matrix. */
   for (i = 0; i < n - 1; i++) {
     /** the current depth j */
@@ -1424,26 +1437,25 @@ void inconsistency_calculation_alt(const double *Z, double *R, int n, int d) {
     levelSum = 0.0;
     levelCnt = 0;
     levelStdSum = 0.0;
-    bzero(lvisited, n * sizeof(unsigned char));
-    bzero(rvisited, n * sizeof(unsigned char));
+    bzero(lvisited, bff);
+    bzero(rvisited, bff);
     curNode[0] = i;
     for (k = 0; k >= 0;) {
       ndid = curNode[k];
       Zrow = Z + ((ndid) * CPY_LIS);
       lid = (int)Zrow[CPY_LIN_LEFT];
       rid = (int)Zrow[CPY_LIN_RIGHT];
-      /**      fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	       ndid, ndid, k, lid, rid);**/
-
+      /** fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	          ndid, ndid, k, lid, rid);**/
       if (k < d - 1) {
-	if (lid >= n && !lvisited[ndid]) {
-	  lvisited[ndid] = 0xFF;
+	if (lid >= n && !CPY_GET_BIT(lvisited, ndid)) {
+	  CPY_SET_BIT(lvisited, ndid);
 	  k++;
 	  curNode[k] = lid-n;
 	  continue;
 	}
-	if (rid >= n && !rvisited[ndid]) {
-	  rvisited[ndid] = 0xFF;
+	if (rid >= n && !CPY_GET_BIT(rvisited, ndid)) {
+	  CPY_SET_BIT(rvisited, ndid);
 	  k++;
 	  curNode[k] = rid-n;
 	  continue;
@@ -1471,200 +1483,8 @@ void inconsistency_calculation_alt(const double *Z, double *R, int n, int d) {
       Rrow[CPY_INS_INS] = (Zrow[CPY_LIN_DIST] - Rrow[CPY_INS_MEAN]) / Rrow[CPY_INS_STD];
     }
   }
-
-/*     /\** Next calculate the standard deviations. *\/ */
-/*     bzero(lvisited, n*sizeof(char)); */
-/*     bzero(rvisited, n*sizeof(char)); */
-/*     k = 0; */
-/*   curNode[k] = (n * 2) - 2; */
-/*   while (k >= 0) { */
-/*     ndid = curNode[k]; */
-/*     /\**    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n", */
-/* 	   ndid, ndid-n, k, lid, rid);**\/ */
-/*     Zrow = Z + ((ndid-n) * CPY_LIS); */
-/*     lid = (int)Zrow[CPY_LIN_LEFT]; */
-/*     if (lid >= n && !lvisited[ndid-n]) { */
-/*       lvisited[ndid-n] = 0xFF; */
-/*       curNode[k+1] = lid; */
-/*       k++; */
-/*       continue; */
-/*     } */
-/*     rid = (int)Zrow[CPY_LIN_RIGHT]; */
-/*     if (rid >= n && !rvisited[ndid-n]) { */
-/*       rvisited[ndid-n] = 0xFF; */
-/*       curNode[k+1] = rid; */
-/*       k++; */
-/*       continue; */
-/*     } */
-/*     /\** If it's not a leaf node, and we've visited both children, */
-/* 	record the final mean in the table. *\/ */
-/*     if (ndid >= n) { */
-/*       Rrow = R + (CPY_NIS * (ndid-n)); */
-/*       lb = CPY_MAX(k - d + 1, 0); */
-/*       ub = CPY_MAX(k, 0); */
-/*       for (i = ub; i >= lb; i--) { */
-/* 	tmp = (Zrow[CPY_LIN_DIST] - *(R + ((curNode[i]-n) * CPY_NIS))); */
-/* 	levelSum[i] += tmp * tmp; */
-/*       } */
-/*       /\**      Rrow[1] = sqrt(levelSum[k] * levelSum[k] / Rrow[2]);**\/ */
-/*       if (Rrow[CPY_INS_N] < 2.0) { */
-/* 	Rrow[CPY_INS_STD] = 0.0; */
-/*       } */
-/*       else { */
-/* 	Rrow[CPY_INS_STD] = sqrt(levelSum[k] / (Rrow[CPY_INS_N]-1)); */
-/*       } */
-/*       /\** Let the count and sum slots be used for the next newly visited */
-/*           node. *\/ */
-/*       levelSum[k] = 0.0; */
-/*       levelCnt[k] = 0; */
-/*     } */
-/*     k--; */
-/*   } */
-/*   for (k = 0; k < n - 1; k++) { */
-/*     Rrow = R + (CPY_NIS * k); */
-/*     if (Rrow[CPY_INS_STD] != 0.0) { */
-/*       Rrow[CPY_INS_INS] = (*(Z + (CPY_LIS * k) + CPY_LIN_DIST) */
-/* 			   - Rrow[CPY_INS_MEAN])/Rrow[CPY_INS_STD]; */
-/*     } */
-/*     else { */
-/*       Rrow[CPY_INS_INS] = 0.0; */
-/*     } */
-/*   } */
   
   free(curNode);
-  free(lvisited);
-  free(rvisited);
-}
-
-
-void inconsistency_calculation(const double *Z, double *R, int n, int d) {
-  int *curNode, *levelCnt;
-  int ndid, lid, rid, i, k, lb, ub, inc;
-  unsigned char *lvisited, *rvisited;
-  const double *Zrow;
-  double *Rrow, *levelSum;
-  double tmp;
-  k = 0;
-  curNode = (int*)malloc(n * sizeof(int));
-  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  levelSum = (double*)malloc(n * sizeof(double));
-  levelCnt = (int*)malloc(n * sizeof(int));
-  curNode[k] = (n * 2) - 2;
-  levelSum[k] = 0.0;
-  levelCnt[k] = 0;
-  bzero(lvisited, n * sizeof(unsigned char));
-  bzero(rvisited, n * sizeof(unsigned char));
-  bzero(levelSum, n * sizeof(double));
-  bzero(levelCnt, n * sizeof(int));
-  while (k >= 0) {
-    ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * CPY_LIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	    ndid, ndid-n, k, lid, rid);
-    if (lid >= n && !lvisited[ndid-n]) {
-      lvisited[ndid-n] = 0xFF;
-      k++;
-      curNode[k] = lid;
-      levelCnt[k] = 0;
-      levelSum[k] = 0.0;
-      continue;
-    }
-    if (rid >= n && !rvisited[ndid-n]) {
-      rvisited[ndid-n] = 0xFF;
-      k++;
-      curNode[k] = rid;
-      levelCnt[k] = 0;
-      levelSum[k] = 0.0;
-      continue;
-    }
-    /** If it's not a leaf node, and we've visited both children,
-	record the final mean in the table. */
-    if (ndid >= n) {
-      lb = CPY_MAX(k - d + 1, 0);
-      ub = CPY_MAX(k, 0);
-      inc = 1;
-      for (i = ub; i >= lb; i--) {
-	levelSum[i] += Zrow[CPY_LIN_DIST];
-	levelCnt[i] += inc;
-	//	levelCnt[i] += Zrow[CPY_LIN_CNT];
-      }
-      fprintf(stderr, "  Using range %d to %d, levelCnt[k]=%d\n", lb, ub, levelCnt[k]);
-      Rrow = R + (CPY_NIS * (ndid-n));
-      Rrow[CPY_INS_N] = (double)levelCnt[k];
-      Rrow[CPY_INS_MEAN] = levelSum[k] / Rrow[CPY_INS_N];
-      /** Let the count and sum slots be used for the next newly visited
-          node. */
-      levelSum[k] = 0.0;
-      levelCnt[k] = 0;
-    }
-    k--;
-  }
-
-  /** Next calculate the standard deviations. */
-  bzero(lvisited, n*sizeof(char));
-  bzero(rvisited, n*sizeof(char));
-  k = 0;
-  curNode[k] = (n * 2) - 2;
-  while (k >= 0) {
-    ndid = curNode[k];
-    /**    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	   ndid, ndid-n, k, lid, rid);**/
-    Zrow = Z + ((ndid-n) * CPY_LIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    if (lid >= n && !lvisited[ndid-n]) {
-      lvisited[ndid-n] = 0xFF;
-      curNode[k+1] = lid;
-      k++;
-      continue;
-    }
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    if (rid >= n && !rvisited[ndid-n]) {
-      rvisited[ndid-n] = 0xFF;
-      curNode[k+1] = rid;
-      k++;
-      continue;
-    }
-    /** If it's not a leaf node, and we've visited both children,
-	record the final mean in the table. */
-    if (ndid >= n) {
-      Rrow = R + (CPY_NIS * (ndid-n));
-      lb = CPY_MAX(k - d + 1, 0);
-      ub = CPY_MAX(k, 0);
-      for (i = ub; i >= lb; i--) {
-	tmp = (Zrow[CPY_LIN_DIST] - *(R + ((curNode[i]-n) * CPY_NIS)));
-	levelSum[i] += tmp * tmp;
-      }
-      /**      Rrow[1] = sqrt(levelSum[k] * levelSum[k] / Rrow[2]);**/
-      if (Rrow[CPY_INS_N] < 2.0) {
-	Rrow[CPY_INS_STD] = 0.0;
-      }
-      else {
-	Rrow[CPY_INS_STD] = sqrt(levelSum[k] / (Rrow[CPY_INS_N]-1));
-      }
-      /** Let the count and sum slots be used for the next newly visited
-          node. */
-      levelSum[k] = 0.0;
-      levelCnt[k] = 0;
-    }
-    k--;
-  }
-  for (k = 0; k < n - 1; k++) {
-    Rrow = R + (CPY_NIS * k);
-    if (Rrow[CPY_INS_STD] != 0.0) {
-      Rrow[CPY_INS_INS] = (*(Z + (CPY_LIS * k) + CPY_LIN_DIST)
-			   - Rrow[CPY_INS_MEAN])/Rrow[CPY_INS_STD];
-    }
-    else {
-      Rrow[CPY_INS_INS] = 0.0;
-    }
-  }
-  
-  free(curNode);
-  free(levelSum);
-  free(levelCnt);
   free(lvisited);
   free(rvisited);
 }
@@ -1702,16 +1522,18 @@ void form_member_list(const double *Z, int *members, int n) {
   int ndid, lid, rid, k, ln, rn, nc2;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
+
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   left = (int*)malloc(n * sizeof(int));
-  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
   curNode[k] = (n * 2) - 2;
   left[k] = 0;
   nc2 = NCHOOSE2(n);
-  bzero(lvisited, n * sizeof(unsigned char));
-  bzero(rvisited, n * sizeof(unsigned char));
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
 
   while (k >= 0) {
     ndid = curNode[k];
@@ -1734,8 +1556,8 @@ void form_member_list(const double *Z, int *members, int n) {
     /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
 	   ndid, ndid-n, k, lid, rid);**/
 
-    if (lid >= n && !lvisited[ndid-n]) {
-      lvisited[ndid-n] = 0xFF;
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
       curNode[k+1] = lid;
       left[k+1] = left[k];
       k++;
@@ -1744,8 +1566,8 @@ void form_member_list(const double *Z, int *members, int n) {
     else if (lid < n) {
       members[left[k]] = lid;
     }
-    if (rid >= n && !rvisited[ndid-n]) {
-      rvisited[ndid-n] = 0xFF;
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
       curNode[k+1] = rid;
       left[k+1] = left[k] + ln;
       k++;
@@ -1774,15 +1596,17 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
   double maxinconsist;
   const double * const *crit;
   int crit_off;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
+
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
-  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
-  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
   maxsinconsist = (double*)malloc(n * sizeof(double));
   curNode[k] = (n * 2) - 2;
   nc2 = NCHOOSE2(n);
-  bzero(lvisited, n * sizeof(unsigned char));
-  bzero(rvisited, n * sizeof(unsigned char));
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
   /** number of clusters formed so far. */
   nc = 0;
 
@@ -1804,14 +1628,14 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     rid = (int)Zrow[CPY_LIN_RIGHT];
     maxinconsist = Rrow[CPY_INS_INS];
     /**    maxinconsist = *(*crit + crit_off);**/
-    if (lid >= n && !lvisited[ndid-n]) {
-      lvisited[ndid-n] = 0xFF;
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
       curNode[k+1] = lid;
       k++;
       continue;
     }
-    if (rid >= n && !rvisited[ndid-n]) {
-      rvisited[ndid-n] = 0xFF;
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
       curNode[k+1] = rid;
       k++;
       continue;
@@ -1829,8 +1653,8 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
   }
   k = 0;
   curNode[k] = (n * 2) - 2;
-  bzero(lvisited, n * sizeof(unsigned char));
-  bzero(rvisited, n * sizeof(unsigned char));
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
   ms = -1;
   while (k >= 0) {
     ndid = curNode[k];
@@ -1844,14 +1668,14 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
       ms = k;
       nc++;
     }
-    if (lid >= n && !lvisited[ndid-n]) {
-      lvisited[ndid-n] = 0xFF;
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
       curNode[k+1] = lid;
       k++;
       continue;
     }
-    if (rid >= n && !rvisited[ndid-n]) {
-      rvisited[ndid-n] = 0xFF;
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
       curNode[k+1] = rid;
       k++;
       continue;

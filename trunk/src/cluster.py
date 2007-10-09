@@ -58,83 +58,89 @@ def randdm(pnts):
     return D
 
 def linkage(y, method='single', metric='euclidean'):
-    """ linkage(y, method)
+    """ Z=linkage(y, method)
 
-        Performs hierarchical clustering on the condensed distance matrix y.
-        y must be a n * (n - 1) sized vector where n is the number of points
-        paired in the distance matrix. The behavior of this function is
-        very similar to the MATLAB(R) linkage function.
+          Performs hierarchical clustering on the condensed distance
+          matrix y. y must be a n * (n - 1) sized vector where n is
+          the number of points paired in the distance matrix. The
+          behavior of this function is very similar to the MATLAB(R)
+          linkage function.
 
-        A (n - 1) * 4 matrix Z is returned. At the i'th iteration, clusters
-        with indices Z[i, 0] and Z[i, 1] are combined to form cluster n + i.
-        A cluster with an index less than n corresponds to one of the n
-        original clusters. The distance between clusters Z[i, 0] and
-        Z[i, 1] is given by Z[i, 2]. The fourth value Z[i, 3] represents the
-        number of nodes in the cluster n + i.
+          A (n - 1) * 4 matrix Z is returned. At the i'th iteration,
+          clusters with indices Z[i, 0] and Z[i, 1] are combined to
+          form cluster n + i. A cluster with an index less than n
+          corresponds to one of the n original clusters. The distance
+          between clusters Z[i, 0] and Z[i, 1] is given by Z[i, 2].
+          The fourth value Z[i, 3] represents the number of nodes in
+          the cluster n + i.
 
-        The following methods are used to compute the distance dist(s, t)
-        between two clusters s and t. Suppose there are s_n original objects
-        s[0], s[1], ..., s[n-1] in cluster s and t_n original objects
-        t[0], t[1], ..., t[n-1] in cluster t.
+          The following methods are used to compute the distance
+          dist(s, t) between two clusters s and t. Suppose there are
+          s_n original objects s[0], s[1], ..., s[n-1] in cluster s
+          and t_n original objects t[0], t[1], ..., t[n-1] in cluster t.
         
-          * method='single' assigns dist(s,t) = MIN(dist(s[i],t[j]) for
-            all points i in cluster s and j in cluster t.
+            * method='single' assigns dist(s,t) = MIN(dist(s[i],t[j])
+              for all points i in cluster s and j in cluster t.
 
-               (also called Nearest Point Algorithm)
+                (also called Nearest Point Algorithm)
 
-          * method='complete' assigns dist(s,t) = MAX(dist(s[i],t[j]) for
-            all points i in cluster s and j in cluster t.
+            * method='complete' assigns dist(s,t) = MAX(dist(s[i],t[j])
+              for all points i in cluster s and j in cluster t.
 
-               (also called Farthest Point Algorithm
-                     or the Voor Hees Algorithm)
+                (also called Farthest Point Algorithm
+                      or the Voor Hees Algorithm)
 
-          * method='average' assigns dist(s,t) =
-               sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|)
-            for all points i and j where |s| and |t| are the
-            cardinalities of clusters s and t, respectively.
+           * method='average' assigns dist(s,t) =
+                sum_{ij} { dist(s[i], t[j]) } / (|s|*|t|)
+             for all points i and j where |s| and |t| are the
+             cardinalities of clusters s and t, respectively.
 
-               (also called UPGMA)
+                (also called UPGMA)
 
-          * method='weighted' assigns
+           * method='weighted' assigns
 
                dist(q,u) = (dist(s,u) + dist(t,u))/2
 
-            where q is the newly formed cluster consisting of s and t,
-            and u is a remaining cluster in the unused forest of
-            clusters. (also called WPGMA)
+             where q is the newly formed cluster consisting of s and t,
+             and u is a remaining cluster in the unused forest of
+             clusters. (also called WPGMA)
 
-        linkage(X, method, metric='euclidean')
+        Z=linkage(X, method, metric='euclidean')
 
-        Performs hierarchical clustering on the objects defined by the
-        n by m observation matrix X.
+         Performs hierarchical clustering on the objects defined by the
+         n by m observation matrix X.
 
-        If the metric is 'euclidean' then the following methods may be
-        used:
+         If the metric is 'euclidean' then the following methods may be
+         used:
 
-          * method='centroid' assigns dist(s,t) = euclid(c_s, c_t) where
-            c_s and c_t are the centroids of clusters s and t,
-            respectively. When two clusters s and t are combined into a new
-            cluster q, the new centroid is computed over all the original
-            objects in clusters s and t. (also called UPGMC)
-
-          * method='median' assigns dist(s,t) as above. When two clusters
-            s and t are combined into a new cluster q, the average of
-            centroids s and t give the new centroid q. (also called WPGMC)
+           * method='centroid' assigns dist(s,t) = euclid(c_s, c_t) where
+             c_s and c_t are the centroids of clusters s and t,
+             respectively. When two clusters s and t are combined into a new
+             cluster q, the new centroid is computed over all the original
+             objects in clusters s and t. (also called UPGMC)
+ 
+           * method='median' assigns dist(s,t) as above. When two clusters
+             s and t are combined into a new cluster q, the average of
+             centroids s and t give the new centroid q. (also called WPGMC)
            
-          * method='ward' uses the Ward variance minimization algorithm.
-            The new entry dist(q, u) is computed as follows,
+           * method='ward' uses the Ward variance minimization algorithm.
+             The new entry dist(q, u) is computed as follows,
 
                  dist(q,u) =
 
-             ----------------------------------------------------
-             | |u|+|s|            |u|+|t|            |u|
-             | ------- d(u,s)^2 + ------- d(u,t)^2 - --- d(s,t)^2
-            \|    T                  T                T
+                ----------------------------------------------------
+                | |u|+|s|            |u|+|t|            |u|
+                | ------- d(u,s)^2 + ------- d(u,t)^2 - --- d(s,t)^2
+               \|    T                  T                T
 
-            where q is the newly formed cluster consisting of clusters
-            s and t, u is an unused cluster in the forest, T=|u|+|s|+|t|,
-            and |*| is the cardinality of its argument.
-            (also called incremental)
+             where q is the newly formed cluster consisting of clusters
+             s and t, u is an unused cluster in the forest, T=|u|+|s|+|t|,
+             and |*| is the cardinality of its argument.
+             (also called incremental)
+
+           Warning to MATLAB(R) users: when the minimum distance pair in the
+           unchosen cluster forest is chosen, there may be two or more pairs with the same
+           minimum distance. This implementation
         """
     if type(y) != _array_type:
         raise AttributeError('Incompatible data type. y must be an array.')
