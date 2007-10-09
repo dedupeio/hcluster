@@ -1772,7 +1772,6 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
     Rrow = R + ((ndid-n) * CPY_NIS);
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
-    /**    maxinconsist = *(*crit + crit_off);**/
     if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
       CPY_SET_BIT(lvisited, ndid-n);
       curNode[k+1] = lid;
@@ -1785,7 +1784,8 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
       k++;
       continue;
     }
-    maxinconsist = Rrow[CPY_INS_INS];
+    maxinconsist = *(*crit + crit_off);
+    /**    maxinconsist = Rrow[CPY_INS_INS];**/
     if (lid >= n) {
       maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[lid-n]);
     }

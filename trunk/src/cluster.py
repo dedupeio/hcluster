@@ -1017,8 +1017,15 @@ def cluster(Z, t, criterion='inconsistent', depth=2, R=None):
             if not is_valid_im(R):
                 raise AttributeError('R passed is not a valid inconsistency matrix.')
         _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(0))
+    elif criterion == 'distance':
+        if R is None:
+            R = inconsistent(Z, depth)
+        else:
+            if not is_valid_im(R):
+                raise AttributeError('R passed is not a valid inconsistency matrix.')
+        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(1))
     else:
-        raise AttributeError('Invalid cluster formation criterion: ' % criterion)
+        raise AttributeError('Invalid cluster formation criterion: %s' % str(criterion))
     return T
 
 def clusterdata(X, t, criterion='inconsistent', linkage='single', \
@@ -1233,9 +1240,9 @@ def is_cluster_isomorphic(T1, T2):
       Returns True if two different cluster assignments T1 and T2 are
       equivalent. T1 and T2 must be arrays of the same size.
     """
-    if type(T1) is not array_type:
+    if type(T1) is not _array_type:
         raise AttributeError('T1 must be a numpy array.')
-    if type(T2) is not array_type:
+    if type(T2) is not _array_type:
         raise AttributeError('T2 must be a numpy array.')
 
     T1S = T1.shape
