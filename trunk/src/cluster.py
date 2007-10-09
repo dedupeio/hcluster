@@ -782,8 +782,8 @@ def inconsistent(Z, d=2):
         raise AttributeError('The first argument Z is not a valid linkage.')
     if (not d == numpy.floor(d)) or d < 0:
         raise AttributeError('The second argument d must be a nonnegative integer value.')
-    if d == 0:
-        d = 1
+#    if d == 0:
+#        d = 1
 
     n = Zs[0] + 1
     R = scipy.zeros((n - 1, 4), dtype='double')
@@ -823,9 +823,9 @@ def from_mlab_linkage(Z):
     CS = scipy.zeros((Zs[0], 1), dtype='double')
     Zpart = Zpart - 1
     _cluster_wrap.calculate_cluster_sizes_wrap(scipy.hstack([Zpart, \
-                                                             Zd]), \
+                                                             Zd]).copy(), \
                                                CS, int(Zs[0]) + 1)
-    return scipy.hstack([Zpart, Zd, CS])
+    return scipy.hstack([Zpart, Zd, CS]).copy()
 
 def to_mlab_linkage(Z):
     """

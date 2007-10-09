@@ -396,6 +396,21 @@ void chopmins(int *ind, int mini, int minj, int np) {
   /**  fprintf(stderr, "[Remove mini=%d minj=%d]\n", mini, minj);**/
 }
 
+void chopmin(int *ind, int minj, int np) {
+  int i;
+  for (i = minj; i < np - 1; i++) {
+    ind[i] = ind[i + 1];
+  }
+  /**  }**/
+  /**  if (np > 0) {
+    ind[np - 1] = HUGE_VALF;
+  }
+  if (np > 1) {
+    ind[np - 2] = INFINITY;
+    }***/
+  /**  fprintf(stderr, "[Remove mini=%d minj=%d]\n", mini, minj);**/
+}
+
 void chopmins_ns_ij(double *ind, int mini, int minj, int np) {
   int i;
   /**if (mini < np - 2) {**/
@@ -676,7 +691,7 @@ void print_vec(const double *d, int n) {
 void linkage(double *dm, double *Z, double *X,
 	     int m, int n, int ml, int kc, distfunc dfunc,
 	     int method) {
-  int i, j, k, t, np, nid, mini, minj;
+  int i, j, k, t, np, nid, mini, minj, npc2;
   double min, ln, rn, qn;
   int *ind;
   /** An iterator through the distance matrix. */
@@ -685,7 +700,7 @@ void linkage(double *dm, double *Z, double *X,
   int *rowsize;
 
   /** Temporary array to store modified distance matrix. */
-  double *dmt, **rows;
+  double *dmt, **rows, *Zrow;
   double *centroidsData;
   double **centroids;
   const double *centroidL, *centroidR;
@@ -695,7 +710,6 @@ void linkage(double *dm, double *Z, double *X,
   cnode *nodes, *node;
 
   cinfo info;
-
 
   /** The next two are only necessary for euclidean distance methods. */
   if (ml) {
@@ -756,6 +770,7 @@ void linkage(double *dm, double *Z, double *X,
     node->n = 1;
     node->d = 0.0;
     rowsize[i] = n - 1 - i;
+    order[i] = i;
   }
   rows[0] = dmt;
   for (i = 1; i < n; i++) {
@@ -772,6 +787,7 @@ void linkage(double *dm, double *Z, double *X,
   for (k = 0, nid = n; k < n - 1; k++, nid++) {
     info.nid = nid;
     np = n - k;
+    npc2 = NCHOOSE2(np);
     /**    fprintf(stderr, "k=%d, nid=%d, n=%d np=%d\n", k, nid, n, np);**/
     min = dmt[0];
     mini = 0;
@@ -780,7 +796,7 @@ void linkage(double *dm, double *Z, double *X,
     for (i = 0; i < np - 1; i++) {
       dmit = rows[i];
       for (j = i + 1; j < np; j++, dmit++) {
-	if (*dmit < min) {
+	if (*dmit <= min) {
 	  min = *dmit;
 	  mini = i;
 	  minj = j;
@@ -798,10 +814,11 @@ void linkage(double *dm, double *Z, double *X,
     node->d = min;
     node->id = nid;
 
-    *(Z + (k * CPY_LIS) + CPY_LIN_LEFT) = node->left->id;
-    *(Z + (k * CPY_LIS) + CPY_LIN_RIGHT) = node->right->id;
-    *(Z + (k * CPY_LIS) + CPY_LIN_DIST) = min;
-    *(Z + (k * CPY_LIS) + CPY_LIN_CNT) = node->n;
+    Zrow = Z + (k * CPY_LIS);
+    Zrow[CPY_LIN_LEFT] = node->left->id;
+    Zrow[CPY_LIN_RIGHT] = node->right->id;
+    Zrow[CPY_LIN_DIST] = min;
+    Zrow[CPY_LIN_CNT] = node->n;
 
     /**    fprintf(stderr,
 	    "[lid=%d, rid=%d, llid=%d, rrid=%d m=%5.8f]",
@@ -906,6 +923,7 @@ void linkage(double *dm, double *Z, double *X,
     for (i = 0; i < np - 2; i++) {
       *(rows[i] + np - 3 - i) = buf[i];
     }
+
     /**    print_dm(rows, np - 1);
 	   print_ind(ind, np);**/
     chopmins(ind, mini, minj, np);
@@ -924,34 +942,265 @@ void linkage(double *dm, double *Z, double *X,
   free(centroids);
 }
 
-/**
- * endpnts is a (n-1) by 4 by 2 array
- *
- * ctrpnts is a (n-1) by 2 by 2 array
- *
- * edge is a (n-1) by 2 by 2 array
- *
- * sbl: size between leaves
- *
- * Thoughts to self: might be more efficient to compute these bits and
- * pieces when constructing z.
- */
-/**
-void get_dendrogram_line_endpoints(const double *Z,
-				   int n,
-				   double *endpnts,
-				   double *ctrpnts
-				   double *edge,
-				   double sbl) {
-  const double *Zit;
-  double *endpntsit;
-  double *ctrpntsit;
-  double *edgeit;
-  int i, j;
-  for (i = 0; i < n - 1; i++) {
-    Zit = Z + (4 * i)
+void linkage_alt(double *dm, double *Z, double *X,
+	     int m, int n, int ml, int kc, distfunc dfunc,
+	     int method) {
+  int i, j, k, t, np, nid, mini, minj, npc2;
+  double min, ln, rn, qn;
+  int *ind;
+  /** An iterator through the distance matrix. */
+  double *dmit, *buf;
+
+  int *rowsize, *order;
+
+  /** Temporary array to store modified distance matrix. */
+  double *dmt, **rows, *Zrow;
+  double *centroidsData;
+  double **centroids;
+  const double *centroidL, *centroidR;
+  double *centroid;
+  clist *lists, *listL, *listR, *listC;
+  clnode *lnodes;
+  cnode *nodes, *node;
+
+  cinfo info;
+
+  /** The next two are only necessary for euclidean distance methods. */
+  if (ml) {
+    lists = (clist*)malloc(sizeof(clist) * (n-1));
+    lnodes = (clnode*)malloc(sizeof(clnode) * n);
   }
-  }**/
+  else {
+    lists = 0;
+    lnodes = 0;
+  }
+  if (kc) {
+    centroids = (double**)malloc(sizeof(double*) * (2 * n));
+    centroidsData = (double*)malloc(sizeof(double) * n * m);
+    for (i = 0; i < n; i++) {
+      centroids[i] = X + i * m;
+    }
+    for (i = 0; i < n; i++) {
+      centroids[i+n] = centroidsData + i * m;
+    }
+  }
+  else {
+    centroids = 0;
+    centroidsData = 0;
+  }
+
+  order = (int*)malloc(n * sizeof(int));
+  nodes = (cnode*)malloc(sizeof(cnode) * (n * 2) - 1);
+  ind = (int*)malloc(sizeof(int) * n);
+  dmt = (double*)malloc(sizeof(double) * NCHOOSE2(n));
+  buf = (double*)malloc(sizeof(double) * n);
+  rows = (double**)malloc(sizeof(double*) * n);
+  rowsize = (int*)malloc(sizeof(int) * n);
+  memcpy(dmt, dm, sizeof(double) * NCHOOSE2(n));
+
+  info.X = X;
+  info.m = m;
+  info.n = n;
+  info.nodes = nodes;
+  info.ind = ind;
+  info.dmt = dmt;
+  info.buf = buf;
+  info.rows = rows;
+  info.rowsize = rowsize;
+  info.dm = dm;
+  info.centroids = centroids;
+  if (kc) {
+    info.centroidBuffer = centroids[2*n - 1];
+  }
+  else {
+    info.centroidBuffer = 0;
+  }
+  info.lists = lists;
+  for (i = 0; i < n; i++) {
+    ind[i] = i;
+    node = nodes + i;
+    node->left = 0;
+    node->right = 0;
+    node->id = i;
+    node->n = 1;
+    node->d = 0.0;
+    rowsize[i] = n - 1 - i;
+    order[i] = i;
+  }
+  rows[0] = dmt;
+  for (i = 1; i < n; i++) {
+    rows[i] = rows[i-1] + n - i;
+  }
+  
+  if (ml) {
+    for (i = 0; i < n; i++) {
+      (lnodes + i)->val = nodes + i;
+      (lnodes + i)->next = 0;
+    }
+  }
+
+  for (k = 0, nid = n; k < n - 1; k++, nid++) {
+    info.nid = nid;
+    np = n - k;
+    npc2 = NCHOOSE2(np);
+    /**    fprintf(stderr, "k=%d, nid=%d, n=%d np=%d\n", k, nid, n, np);**/
+    min = dmt[0];
+    mini = 0;
+    minj = 1;
+    /** Note that mini < minj since j > i is always true. */
+    /** BEGIN NEW CODE **/
+    for (i = 0; i < np - 1; i++) {
+      dmit = rows[i];
+      for (j = i + 1; j < np; j++, dmit++) {
+	if (*dmit < min) {
+	  min = *dmit;
+	  mini = i;
+	  minj = j;
+	}
+      }
+    }
+
+    node = nodes + nid;
+    node->left = nodes + ind[mini];
+    node->right = nodes + ind[minj];
+    ln = (double)node->left->n;
+    rn = (double)node->right->n;
+    qn = ln + rn;
+    node->n = node->left->n + node->right->n;
+    node->d = min;
+    node->id = nid;
+
+    Zrow = Z + (k * CPY_LIS);
+    Zrow[CPY_LIN_LEFT] = node->left->id;
+    Zrow[CPY_LIN_RIGHT] = node->right->id;
+    Zrow[CPY_LIN_DIST] = min;
+    Zrow[CPY_LIN_CNT] = node->n;
+
+    /**    fprintf(stderr,
+	    "[lid=%d, rid=%d, llid=%d, rrid=%d m=%5.8f]",
+	    node->left->id, node->right->id, ind[mini], ind[minj], min);**/
+
+    if (ml) {
+      listC = GETCLUSTER(nid);
+      if (ISCLUSTER(node->left) != 0) {
+	listL = GETCLUSTER(node->left->id);
+	if (ISCLUSTER(node->right) != 0) {
+	  listR = GETCLUSTER(node->right->id);
+	  listL->tail->next = listR->head;
+	  listC->tail = listR->tail;
+	  listR->tail->next = 0;
+	}
+	else {
+	  listC->tail = lnodes + node->right->id;
+	  listL->tail->next = listC->tail;
+	  listC->tail->next = 0;
+	}
+	listC->head = listL->head;
+      }
+      else {
+	listC->head = lnodes + node->left->id;
+	if (ISCLUSTER(node->right)) {
+	  listR = GETCLUSTER(node->right->id);
+	  listC->head->next = listR->head;
+	  listC->tail = listR->tail;
+	  listC->tail->next = 0;
+	}
+	else {
+	  listC->tail = lnodes + node->right->id;
+	  listC->tail->next = 0;
+	  listC->head->next = listC->tail;
+	}
+      }
+    }
+    if (kc) {
+      centroidL = centroids[ind[mini]];
+      centroidR = centroids[ind[minj]];
+      centroid = centroids[nid];
+      switch(method) {
+      case CPY_LINKAGE_MEDIAN:
+	for (t = 0; t < m; t++) {
+	  centroid[t] = (centroidL[t] * 0.5 + centroidR[t] * 0.5);
+	}
+	break;
+      case CPY_LINKAGE_CENTROID:
+      case CPY_LINKAGE_WARD:
+      default:
+	for (t = 0; t < m; t++) {
+	  centroid[t] = (centroidL[t] * ln + centroidR[t] * rn) / qn;
+	}
+	break;
+      }
+      /**      fprintf(stderr, "L: ");
+      print_vec(centroidL, m);
+      fprintf(stderr, "\nR: ");
+      print_vec(centroidR, m);
+      fprintf(stderr, "\nT: ");
+      print_vec(centroid, m);**/
+    }
+
+    /**    print_dm(rows, np);**/
+    /**    dfunc(buf, rows, mini, minj, np, dm, n, ind, nodes);**/
+    dfunc(&info, mini, minj, np, n);
+
+    /** For these rows, we must remove, i and j but leave all unused space
+        at the end. This reduces their size by two.*/
+    for (i = 0; i < minj; i++) {
+      chopmins_ns_i(rows[i], minj - i - 1, rowsize[i]);
+    }
+
+    /** We skip the i'th row. For rows i+1 up to j-1, we just remove j. */
+    /**for (i = mini + 1; i < minj; i++) {
+      chopmins_ns_i(rows[i], minj - i - 1, rowsize[i]);
+      }**/
+
+    /** For rows 0 to mini - 1, we move them down the matrix, leaving the
+	first row free. */
+    /**for (i = mini; i > 0; i--) {
+      memcpy(rows[i], rows[i-1], sizeof(double) * rowsize[i]-k);
+    }
+
+    for (i = mini; i < minj - 1; i++) {
+      memcpy(rows[i], rows[i+1], sizeof(double) * (rowsize[i+1]));
+      }**/
+
+    /** For rows mini+1 to minj-1, we do nothing since they are in the
+	right place for the next iteration. For rows minj+1 onward,
+	we move them to the right. */
+	
+    for (i = minj; i < np - 1; i++) {
+      memcpy(rows[i], rows[i+1], sizeof(double) * (rowsize[i+1]));
+    }
+
+    /** Rows i+1 to j-1 lose one unit of space, so we move them up. */
+    /** Rows j to np-1 lose no space. We do nothing to them. */
+
+    /**    memcpy(rows[0], buf, sizeof(double) * rowsize[0] - k);*/
+
+    for (i = 0; i < mini; i++) {
+      *(rows[i] + mini - i - 1) = buf[i];
+    }
+
+    for (i = mini + 1; i < np - 2; i++) {
+      *(rows[mini] + i - mini - 1) = buf[i-1];
+    }
+
+    /**    print_dm(rows, np - 1);
+	   print_ind(ind, np);**/
+    chopmin(ind, minj, np);
+    ind[mini] = nid;
+    /**    print_ind(ind, np - 1);**/
+  }
+  free(lists);
+  free(lnodes);
+  free(nodes);
+  free(ind);
+  free(dmt);
+  free(buf);
+  free(rows);
+  free(rowsize);
+  free(centroidsData);
+  free(centroids);
+}
 
 void dist_to_squareform_from_vector(double *M, const double *v, int n) {
   double *it;
@@ -1155,13 +1404,146 @@ void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
   free(rvisited);
 }
 
+void inconsistency_calculation_alt(const double *Z, double *R, int n, int d) {
+  int *curNode;
+  int ndid, lid, rid, i, k, lb, ub, inc, j;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow;
+  double *Rrow;
+  double tmp;
+  double levelSum, levelStdSum;
+  int levelCnt;
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  rvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
+  /** for each node in the original linkage matrix. */
+  for (i = 0; i < n - 1; i++) {
+    /** the current depth j */
+    k = 0;
+    levelSum = 0.0;
+    levelCnt = 0;
+    levelStdSum = 0.0;
+    bzero(lvisited, n * sizeof(unsigned char));
+    bzero(rvisited, n * sizeof(unsigned char));
+    curNode[0] = i;
+    for (k = 0; k >= 0;) {
+      ndid = curNode[k];
+      Zrow = Z + ((ndid) * CPY_LIS);
+      lid = (int)Zrow[CPY_LIN_LEFT];
+      rid = (int)Zrow[CPY_LIN_RIGHT];
+      /**      fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	       ndid, ndid, k, lid, rid);**/
+
+      if (k < d - 1) {
+	if (lid >= n && !lvisited[ndid]) {
+	  lvisited[ndid] = 0xFF;
+	  k++;
+	  curNode[k] = lid-n;
+	  continue;
+	}
+	if (rid >= n && !rvisited[ndid]) {
+	  rvisited[ndid] = 0xFF;
+	  k++;
+	  curNode[k] = rid-n;
+	  continue;
+	}
+      }
+      levelCnt++;
+      levelSum += Zrow[CPY_LIN_DIST];
+      levelStdSum += Zrow[CPY_LIN_DIST] * Zrow[CPY_LIN_DIST];
+	/**fprintf(stderr, "  Using range %d to %d, levelCnt[k]=%d\n", lb, ub, levelCnt[k]);**/
+      /** Let the count and sum slots be used for the next newly visited
+	  node. */
+      k--;
+    }
+    Rrow = R + (CPY_NIS * i);
+    Rrow[CPY_INS_N] = (double)levelCnt;
+    Rrow[CPY_INS_MEAN] = levelSum / levelCnt;
+    if (levelCnt < 2) {
+      Rrow[CPY_INS_STD] = (levelStdSum - (levelSum * levelSum)) / levelCnt;
+    }
+    else {
+      Rrow[CPY_INS_STD] = (levelStdSum - ((levelSum * levelSum) / levelCnt)) / (levelCnt - 1);
+    }
+    Rrow[CPY_INS_STD] = sqrt(CPY_MAX(0, Rrow[CPY_INS_STD]));
+    if (Rrow[CPY_INS_STD] > 0) {
+      Rrow[CPY_INS_INS] = (Zrow[CPY_LIN_DIST] - Rrow[CPY_INS_MEAN]) / Rrow[CPY_INS_STD];
+    }
+  }
+
+/*     /\** Next calculate the standard deviations. *\/ */
+/*     bzero(lvisited, n*sizeof(char)); */
+/*     bzero(rvisited, n*sizeof(char)); */
+/*     k = 0; */
+/*   curNode[k] = (n * 2) - 2; */
+/*   while (k >= 0) { */
+/*     ndid = curNode[k]; */
+/*     /\**    fprintf(stderr, "ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n", */
+/* 	   ndid, ndid-n, k, lid, rid);**\/ */
+/*     Zrow = Z + ((ndid-n) * CPY_LIS); */
+/*     lid = (int)Zrow[CPY_LIN_LEFT]; */
+/*     if (lid >= n && !lvisited[ndid-n]) { */
+/*       lvisited[ndid-n] = 0xFF; */
+/*       curNode[k+1] = lid; */
+/*       k++; */
+/*       continue; */
+/*     } */
+/*     rid = (int)Zrow[CPY_LIN_RIGHT]; */
+/*     if (rid >= n && !rvisited[ndid-n]) { */
+/*       rvisited[ndid-n] = 0xFF; */
+/*       curNode[k+1] = rid; */
+/*       k++; */
+/*       continue; */
+/*     } */
+/*     /\** If it's not a leaf node, and we've visited both children, */
+/* 	record the final mean in the table. *\/ */
+/*     if (ndid >= n) { */
+/*       Rrow = R + (CPY_NIS * (ndid-n)); */
+/*       lb = CPY_MAX(k - d + 1, 0); */
+/*       ub = CPY_MAX(k, 0); */
+/*       for (i = ub; i >= lb; i--) { */
+/* 	tmp = (Zrow[CPY_LIN_DIST] - *(R + ((curNode[i]-n) * CPY_NIS))); */
+/* 	levelSum[i] += tmp * tmp; */
+/*       } */
+/*       /\**      Rrow[1] = sqrt(levelSum[k] * levelSum[k] / Rrow[2]);**\/ */
+/*       if (Rrow[CPY_INS_N] < 2.0) { */
+/* 	Rrow[CPY_INS_STD] = 0.0; */
+/*       } */
+/*       else { */
+/* 	Rrow[CPY_INS_STD] = sqrt(levelSum[k] / (Rrow[CPY_INS_N]-1)); */
+/*       } */
+/*       /\** Let the count and sum slots be used for the next newly visited */
+/*           node. *\/ */
+/*       levelSum[k] = 0.0; */
+/*       levelCnt[k] = 0; */
+/*     } */
+/*     k--; */
+/*   } */
+/*   for (k = 0; k < n - 1; k++) { */
+/*     Rrow = R + (CPY_NIS * k); */
+/*     if (Rrow[CPY_INS_STD] != 0.0) { */
+/*       Rrow[CPY_INS_INS] = (*(Z + (CPY_LIS * k) + CPY_LIN_DIST) */
+/* 			   - Rrow[CPY_INS_MEAN])/Rrow[CPY_INS_STD]; */
+/*     } */
+/*     else { */
+/*       Rrow[CPY_INS_INS] = 0.0; */
+/*     } */
+/*   } */
+  
+  free(curNode);
+  free(lvisited);
+  free(rvisited);
+}
+
+
 void inconsistency_calculation(const double *Z, double *R, int n, int d) {
   int *curNode, *levelCnt;
-  int ndid, lid, rid, i, k;
+  int ndid, lid, rid, i, k, lb, ub, inc;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
   double *Rrow, *levelSum;
-  double tmp, lb;
+  double tmp;
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   lvisited = (unsigned char*)malloc(n * sizeof(unsigned char));
@@ -1169,6 +1551,8 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
   levelSum = (double*)malloc(n * sizeof(double));
   levelCnt = (int*)malloc(n * sizeof(int));
   curNode[k] = (n * 2) - 2;
+  levelSum[k] = 0.0;
+  levelCnt[k] = 0;
   bzero(lvisited, n * sizeof(unsigned char));
   bzero(rvisited, n * sizeof(unsigned char));
   bzero(levelSum, n * sizeof(double));
@@ -1178,35 +1562,42 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     Zrow = Z + ((ndid-n) * CPY_LIS);
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
-    /**    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
-	   ndid, ndid-n, k, lid, rid);**/
+    fprintf(stderr, "[fp] ndid=%d, ndid-n=%d, k=%d, lid=%d, rid=%d\n",
+	    ndid, ndid-n, k, lid, rid);
     if (lid >= n && !lvisited[ndid-n]) {
       lvisited[ndid-n] = 0xFF;
-      curNode[k+1] = lid;
       k++;
+      curNode[k] = lid;
+      levelCnt[k] = 0;
+      levelSum[k] = 0.0;
       continue;
     }
     if (rid >= n && !rvisited[ndid-n]) {
       rvisited[ndid-n] = 0xFF;
-      curNode[k+1] = rid;
       k++;
+      curNode[k] = rid;
+      levelCnt[k] = 0;
+      levelSum[k] = 0.0;
       continue;
     }
     /** If it's not a leaf node, and we've visited both children,
 	record the final mean in the table. */
     if (ndid >= n) {
       lb = CPY_MAX(k - d + 1, 0);
-      /**      fprintf(stderr, "  Using range %d to %d\n", CPY_MAX(k - d, 0), k);**/
-      for (i = k; i >= lb; i--) {
-	levelSum[i] += Zrow[2];
-	levelCnt[i]++;
+      ub = CPY_MAX(k, 0);
+      inc = 1;
+      for (i = ub; i >= lb; i--) {
+	levelSum[i] += Zrow[CPY_LIN_DIST];
+	levelCnt[i] += inc;
+	//	levelCnt[i] += Zrow[CPY_LIN_CNT];
       }
+      fprintf(stderr, "  Using range %d to %d, levelCnt[k]=%d\n", lb, ub, levelCnt[k]);
       Rrow = R + (CPY_NIS * (ndid-n));
       Rrow[CPY_INS_N] = (double)levelCnt[k];
       Rrow[CPY_INS_MEAN] = levelSum[k] / Rrow[CPY_INS_N];
       /** Let the count and sum slots be used for the next newly visited
           node. */
-      levelSum[k] = 0;
+      levelSum[k] = 0.0;
       levelCnt[k] = 0;
     }
     k--;
@@ -1241,7 +1632,8 @@ void inconsistency_calculation(const double *Z, double *R, int n, int d) {
     if (ndid >= n) {
       Rrow = R + (CPY_NIS * (ndid-n));
       lb = CPY_MAX(k - d + 1, 0);
-      for (i = k; i >= lb; i--) {
+      ub = CPY_MAX(k, 0);
+      for (i = ub; i >= lb; i--) {
 	tmp = (Zrow[CPY_LIN_DIST] - *(R + ((curNode[i]-n) * CPY_NIS)));
 	levelSum[i] += tmp * tmp;
       }
@@ -1281,7 +1673,7 @@ void calculate_cluster_sizes(const double *Z, double *CS, int n) {
   int i, j, k;
   const double *row;
   for (k = 0; k < n - 1; k++) {
-    row = Z + (k * CPY_LIS);
+    row = Z + (k * 3);
     i = (int)row[CPY_LIN_LEFT];
     j = (int)row[CPY_LIN_RIGHT];
     /** If the left node is a non-singleton, add its count. */
@@ -1394,11 +1786,6 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
   /** number of clusters formed so far. */
   nc = 0;
 
-  /** I want to avoid an
-        if (criterion=='distance') {...} else if (criterion=='inconsistent'){...}
-      in the loop. So, I will store a pointer to the Zrow or Rrow pointer
-      depending on the criterion as well as an offset to get to the
-      number. **/
   
   /** if method is distance. */
   if (method == CPY_CRIT_DISTANCE) {

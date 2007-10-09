@@ -171,7 +171,7 @@ extern PyObject *inconsistent_wrap(PyObject *self, PyObject *args) {
 			&n, &d)) {
     return 0;
   }
-  inconsistency_calculation((const double*)Z->data, (double*)R->data, n, d);
+  inconsistency_calculation_alt((const double*)Z->data, (double*)R->data, n, d);
   return Py_BuildValue("d", 0.0);
 }
 

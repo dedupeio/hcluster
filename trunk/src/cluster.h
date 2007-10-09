@@ -103,6 +103,7 @@ void pdist_jaccard_bool(const char *X, double *dm, int m, int n);
 void pdist_minkowski(const double *X, double *dm, int m, int n, double p);
 
 void inconsistency_calculation(const double *Z, double *R, int n, int d);
+void inconsistency_calculation_alt(const double *Z, double *R, int n, int d);
 
 double dot_product(const double *u, const double *v, int n);
 
