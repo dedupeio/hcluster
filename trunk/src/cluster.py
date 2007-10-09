@@ -854,6 +854,8 @@ def to_mlab_linkage(Z):
 
 def is_linkage_monotonic(Z):
     """
+    is_linkage_monotonic(Z)
+    
       Returns True if the linkage Z is monotonic. The linkage is monotonic
       if for every cluster s and t joined, the distance between them is
       no less than the distance between any previously joined clusters.
@@ -862,7 +864,20 @@ def is_linkage_monotonic(Z):
         raise AttributeError("The variable Z passed is not a valid linkage.")
     return (Z[:-1,2]-Z[1:,2] >= 0).any()
 
-def is_valid_im(Z):
+def is_valid_im(R):
+    """
+    is_valid_im(R)
+    
+      Returns True if the inconsistency matrix passed is valid. It must
+      be a n by 4 numpy array of doubles. The standard deviations R[:,1]
+      must be nonnegative. The link counts R[:,2] must be positive and
+      no greater than n-1.
+    """
+    valid = type(R) is _array_type
+    valid = valid and R.dtype == 'double'
+    valid = valid and len(R.shape) == 2
+    valid = valid and R.shape[0] > 0
+    valid = valid and R.shape[1] == 4
     return True
 
 def is_valid_linkage(Z, warning=False, throw=False):

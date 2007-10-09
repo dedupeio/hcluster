@@ -1853,3 +1853,124 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
   free(lvisited);
   free(rvisited);  
 }
+
+void form_flat_clusters_maxclust(const double *Z, const double *R,
+				 int *T, double cutoff, int n, int method) {
+  int *curNode;
+  int ndid, lid, rid, k, nc2, ms, nc;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow, *Rrow;
+  double *maxsinconsist;
+  double maxinconsist;
+  const double * const *crit;
+  int crit_off;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
+
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
+  maxsinconsist = (double*)malloc(n * sizeof(double));
+  curNode[k] = (n * 2) - 2;
+  nc2 = NCHOOSE2(n);
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
+  /** number of clusters formed so far. */
+  nc = 0;
+  ms = -1;
+  /** if method is distance. */
+  if (method == CPY_CRIT_DISTANCE) {
+    crit = &Zrow;
+    crit_off = CPY_LIN_DIST;
+  }
+  else if (method == CPY_CRIT_INCONSISTENT) {
+    crit = &Rrow;
+    crit_off = CPY_INS_INS;
+  }
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    Rrow = R + ((ndid-n) * CPY_NIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    maxinconsist = *(*crit + crit_off);
+    /**    maxinconsist = Rrow[CPY_INS_INS];**/
+    if (lid >= n) {
+      maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[lid-n]);
+    }
+    if (rid >= n) {
+      maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[rid-n]);
+    }
+    maxsinconsist[ndid-n] = maxinconsist;
+    k--;
+  }
+  k = 0;
+  curNode[k] = (n * 2) - 2;
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
+  ms = -1;
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    Rrow = R + ((ndid-n) * CPY_NIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    maxinconsist = maxsinconsist[ndid-n];
+    fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, maxinconsist, nc);
+    if (ms == -1 && maxinconsist < cutoff) {
+      ms = k;
+      nc++;
+    }
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    if (ndid >= n) {
+      if (lid < n) {
+	if (ms == -1) {
+	  T[lid] = ++nc;
+	}
+	else {
+	  T[lid] = nc;
+	}
+      }
+      if (rid < n) {
+	if (ms == -1) {
+	  T[rid] = ++nc;
+	}
+	else {
+	  T[rid] = nc;
+	}
+      }
+      if (ms == k) {
+	ms = -1;
+      }
+    }
+    k--;
+  }
+
+  free(maxsinconsist);
+  free(curNode);
+  free(lvisited);
+  free(rvisited);  
+}
