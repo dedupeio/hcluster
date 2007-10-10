@@ -718,13 +718,13 @@ def cophenet(*args, **kwargs):
     """
     d = cophenet(Z)
 
-      Calculates the cophenetic distances between each observation in a
+      Calculates the cophenetic distances between each observation in the
       hierarchical clustering defined by the linkage Z.
 
       Suppose p and q are original observations in disjoint clusters
-      s and t, respectively and that s and t are joined by a direct
-      parent cluster u. The cophenetic distance between observations
-      i and j is simply the distance between clusters s and t.
+      s and t, respectively and s and t are joined by a direct parent
+      cluster u. The cophenetic distance between observations i and j
+      is simply the distance between clusters s and t.
 
       d is cophenetic distance matrix in condensed form. The ij'th
       entry is the cophenetic distance between original observations
@@ -1043,11 +1043,11 @@ def cluster(Z, t, criterion='inconsistent', depth=2, R=None):
 
         * 'distance': Forms flat clusters so that the original
         observations in each cluster has no greater a cophenetic
-        distance of c.
+        distance than c.
 
-        * 'maxclust': Finds a threshold r such that the cophenetic
+        * 'maxclust': Finds a minimum threshold r such that the cophenetic
         distance between any two original observations in the same flat
-        cluster is no more than r and no more than t clusters are
+        cluster is no more than r and no more than t flat clusters are
         formed.
     """
     if not is_valid_linkage(Z):
@@ -1081,14 +1081,13 @@ def clusterdata(X, t, criterion='inconsistent', linkage='single', \
       Clusters the original observations in the n by m data matrix X
       (n observations in m dimensions) using the euclidean distance
       metric to calculate distances between original observations,
-      the single linkage algorithm for hierarchical clustering, and
-      the cut-off cluster formation algorithm to transform the linkage
-      into flat clusters. t is the cut-off threshold as specified
-      in the cluster function.
+      performs hierarchical clustering using the single linkage
+      algorithm, and forms flat clusters using the inconsistency
+      method with t as the cut-off threshold.
 
       A one-dimensional numpy array T of length n is returned. T[i]
-      is the index of the flat cluster to which original observation
-      i belongs.
+      is the index of the flat cluster to which the original
+      observation i belongs.
 
     T = clusterdata(X, t, criterion='inconsistent', linkage='single',
                     dist='euclid', depth=2, R=None)
