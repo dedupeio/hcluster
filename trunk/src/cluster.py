@@ -247,10 +247,8 @@ class cnode:
         """
         c = nd.getCount()
 
-        Returns the number of leaf nodes below and including nd. This
-        represents the number of original observations in the cluster
-        represented by the node. If the nd is a leaf, this number is
-        1.
+        Returns the number of leaf nodes (original observations)
+        belonging to the cluster node nd. If the nd is a leaf, c=1.
         """
         return self.count
 
@@ -291,8 +289,8 @@ class cnode:
         
             ids = root.preOrder(lambda x: x.id)
     
-          retuarns a list of the node ids corresponding to the leaf
-          nodes of the tree starting at the root defin.
+          returns a list of the node ids corresponding to the leaf
+          nodes of the tree as they appear from left to right.
         """
     
         # Do a preorder traversal, caching the result. To avoid having to do
@@ -341,7 +339,7 @@ def totree(Z, rd=False):
       Each cnode object has a left, right, dist, id, and count
       attribute. The left and right attributes point to cnode
       objects that were combined to generate the cluster. If
-      both are None then the cnode object is leaf node, its
+      both are None then the cnode object is a leaf node, its
       count must be 1, and its distance is meaningless but set
       to 0.
 
@@ -351,7 +349,7 @@ def totree(Z, rd=False):
       the reference to the root cnode and d is a reference to a
       dictionary mapping cluster ids to cnodes. If a cluster id
       is less than n, then it corresponds to a singleton cluster
-      (leaf node).      
+      (leaf node).
     """
 
     if type(Z) is not _array_type:
@@ -439,7 +437,7 @@ def squareform(X, force="no", checks=True):
     respectively.
 
     If checks is set to False, no checks will be made for matrix
-    symmetry nor zero diaganols. This is useful if it is known that
+    symmetry nor zero diagonals. This is useful if it is known that
     X - X.T is small and diag(X) is close to zero. These values are
     ignored any way so they do not disrupt the squareform
     transformation.
@@ -500,85 +498,92 @@ def squareform(X, force="no", checks=True):
         raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted' % len(s))
 
 def pdist(X, metric='euclidean', p=2):
-    """ Computes the distance between m points in n-dimensional space.
+    """ Y=pdist(X, method='euclidean', p=2)
+    
+           Computes the distance between m original observations in
+           n-dimensional space. Returns a condensed distance matrix Y.
+           For each i and j (i!=j), the metric dist(u=X[i], v=X[j]) is
+           computed and stored in the entry
+              Y[(n \choose 2)-(n-i \choose 2) + (j-i-1)] .
 
-        1. pdist(X)
+        1. Y=pdist(X)
 
-        Computes the distance between m points using Euclidean distance
-        (2-norm) as the distance metric between the points. The points
-        are arranged as m n-dimensional row vectors in the matrix X.
+          Computes the distance between m points using Euclidean distance
+          (2-norm) as the distance metric between the points. The points
+          are arranged as m n-dimensional row vectors in the matrix X.
 
-        2. pdist(X, 'minkowski', p)
+        2. Y=pdist(X, 'minkowski', p)
 
-        Computes the distances using the Minkowski distance (p-norm) where
-        p is a number.
+          Computes the distances using the Minkowski distance (p-norm)
+          where p is a number.
 
-        3. pdist(X, 'cityblock')
+        3. Y=pdist(X, 'cityblock')
 
-        Computes the city block or manhattan distance between the points.
+          Computes the city block or manhattan distance between the
+          points.
 
-        4. pdist(X, 'seuclidean')
+        4. Y=pdist(X, 'seuclidean')
 
-        Computes the standardized euclidean distance so that the distances
-        are of unit variance.
+          Computes the standardized euclidean distance so that the
+          distances are of unit variance.
 
-        5. pdist(X, 'cosine')
+        5. Y=pdist(X, 'cosine')
 
-        Computes the cosine distance between vectors u and v. This is
+          Computes the cosine distance between vectors u and v. This is
         
-           1 - uv^T
-           -----------
-           |u|_2 |v|_2
+               1 - uv^T
+             -----------
+             |u|_2 |v|_2
 
-        where |*|_2 is the 2 norm of its argument *.
+          where |*|_2 is the 2 norm of its argument *.
 
-        6. pdist(X, 'correlation')
+        6. Y=pdist(X, 'correlation')
 
-        Computes the correlation distance between vectors u and v. This is
+          Computes the correlation distance between vectors u and v. This is
 
-           1 - (u - n|u|_1)(v - n|v|_1)^T
-           --------------------------------- ,
-           |(u - n|u|_1)|_2 |(v - n|v|_1)|^T
+            1 - (u - n|u|_1)(v - n|v|_1)^T
+            --------------------------------- ,
+            |(u - n|u|_1)|_2 |(v - n|v|_1)|^T
 
-        where |*|_1 is the Manhattan (or 1-norm) of its argument *,
-        and n is the common dimensionality of the vectors.
+          where |*|_1 is the Manhattan (or 1-norm) of its argument *,
+          and n is the common dimensionality of the vectors.
 
-        7. pdist(X, 'hamming')
+        7. Y=pdist(X, 'hamming')
 
-        Computes the normalized Hamming distance, or the proportion
-        of those vector elements between two vectors u and v which
-        disagree. To save memory, the matrix X can be of type boolean.
+          Computes the normalized Hamming distance, or the proportion
+          of those vector elements between two vectors u and v which
+          disagree. To save memory, the matrix X can be of type boolean.
 
-        8. pdist(X, 'jaccard')
+        8. Y=pdist(X, 'jaccard')
 
-        Computes the Jaccard distance between the points. Given two
-        vectors, u and v, the Jaccard disaance is the proportion of
-        those elements u_i and v_i that disagree where at least one
-        of them is non-zero.
+          Computes the Jaccard distance between the points. Given two
+          vectors, u and v, the Jaccard disaance is the proportion of
+          those elements u_i and v_i that disagree where at least one
+          of them is non-zero.
 
-        9. pdist(X, 'chebyshev')
+        9. Y=pdist(X, 'chebyshev')
 
-        Computes the Chebyshev distance between the points. The
-        Chebyshev distance between two vectors u and v is the maximum
-        norm-1 distance between their respective elements. More
-        precisely, the distance is given by
+          Computes the Chebyshev distance between the points. The
+          Chebyshev distance between two vectors u and v is the maximum
+          norm-1 distance between their respective elements. More
+          precisely, the distance is given by
 
-           d(u,v) = max_{i=1}^{n}{|u_i-v_i|}.
+            d(u,v) = max_{i=1}^{n}{|u_i-v_i|}.
 
-        10. pdist(X, f)
+        10. Y=pdist(X, f)
         
-        Computes the distance between all pairs of vectors in X
-        using the user supplied 2-arity function f. For example,
-        Euclidean distance between the vectors could be computed
-        as follows,
+          Computes the distance between all pairs of vectors in X
+          using the user supplied 2-arity function f. For example,
+          Euclidean distance between the vectors could be computed
+          as follows,
 
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
 
-        11. pdist(X, 'test_Y')
+        11. Y=pdist(X, 'test_Y')
 
-        Computes the distance between all pairs of vectors in X
-        using the distance metric Y but with a more succint,
-        verifiable, but less efficient implementation.
+          Computes the distance between all pairs of vectors in X
+          using the distance metric Y but with a more succint,
+          verifiable, but less efficient implementation.
 
        """
 
