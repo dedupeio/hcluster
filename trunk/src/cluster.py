@@ -502,9 +502,9 @@ def pdist(X, metric='euclidean', p=2):
     
            Computes the distance between m original observations in
            n-dimensional space. Returns a condensed distance matrix Y.
-           For each i and j (i!=j), the metric dist(u=X[i], v=X[j]) is
-           computed and stored in the entry
-              Y[(n \choose 2)-(n-i \choose 2) + (j-i-1)] .
+           For each i and j (i<j), the metric dist(u=X[i], v=X[j]) is
+           computed and stored in the ij'th entry. See squareform
+           to learn how to retrieve this entry.
 
         1. Y=pdist(X)
 
@@ -1117,7 +1117,7 @@ def clusterdata(X, t, criterion='inconsistent', linkage='single', \
      T = clusterdata(X, criterion='inconsistent', linkage='single', \
                      distance='euclidean', maxclust=X, depth=2, )
 
-       Similar to the above but uses Python's more conveinent named
+       Similar to the above but uses Python's more convenient named
        argument syntax.
 
     """
