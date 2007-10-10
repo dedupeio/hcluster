@@ -69,9 +69,11 @@
                              ((CPY_BITS_PER_CHAR-1) - \
                               ((i) % CPY_BITS_PER_CHAR))) & 0x1)
 #define CPY_SET_BIT(_xx, i) ((_xx)[(i) / CPY_BITS_PER_CHAR] |= \
-                              ((0x1) << ((CPY_BITS_PER_CHAR-1)-((i) % 8))))
+                              ((0x1) << ((CPY_BITS_PER_CHAR-1) \
+                                         -((i) % CPY_BITS_PER_CHAR))))
 #define CPY_CLEAR_BIT(_xx, i) ((_xx)[(i) / CPY_BITS_PER_CHAR] &= \
-                              ~((0x1) << ((CPY_BITS_PER_CHAR-1)-((i) % 8))))
+                              ~((0x1) << ((CPY_BITS_PER_CHAR-1) \
+                                         -((i) % CPY_BITS_PER_CHAR))))
 
 #ifndef CPY_CEIL_DIV
 #define CPY_CEIL_DIV(x, y) ((((double)x)/(double)y) == \
