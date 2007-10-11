@@ -892,7 +892,9 @@ def is_linkage_monotonic(Z):
     """
     if not is_valid_linkage(Z):
         raise AttributeError("The variable Z passed is not a valid linkage.")
-    return (Z[:-1,2]-Z[1:,2] >= 0).any()
+
+    # We expect the i'th value to be greater than its successor.
+    return (Z[:-1,2]>=Z[1:,2]).all()
 
 def is_valid_im(R):
     """
