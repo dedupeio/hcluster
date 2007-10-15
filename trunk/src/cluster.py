@@ -47,6 +47,7 @@ _cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
 _cpy_linkage_methods = set(_cpy_non_euclid_methods.keys()).union(set(_cpy_euclid_methods.keys()))
 _array_type = type(scipy.array([]))
 
+
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
         pnts * (pnts - 1) / 2 sized vector is returned.
@@ -1146,9 +1147,62 @@ def prelist(Z):
     _cluster_wrap.prelist_wrap(Z, ML, int(n))
     return ML
 
-def dendrogram(*args, **kwargs):
+# Let's do a conditional import. If matplotlib is not available, 
+try:
+    import matplotlib
+    import matplotlib.pylab
+    mpl = True
+    def _plot_dendrogram(ivlines, dvlines, ivl, p, n, mh, orientation):
+        axis = matplotlib.pylab.gca()
+        # Independent variable plot width
+        ivw = p * 10
+        # Depenendent variable plot height
+        dvw = mh + mh * 0.05
+        ivticks = scipy.arange(0, p*10+5, 10)
+        if orientation == 'top':
+            axis.set_ylim([0, dvw])
+            axis.set_xlim([0, ivw])
+            xlines = ivlines
+            ylines = dvlines
+            axis.set_xticks(ivticks)
+            axis.set_xticklabels(ivl)
+        elif orientation == 'bottom':
+            axis.set_ylim([dvw, 0])
+            axis.set_xlim([0, ivw])
+            ivl.reverse()
+            xlines = ivlines
+            ylines = dvlines
+            axis.set_xticks(ivticks)
+            axis.set_xticklabels(ivl)
+        elif orientation == 'left':
+            axis.set_xlim([0, dvw])
+            axis.set_ylim([0, ivw])
+            xlines = dvlines
+            ylines = ivlines
+            axis.set_yticks(ivticks)
+            axis.set_yticklabels(ivl)
+        elif orientation == 'right':
+            axis.set_xlim([dvw, 0])
+            axis.set_ylim([0, ivw])
+            xlines = dvlines
+            ylines = ivlines
+            ivl.reverse()
+            axis.set_yticks(ivticks)
+            axis.set_yticklabels(ivl)
+        for (xline,yline) in zip(xlines, ylines):
+            line = matplotlib.lines.Line2D(xline, yline)
+            axis.add_line(line)
+        matplotlib.pylab.draw_if_interactive()
+            
+except ImportError:
+    mpl = False
+    def _plot_dendrogram(ivlines, dvlines, p, n, mh, orientation):
+        raise AttributeError('matplotlib not available. Plot request denied.')
+
+def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
+               orientation='top', labels=None, count_sort=False,
+               distance_sort=False, show_leaf_counts=True):
     """
-    H = dendrogram(root, p=30)
     H = dendrogram(Z, p=30)
 
       Plots the hiearchical clustering defined by the linkage Z as a
@@ -1162,27 +1216,28 @@ def dendrogram(*args, **kwargs):
       Corresponding to MATLAB behavior, if there are more than p
       leaf nodes in the data set, some nodes and their descendents
       are contracted into leaf nodes, leaving exactly p nodes in the
-      plot.
+      plot. The nodes chosen to be non-leaf nodes in the condensed
+      dendrogram are the last p non-singleton clusters in the linkage
+      Z (i.e. nodes corresponding to row vectors Z[n-p-2:end,:]).
 
       Returns a reference H to the list of line objects for this
       dendrogram.
 
-    H = dendrogram(..., 'colorthreshold', t)
     H = dendrogram(..., colorthreshold=t)
 
       Colors all the links below a cluster node a unique color if it is
       the first node among its ancestors to have a distance below the
       threshold t. (An alternative named-argument syntax can be used.)
 
-    (H,T) = dendrogram(..., 'get_leaves')
     (H,T) = dendrogram(..., get_leaves=True)
     
-      Returns a tuple with the handle H and a m-sized int32 array T.
-      The T[i] value is the leaf node index to which original observation
-      with index i appears. This vector has duplicates only if m > p.
+      Returns a tuple with the handle H and a m-sized numpy array T of
+      integer values. The T[i] value is the leaf node index in which
+      original observation with index i appears. This vector has
+      duplicates iff m > p.
+      
       (An alternative named-argument syntax can be used.)
 
-    ... = dendrogram(..., 'orientation', 'orient')
     ... = dendrogram(..., orientation='top')
 
       Plots the dendrogram in a particular direction. The orientation
@@ -1193,31 +1248,22 @@ def dendrogram(*args, **kwargs):
            
         * 'bottom': plots the root at the bottom, and plot descendent
           links going upwards.
-           
+
         * 'left': plots the root at the left, and plot descendent
           links going right.
 
         * 'right': plots the root at the right, and plot descendent
           links going left.
 
-    ... = dendrogram(..., 'labels', S)
     ... = dendrogram(..., labels=None)
 
         S is a p-sized list (or tuple) passed with the text of the labels
         to render by the leaf nodes. Passing None causes the index of
         the original observation to be used. A label only appears if
-        its associated.
+        its associated leaf node corresponds to a singleton cluster.
 
         (MLab features end here.)
         
-    ... = dendrogram(..., leaves_order=None)
-
-        Plots the leaves in the order specified by a vector of
-        original observation indices. If the vector contains duplicates
-        or results in a crossing, an exception will be thrown. Passing
-        None orders leaf nodes based on the order they appear in the
-        pre-order traversal.
-
     ... = dendrogram(..., count_sort=False)
 
         When plotting a cluster node and its directly descendent links,
@@ -1225,7 +1271,7 @@ def dendrogram(*args, **kwargs):
         plotted is determined by the count_sort parameter. Valid values
         of count_sort are:
 
-          * 'no'/False: nothing is done.
+          * False: nothing is done.
           
           * 'ascending'/True: the descendent with the minimum number of
           original objects in its cluster is plotted first.
@@ -1233,14 +1279,14 @@ def dendrogram(*args, **kwargs):
           * 'descendent': the descendent with the maximum number of
           original objects in its cluster is plotted first.
 
-    ... = dendrogram(..., distance_sort='no')
+    ... = dendrogram(..., distance_sort=False)
 
         When plotting a cluster node and its directly descendent links,
         the order the two descendent links and their descendents are
         plotted is determined by the distance_sort parameter. Valid
         values of count_sort are:
 
-          * 'no'/False: nothing is done.
+          * False: nothing is done.
 
           * 'ascending'/True: the descendent with the minimum distance
           between its direct descendents is plotted first.
@@ -1248,42 +1294,221 @@ def dendrogram(*args, **kwargs):
           * 'descending': the descendent with the maximum distance
           between its direct descendents is plotted first.
 
-    ... = dendrogram(..., show_leaf_counts=False)
+        Note that either count_sort or distance_sort must be False.
+
+    ... = dendrogram(..., show_leaf_counts)
 
         When show_leaf_counts=True, leaf nodes representing k>1
         original observation are labeled with the number of observations
         they contain in parenthesis.
         
     """
-    nargs = len(args)
-    if nargs == 0:
-        raise AttributeError('At least one argument is needed.')
-    if nargs >= 1:
-        if type(arg[0]) is _array_type:
-            Z = arg[0]
-            if not is_valid_linkage(Z):
-                raise AttributeError('If the first argument is an array, it must be a valid linkage.')
-            root = totree(Z)
-        elif type(arg[0]) is _cnode_type:
-            root = arg[0]
+
+    # Features under consideration.
+    #
+    #         ... = dendrogram(..., leaves_order=None)
+    #
+    #         Plots the leaves in the order specified by a vector of
+    #         original observation indices. If the vector contains duplicates
+    #         or results in a crossing, an exception will be thrown. Passing
+    #         None orders leaf nodes based on the order they appear in the
+    #         pre-order traversal.
+
+    if not is_valid_linkage(Z):
+        raise AttributeError('If the first argument is an array, it must be a valid linkage.')
+    Zs = Z.shape
+    n = Zs[0] + 1
+    if type(p) in (types.IntType, types.FloatType):
+        p = int(p)
+    else:
+        raise AttributeError('The second argument must be a number')
+    if p > n:
+        p = n
+
+    ivline_list=[]
+    dvline_list=[]
+    ivl=[]
+    _dendrogram_calculate_info(Z=Z, p=p, \
+                               colorthreshold=colorthreshold, \
+                               get_leaves=get_leaves, \
+                               orientation=orientation, \
+                               labels=labels, \
+                               count_sort=count_sort, \
+                               distance_sort=distance_sort, \
+                               show_leaf_counts=show_leaf_counts, \
+                               i=2*n-2, iv=0.0, ivl=[], n=n, \
+                               ivline_list=ivline_list, \
+                               dvline_list=dvline_list)
+    mh = max(Z[:,2])
+    _plot_dendrogram(ivline_list, dvline_list, ivl, p, n, mh, orientation)
+
+def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=True, \
+                               orientation='top', labels=None, \
+                               count_sort=False, distance_sort=False, \
+                               show_leaf_counts=False, i=-1, iv=0.0, \
+                               ivl=[], n=0, ivline_list=[], dvline_list=[]):
+    """
+    (l,w) = _dendrogram_calculate_info(Z, p=30, colorthreshold=inf, get_leaves=True,
+               orientation='top', labels=None, count_sort=False,
+               distance_sort=False, show_leaf_counts=False, i=0, iv=0.0,
+               ivl=[], n=0, ivline_list=[], dvline_list=[]):
+
+    Calculates the endpoints of the links as well as the labels for the
+    the dendrogram rooted at the node with index i. iv is the independent
+    variable value to plot the left-most leaf node below the root node i
+    (if orientation='top', this would be the left-most x value where the
+    plotting of this root node i and its descendents should begin).
+    
+    ivl is a list to store the labels of the leaf nodes. Nodes with an index
+    below 2*n-p-1 are condensed into a leaf node. p is the maximum number
+    of non-leaf nodes to plot.
+
+    Returns a tuple with l being the independent variable coordinate that
+    corresponds to the midpoint of cluster to the left of cluster i if
+    i is non-singleton, otherwise the independent coordinate of the leaf
+    node if i is a leaf node.
+
+    w is the amount of space used in independent variable units.
+    """
+    if n == 0:
+        raise AttributeError("Invalid singleton cluster count n.")
+
+    if i == -1:
+        raise AttributeError("Invalid root cluster index i.")
+
+    # If the node is a leaf node but corresponds to a non-single cluster,
+    # it's label is either the empty string or the number of original
+    # observations belonging to cluster i.
+    if i < 2*n-p and i >= n:
+        if show_leaf_counts:
+            ivl.append("(" + str(Z[i-n, 3]) + ")")
         else:
-            raise AttributeError('The first argument must be a linkage array Z or a cnode of the root cluster.')
-    restArgs = []
-    ks = kwargs.keys()
-    n = root.count
-    p = min(30, n)
-    if nargs >= 2:
-        if type(arg[0]) is IntType:
-            p = arg[0]
-        elif type(arg[0]) is FloatType:
-            p = int(arg[0])
+            ivl.append("")
+        return (iv + 5.0, 10.0, 0.0)
+    elif i < n:
+        if labels is not None:
+            ivl.append(labels[i-n])
+        else:        
+            ivl.append(str(i))
+        return (iv + 5.0, 10.0, 0.0)
+    elif i >= 2*n-p:
+        # Actual indices of a and b
+        aa = Z[i-n, 0]
+        ab = Z[i-n, 1]
+        if aa > n:
+            # The number of singletons below cluster a
+            na = Z[aa-n, 3]
+            # The distance between a's two direct children.
+            da = Z[aa-n, 2]
         else:
-            raise AttributeError('The second argument must be a number')
-        restArgs = args[2:]
+            na = 1
+            da = 0.0
+        if ab > n:
+            nb = Z[ab-n, 3]
+            db = Z[ab-n, 2]
+        else:
+            nb = 1
+            da = 0.0
+
+        if count_sort == 'ascending' or count_sort == True:
+            # If a has a count greater than b, it and its descendents should
+            # be drawn to the right. Otherwise, to the left.
+            if na > nb:
+                # The cluster index to draw to the left (ua) will be ab
+                # and the one to draw to the right (ub) will be aa
+                ua = ab
+                ub = aa
+            else:
+                ua = aa
+                ub = ab
+        elif count_sort == 'descending':
+            # If a has a count less than or equal to b, it and its
+            # descendents should be drawn to the left. Otherwise, to
+            # the right.
+            if na <= nb:
+                ua = aa
+                ub = ab
+            else:
+                ua = ab
+                ub = aa
+        elif distance_sort == 'ascending' or distance_sort == True:
+            # If a has a distance greater than b, it and its descendents should
+            # be drawn to the right. Otherwise, to the left.
+            if da > db:
+                ua = ab
+                ub = aa
+            else:
+                ua = aa
+                ub = ab
+        elif distance_sort == 'descending':
+            # If a has a distance less than or equal to b, it and its
+            # descendents should be drawn to the left. Otherwise, to
+            # the right.
+            if da <= db:
+                ua = aa
+                ub = ab
+            else:
+                ua = ab
+                ub = aa
+        else:
+            ua = aa
+            ub = ab
+
+        # The distance of the cluster to draw to the left (ua) is uad
+        # and its count is uan. Likewise, the cluster to draw to the
+        # right has distance ubd and count ubn.
+        if ua < n:
+            uad = 0.0
+            uan = 1
+        else:
+            uad = Z[ua-n, 2]
+            uan = Z[ua-n, 3]
+        if ub < n:
+            ubd = 0.0
+            ubn = 1
+        else:
+            ubd = Z[ub-n, 2]
+            ubn = Z[ub-n, 3]
+
+        # Updated iv variable and the amount of space used.
+        (uiva, uwa, uah) = \
+              _dendrogram_calculate_info(Z=Z, p=p, \
+                                         colorthreshold=colorthreshold, \
+                                         get_leaves=get_leaves, \
+                                         orientation=orientation, \
+                                         labels=labels, \
+                                         count_sort=count_sort, \
+                                         distance_sort=distance_sort, \
+                                         show_leaf_counts=show_leaf_counts, \
+                                         i=ua, iv=iv, ivl=ivl, n=n, \
+                                         ivline_list=ivline_list, \
+                                         dvline_list=dvline_list)
+        (uivb, uwb, ubh) = \
+              _dendrogram_calculate_info(Z=Z, p=p, \
+                                         colorthreshold=colorthreshold, \
+                                         get_leaves=get_leaves, \
+                                         orientation=orientation, \
+                                         labels=labels, \
+                                         count_sort=count_sort, \
+                                         distance_sort=distance_sort, \
+                                         show_leaf_counts=show_leaf_counts, \
+                                         i=ub, iv=iv+uwa, ivl=ivl, n=n, \
+                                         ivline_list=ivline_list, \
+                                         dvline_list=dvline_list)
+
+        # The height of clusters a and b
+        ah = uad
+        bh = ubd
+        h = Z[i-n, 2]
+
+        ivline_list.append([uiva, uiva, uivb, uivb])
+        dvline_list.append([uah, h, h, ubh])
+        
+        return ( ((uiva + uivb) / 2), uwa+uwb, h )
 
 def is_cluster_isomorphic(T1, T2):
     """
-      Returns True if two different cluster assignments T1 and T2 are
+      Returns True iff two different cluster assignments T1 and T2 are
       equivalent. T1 and T2 must be arrays of the same size.
     """
     if type(T1) is not _array_type:
