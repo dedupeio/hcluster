@@ -1152,43 +1152,59 @@ try:
     import matplotlib
     import matplotlib.pylab
     mpl = True
-    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation):
+    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation, no_labels):
         axis = matplotlib.pylab.gca()
         # Independent variable plot width
         ivw = p * 10
         # Depenendent variable plot height
         dvw = mh + mh * 0.05
-        ivticks = scipy.arange(0, p*10+5, 10)
+        ivticks = scipy.arange(5, p*10+5, 10)
         if orientation == 'top':
             axis.set_ylim([0, dvw])
             axis.set_xlim([0, ivw])
             xlines = icoords
             ylines = dcoords
-            axis.set_xticks(ivticks)
-            axis.set_xticklabels(ivl)
+            if no_labels:
+                axis.set_xticks([])
+                axis.set_xticklabels([])
+            else:
+                axis.set_xticks(ivticks)
+                axis.set_xticklabels(ivl)
         elif orientation == 'bottom':
             axis.set_ylim([dvw, 0])
             axis.set_xlim([0, ivw])
             ivl.reverse()
             xlines = icoords
             ylines = dcoords
-            axis.set_xticks(ivticks)
-            axis.set_xticklabels(ivl)
+            if no_labels:
+                axis.set_xticks([])
+                axis.set_xticklabels([])
+            else:
+                axis.set_xticks(ivticks)
+                axis.set_xticklabels(ivl)
         elif orientation == 'left':
             axis.set_xlim([0, dvw])
             axis.set_ylim([0, ivw])
             xlines = dcoords
             ylines = icoords
-            axis.set_yticks(ivticks)
-            axis.set_yticklabels(ivl)
+            if no_labels:
+                axis.set_yticks([])
+                axis.set_yticklabels([])
+            else:
+                axis.set_yticks(ivticks)
+                axis.set_yticklabels(ivl)
         elif orientation == 'right':
             axis.set_xlim([dvw, 0])
             axis.set_ylim([0, ivw])
             xlines = dcoords
             ylines = icoords
             ivl.reverse()
-            axis.set_yticks(ivticks)
-            axis.set_yticklabels(ivl)
+            if no_labels:
+                axis.set_yticks([])
+                axis.set_yticklabels([])
+            else:
+                axis.set_yticks(ivticks)
+                axis.set_yticklabels(ivl)
         for (xline,yline) in zip(xlines, ylines):
             line = matplotlib.lines.Line2D(xline, yline)
             axis.add_line(line)
@@ -1196,14 +1212,15 @@ try:
             
 except ImportError:
     mpl = False
-    def _plot_dendrogram(icoords, dcoords, p, n, mh, orientation):
+    def _plot_dendrogram(icoords, dcoords, p, n, mh, orientation, no_labels):
         raise AttributeError('matplotlib not available. Plot request denied.')
 
 link_line_colors=['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
 def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
                orientation='top', labels=None, count_sort=False,
-               distance_sort=False, show_leaf_counts=True, no_plot=False):
+               distance_sort=False, show_leaf_counts=True, no_plot=False,
+               no_labels=False):
     """
     R = dendrogram(Z, p=30)
 
@@ -1325,7 +1342,12 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
         When no_plot=True, the final rendering is not performed. This is
         useful if only the data structures computed for the rendering
         are needed.
-        
+
+    R = dendrogram(..., no_labels)
+
+        When no_labels=True, no labels appear next to the leaf nodes in
+        the rendering of the dendrogram.
+
     """
 
     # Features under consideration.
@@ -1365,22 +1387,21 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
                                count_sort=count_sort, \
                                distance_sort=distance_sort, \
                                show_leaf_counts=show_leaf_counts, \
-                               i=2*n-2, iv=0.0, ivl=[], n=n, \
+                               i=2*n-2, iv=0.0, ivl=ivl, n=n, \
                                icoord_list=icoord_list, \
-                               dcoord_list=dcoord_list, lvs)
+                               dcoord_list=dcoord_list, lvs=lvs)
     if not no_plot:
         mh = max(Z[:,2])
-        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation)
+        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation, no_labels)
 
-    if get_leaves:
-        return (gca, T)
+    return R
 
 def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=True, \
                                orientation='top', labels=None, \
                                count_sort=False, distance_sort=False, \
                                show_leaf_counts=False, i=-1, iv=0.0, \
                                ivl=[], n=0, icoord_list=[], dcoord_list=[], \
-                               lvs, mhr=False, cc=0):
+                               lvs=None, mhr=False, cc=0):
     """
     (l,w) = _dendrogram_calculate_info(Z, p=30, colorthreshold=inf, get_leaves=True,
                orientation='top', labels=None, count_sort=False,
@@ -1416,18 +1437,20 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
     # it's label is either the empty string or the number of original
     # observations belonging to cluster i.
     if i < 2*n-p and i >= n:
-        lvs.append(i)
+        if lvs is not None:
+            lvs.append(int(i))
         if show_leaf_counts:
-            ivl.append("(" + str(Z[i-n, 3]) + ")")
+            ivl.append("(" + str(int(Z[i-n, 3])) + ")")
         else:
             ivl.append("")
         return (iv + 5.0, 10.0, 0.0)
     elif i < n:
-        lvs.append(i)
+        if lvs is not None:
+            lvs.append(int(i))
         if labels is not None:
             ivl.append(labels[i-n])
         else:        
-            ivl.append(str(i))
+            ivl.append(str(int(i)))
         return (iv + 5.0, 10.0, 0.0)
     elif i >= 2*n-p:
         # Actual indices of a and b
@@ -1520,7 +1543,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          show_leaf_counts=show_leaf_counts, \
                                          i=ua, iv=iv, ivl=ivl, n=n, \
                                          icoord_list=icoord_list, \
-                                         dcoord_list=dcoord_list, lvs)
+                                         dcoord_list=dcoord_list, lvs=lvs)
         (uivb, uwb, ubh) = \
               _dendrogram_calculate_info(Z=Z, p=p, \
                                          colorthreshold=colorthreshold, \
@@ -1532,7 +1555,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          show_leaf_counts=show_leaf_counts, \
                                          i=ub, iv=iv+uwa, ivl=ivl, n=n, \
                                          icoord_list=icoord_list, \
-                                         dcoord_list=dcoord_list, lvs)
+                                         dcoord_list=dcoord_list, lvs=lvs)
 
         # The height of clusters a and b
         ah = uad
