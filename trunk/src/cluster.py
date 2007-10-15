@@ -1152,7 +1152,7 @@ try:
     import matplotlib
     import matplotlib.pylab
     mpl = True
-    def _plot_dendrogram(ivlines, dvlines, ivl, p, n, mh, orientation):
+    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation):
         axis = matplotlib.pylab.gca()
         # Independent variable plot width
         ivw = p * 10
@@ -1162,30 +1162,30 @@ try:
         if orientation == 'top':
             axis.set_ylim([0, dvw])
             axis.set_xlim([0, ivw])
-            xlines = ivlines
-            ylines = dvlines
+            xlines = icoords
+            ylines = dcoords
             axis.set_xticks(ivticks)
             axis.set_xticklabels(ivl)
         elif orientation == 'bottom':
             axis.set_ylim([dvw, 0])
             axis.set_xlim([0, ivw])
             ivl.reverse()
-            xlines = ivlines
-            ylines = dvlines
+            xlines = icoords
+            ylines = dcoords
             axis.set_xticks(ivticks)
             axis.set_xticklabels(ivl)
         elif orientation == 'left':
             axis.set_xlim([0, dvw])
             axis.set_ylim([0, ivw])
-            xlines = dvlines
-            ylines = ivlines
+            xlines = dcoords
+            ylines = icoords
             axis.set_yticks(ivticks)
             axis.set_yticklabels(ivl)
         elif orientation == 'right':
             axis.set_xlim([dvw, 0])
             axis.set_ylim([0, ivw])
-            xlines = dvlines
-            ylines = ivlines
+            xlines = dcoords
+            ylines = icoords
             ivl.reverse()
             axis.set_yticks(ivticks)
             axis.set_yticklabels(ivl)
@@ -1196,14 +1196,16 @@ try:
             
 except ImportError:
     mpl = False
-    def _plot_dendrogram(ivlines, dvlines, p, n, mh, orientation):
+    def _plot_dendrogram(icoords, dcoords, p, n, mh, orientation):
         raise AttributeError('matplotlib not available. Plot request denied.')
+
+link_line_colors=['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
 def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
                orientation='top', labels=None, count_sort=False,
-               distance_sort=False, show_leaf_counts=True):
+               distance_sort=False, show_leaf_counts=True, no_plot=False):
     """
-    H = dendrogram(Z, p=30)
+    R = dendrogram(Z, p=30)
 
       Plots the hiearchical clustering defined by the linkage Z as a
       dendrogram. The dendrogram illustrates how each cluster is
@@ -1220,25 +1222,38 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
       dendrogram are the last p non-singleton clusters in the linkage
       Z (i.e. nodes corresponding to row vectors Z[n-p-2:end,:]).
 
-      Returns a reference H to the list of line objects for this
-      dendrogram.
+      R is a dictionary of the data structures computed to render the
+      dendrogram. Its keys are:
 
-    H = dendrogram(..., colorthreshold=t)
+         'icoords': a list of lists [I1, I2, ..., Ip] where Ik is a
+         list of 4 independent variable coordinates corresponding to
+         the line that represents the k'th link painted.
+
+         'dcoords': a list of lists [I2, I2, ..., Ip] where Ik is a
+         list of 4 independent variable coordinates corresponding to
+         the line that represents the k'th link painted.
+
+         'ivl': a list of labels corresponding to the leaf nodes
+
+    R = dendrogram(..., colorthreshold=t)
 
       Colors all the links below a cluster node a unique color if it is
       the first node among its ancestors to have a distance below the
       threshold t. (An alternative named-argument syntax can be used.)
 
-    (H,T) = dendrogram(..., get_leaves=True)
-    
-      Returns a tuple with the handle H and a m-sized numpy array T of
-      integer values. The T[i] value is the leaf node index in which
-      original observation with index i appears. This vector has
-      duplicates iff m > p.
-      
-      (An alternative named-argument syntax can be used.)
+    R = dendrogram(..., get_leaves=True)
 
-    ... = dendrogram(..., orientation='top')
+      Includes a list R['leaves'] in the result dictionary. The i'th
+      value is the leaf node index in which original observation with
+      index i appears. This vector has duplicates iff m > p.
+
+    R = dendrogram(..., get_node_stats=True)
+
+      Includes a list R['node_ids'] in the result dictionary. The i'th
+      value is the node index k (where k > n) to which linkage line i
+      corresponds.
+
+    R = dendrogram(..., orientation)
 
       Plots the dendrogram in a particular direction. The orientation
       parameter can be any of:
@@ -1255,16 +1270,19 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
         * 'right': plots the root at the right, and plot descendent
           links going left.
 
-    ... = dendrogram(..., labels=None)
+    R = dendrogram(..., labels=None)
 
-        S is a p-sized list (or tuple) passed with the text of the labels
-        to render by the leaf nodes. Passing None causes the index of
-        the original observation to be used. A label only appears if
-        its associated leaf node corresponds to a singleton cluster.
+        The labels parameter is a n-sized list (or tuple). The labels[i]
+        value is the text to put under the i'th leaf node only if it
+        corresponds to an original observation and not a non-singleton
+        cluster.
+
+        When labels=None, the index of the original observation is used
+        used.
 
         (MLab features end here.)
         
-    ... = dendrogram(..., count_sort=False)
+    R = dendrogram(..., count_sort)
 
         When plotting a cluster node and its directly descendent links,
         the order the two descendent links and their descendents are
@@ -1279,7 +1297,7 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
           * 'descendent': the descendent with the maximum number of
           original objects in its cluster is plotted first.
 
-    ... = dendrogram(..., distance_sort=False)
+    R = dendrogram(..., distance_sort)
 
         When plotting a cluster node and its directly descendent links,
         the order the two descendent links and their descendents are
@@ -1296,11 +1314,17 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
 
         Note that either count_sort or distance_sort must be False.
 
-    ... = dendrogram(..., show_leaf_counts)
+    R = dendrogram(..., show_leaf_counts)
 
         When show_leaf_counts=True, leaf nodes representing k>1
         original observation are labeled with the number of observations
         they contain in parenthesis.
+
+    R = dendrogram(..., no_plot)
+
+        When no_plot=True, the final rendering is not performed. This is
+        useful if only the data structures computed for the rendering
+        are needed.
         
     """
 
@@ -1325,9 +1349,14 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
     if p > n:
         p = n
 
-    ivline_list=[]
-    dvline_list=[]
+    if get_leaves:
+        lvs = []
+    else:
+        lvs = None
+    icoord_list=[]
+    dcoord_list=[]
     ivl=[]
+    R={'icoord':icoord_list, 'dcoord':dcoord_list, 'ivl':ivl, 'leaves':lvs}
     _dendrogram_calculate_info(Z=Z, p=p, \
                                colorthreshold=colorthreshold, \
                                get_leaves=get_leaves, \
@@ -1337,21 +1366,26 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
                                distance_sort=distance_sort, \
                                show_leaf_counts=show_leaf_counts, \
                                i=2*n-2, iv=0.0, ivl=[], n=n, \
-                               ivline_list=ivline_list, \
-                               dvline_list=dvline_list)
-    mh = max(Z[:,2])
-    _plot_dendrogram(ivline_list, dvline_list, ivl, p, n, mh, orientation)
+                               icoord_list=icoord_list, \
+                               dcoord_list=dcoord_list, lvs)
+    if not no_plot:
+        mh = max(Z[:,2])
+        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation)
+
+    if get_leaves:
+        return (gca, T)
 
 def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=True, \
                                orientation='top', labels=None, \
                                count_sort=False, distance_sort=False, \
                                show_leaf_counts=False, i=-1, iv=0.0, \
-                               ivl=[], n=0, ivline_list=[], dvline_list=[]):
+                               ivl=[], n=0, icoord_list=[], dcoord_list=[], \
+                               lvs, mhr=False, cc=0):
     """
     (l,w) = _dendrogram_calculate_info(Z, p=30, colorthreshold=inf, get_leaves=True,
                orientation='top', labels=None, count_sort=False,
                distance_sort=False, show_leaf_counts=False, i=0, iv=0.0,
-               ivl=[], n=0, ivline_list=[], dvline_list=[]):
+               ivl=[], n=0, icoord_list=[], dcoord_list=[], lvs):
 
     Calculates the endpoints of the links as well as the labels for the
     the dendrogram rooted at the node with index i. iv is the independent
@@ -1369,6 +1403,8 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
     node if i is a leaf node.
 
     w is the amount of space used in independent variable units.
+
+    
     """
     if n == 0:
         raise AttributeError("Invalid singleton cluster count n.")
@@ -1380,12 +1416,14 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
     # it's label is either the empty string or the number of original
     # observations belonging to cluster i.
     if i < 2*n-p and i >= n:
+        lvs.append(i)
         if show_leaf_counts:
             ivl.append("(" + str(Z[i-n, 3]) + ")")
         else:
             ivl.append("")
         return (iv + 5.0, 10.0, 0.0)
     elif i < n:
+        lvs.append(i)
         if labels is not None:
             ivl.append(labels[i-n])
         else:        
@@ -1481,8 +1519,8 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          distance_sort=distance_sort, \
                                          show_leaf_counts=show_leaf_counts, \
                                          i=ua, iv=iv, ivl=ivl, n=n, \
-                                         ivline_list=ivline_list, \
-                                         dvline_list=dvline_list)
+                                         icoord_list=icoord_list, \
+                                         dcoord_list=dcoord_list, lvs)
         (uivb, uwb, ubh) = \
               _dendrogram_calculate_info(Z=Z, p=p, \
                                          colorthreshold=colorthreshold, \
@@ -1493,16 +1531,16 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          distance_sort=distance_sort, \
                                          show_leaf_counts=show_leaf_counts, \
                                          i=ub, iv=iv+uwa, ivl=ivl, n=n, \
-                                         ivline_list=ivline_list, \
-                                         dvline_list=dvline_list)
+                                         icoord_list=icoord_list, \
+                                         dcoord_list=dcoord_list, lvs)
 
         # The height of clusters a and b
         ah = uad
         bh = ubd
         h = Z[i-n, 2]
 
-        ivline_list.append([uiva, uiva, uivb, uivb])
-        dvline_list.append([uah, h, h, ubh])
+        icoord_list.append([uiva, uiva, uivb, uivb])
+        dcoord_list.append([uah, h, h, ubh])
         
         return ( ((uiva + uivb) / 2), uwa+uwb, h )
 
