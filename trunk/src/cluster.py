@@ -1173,7 +1173,6 @@ try:
         elif orientation == 'bottom':
             axis.set_ylim([dvw, 0])
             axis.set_xlim([0, ivw])
-            ivl.reverse()
             xlines = icoords
             ylines = dcoords
             if no_labels:
@@ -1198,7 +1197,6 @@ try:
             axis.set_ylim([0, ivw])
             xlines = dcoords
             ylines = icoords
-            ivl.reverse()
             if no_labels:
                 axis.set_yticks([])
                 axis.set_yticklabels([])
@@ -1212,7 +1210,7 @@ try:
             
 except ImportError:
     mpl = False
-    def _plot_dendrogram(icoords, dcoords, p, n, mh, orientation, no_labels):
+    def _plot_dendrogram(*args, **kwargs):
         raise AttributeError('matplotlib not available. Plot request denied.')
 
 link_line_colors=['b', 'g', 'r', 'c', 'm', 'y', 'k']
@@ -1349,6 +1347,8 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
         the rendering of the dendrogram.
 
     """
+
+    # TODO: colorthreshold
 
     # Features under consideration.
     #
