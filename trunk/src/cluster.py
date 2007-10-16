@@ -1535,7 +1535,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
             # If a has a distance less than or equal to b, it and its
             # descendents should be drawn to the left. Otherwise, to
             # the right.
-            if da <= db:
+            if da > db:
                 ua = aa
                 ub = ab
             else:
