@@ -1381,13 +1381,12 @@ def dendrogram(Z, p=30, colorthreshold=None, get_leaves=True,
     icoord_list=[]
     dcoord_list=[]
     color_list=[]
-    current_color=[0] * 5
-    currently_below_threshold=[False, 0, 0, 0, 0]
+    current_color=[0]
+    currently_below_threshold=[False]
     ivl=[]
     if colorthreshold is None or \
        (type(colorthreshold) == types.StringType and colorthreshold=='default'):
         colorthreshold = max(Z[:,2])*0.7
-    print colorthreshold
     R={'icoord':icoord_list, 'dcoord':dcoord_list, 'ivl':ivl, 'leaves':lvs,
        'color_list':color_list}
     props = {'cbt': False, 'cc':0}
@@ -1500,7 +1499,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
             db = Z[ab-n, 2]
         else:
             nb = 1
-            da = 0.0
+            db = 0.0
 
         if count_sort == 'ascending' or count_sort == True:
             # If a has a count greater than b, it and its descendents should
@@ -1517,7 +1516,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
             # If a has a count less than or equal to b, it and its
             # descendents should be drawn to the left. Otherwise, to
             # the right.
-            if na <= nb:
+            if na > nb:
                 ua = aa
                 ub = ab
             else:
@@ -1578,6 +1577,18 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          current_color=current_color, \
                                          color_list=color_list, \
                                          currently_below_threshold=currently_below_threshold)
+
+        h = Z[i-n, 2]
+        if h >= colorthreshold or colorthreshold <= 0:
+            c = 'b'
+            
+            if currently_below_threshold[0]:
+                current_color[0] = (current_color[0] + 1) % len(_link_line_colors)
+            currently_below_threshold[0] = False
+        else:
+            currently_below_threshold[0] = True
+            c = _link_line_colors[current_color[0]]
+
         (uivb, uwb, ubh, ubmd) = \
               _dendrogram_calculate_info(Z=Z, p=p, \
                                          colorthreshold=colorthreshold, \
@@ -1596,25 +1607,25 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
         # The height of clusters a and b
         ah = uad
         bh = ubd
-        h = Z[i-n, 2]
 
         max_dist = max(uamd, ubmd, h)
 
         icoord_list.append([uiva, uiva, uivb, uivb])
         dcoord_list.append([uah, h, h, ubh])
-        if colorthreshold <= 0:
-            color_list.append('b')
-        elif max_dist >= colorthreshold:
-            color_list.append('b')
-            currently_below_threshold[0] = False
-            print 'yo'
-        else:
-            if not currently_below_threshold[0]:
-                print i
-                current_color[0] = (current_color[0] + 1) % len(_link_line_colors)
-            currently_below_threshold[0] = True
+        color_list.append(c)
+#         if colorthreshold <= 0:
+#             color_list.append('b')
+#         elif max_dist >= colorthreshold:
+#             color_list.append('b')
+#             currently_below_threshold[0] = False
+#             print 'yo'
+#         else:
+#             if not currently_below_threshold[0]:
+#                 print i
+#                 current_color[0] = (current_color[0] + 1) % len(_link_line_colors)
+#             currently_below_threshold[0] = True
             
-            color_list.append(_link_line_colors[current_color[0]])
+        
         return ( ((uiva + uivb) / 2), uwa+uwb, h, max_dist)
 
 def is_cluster_isomorphic(T1, T2):
