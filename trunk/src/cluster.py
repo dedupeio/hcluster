@@ -1152,7 +1152,7 @@ try:
     import matplotlib
     import matplotlib.pylab
     mpl = True
-    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation, no_labels):
+    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation, no_labels, color_list):
         axis = matplotlib.pylab.gca()
         # Independent variable plot width
         ivw = p * 10
@@ -1203,8 +1203,8 @@ try:
             else:
                 axis.set_yticks(ivticks)
                 axis.set_yticklabels(ivl)
-        for (xline,yline) in zip(xlines, ylines):
-            line = matplotlib.lines.Line2D(xline, yline)
+        for (xline,yline,color) in zip(xlines, ylines, color_list):
+            line = matplotlib.lines.Line2D(xline, yline, color=color)
             axis.add_line(line)
         matplotlib.pylab.draw_if_interactive()
             
@@ -1213,12 +1213,12 @@ except ImportError:
     def _plot_dendrogram(*args, **kwargs):
         raise AttributeError('matplotlib not available. Plot request denied.')
 
-link_line_colors=['b', 'g', 'r', 'c', 'm', 'y', 'k']
+_link_line_colors=['g', 'r', 'c', 'm', 'y', 'k']
 
-def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
+def dendrogram(Z, p=30, colorthreshold=None, get_leaves=True,
                orientation='top', labels=None, count_sort=False,
                distance_sort=False, show_leaf_counts=True, no_plot=False,
-               no_labels=False):
+               no_labels=False, color_list=None):
     """
     R = dendrogram(Z, p=30)
 
@@ -1254,7 +1254,10 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
 
       Colors all the links below a cluster node a unique color if it is
       the first node among its ancestors to have a distance below the
-      threshold t. (An alternative named-argument syntax can be used.)
+      threshold t. All nodes greater than or equal to the threshold are
+      colored blue. If t is less than or equal to zero, all nodes
+      are colored blue. If t is None or 'default', corresponding with
+      MATLAB behavior, the threshold is set to 0.7*max(Z[:,2]).
 
     R = dendrogram(..., get_leaves=True)
 
@@ -1377,8 +1380,17 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
         lvs = None
     icoord_list=[]
     dcoord_list=[]
+    color_list=[]
+    current_color=[0] * 5
+    currently_below_threshold=[False, 0, 0, 0, 0]
     ivl=[]
-    R={'icoord':icoord_list, 'dcoord':dcoord_list, 'ivl':ivl, 'leaves':lvs}
+    if colorthreshold is None or \
+       (type(colorthreshold) == types.StringType and colorthreshold=='default'):
+        colorthreshold = max(Z[:,2])*0.7
+    print colorthreshold
+    R={'icoord':icoord_list, 'dcoord':dcoord_list, 'ivl':ivl, 'leaves':lvs,
+       'color_list':color_list}
+    props = {'cbt': False, 'cc':0}
     _dendrogram_calculate_info(Z=Z, p=p, \
                                colorthreshold=colorthreshold, \
                                get_leaves=get_leaves, \
@@ -1389,10 +1401,13 @@ def dendrogram(Z, p=30, colorthreshold=scipy.inf, get_leaves=True,
                                show_leaf_counts=show_leaf_counts, \
                                i=2*n-2, iv=0.0, ivl=ivl, n=n, \
                                icoord_list=icoord_list, \
-                               dcoord_list=dcoord_list, lvs=lvs)
+                               dcoord_list=dcoord_list, lvs=lvs, \
+                               current_color=current_color, \
+                               color_list=color_list, \
+                               currently_below_threshold=currently_below_threshold)
     if not no_plot:
         mh = max(Z[:,2])
-        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation, no_labels)
+        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation, no_labels, color_list)
 
     return R
 
@@ -1401,13 +1416,10 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                count_sort=False, distance_sort=False, \
                                show_leaf_counts=False, i=-1, iv=0.0, \
                                ivl=[], n=0, icoord_list=[], dcoord_list=[], \
-                               lvs=None, mhr=False, cc=0):
+                               lvs=None, mhr=False, \
+                               current_color=[], color_list=[], \
+                               currently_below_threshold=[]):
     """
-    (l,w) = _dendrogram_calculate_info(Z, p=30, colorthreshold=inf, get_leaves=True,
-               orientation='top', labels=None, count_sort=False,
-               distance_sort=False, show_leaf_counts=False, i=0, iv=0.0,
-               ivl=[], n=0, icoord_list=[], dcoord_list=[], lvs):
-
     Calculates the endpoints of the links as well as the labels for the
     the dendrogram rooted at the node with index i. iv is the independent
     variable value to plot the left-most leaf node below the root node i
@@ -1423,8 +1435,18 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
     i is non-singleton, otherwise the independent coordinate of the leaf
     node if i is a leaf node.
 
-    w is the amount of space used in independent variable units.
+    Returns a tuple (left, w, h, md)
 
+      * left is the independent variable coordinate of the center of the
+        the U of the subtree
+        
+      * w is the amount of space used for the subtree (in independent
+        variable units)
+
+      * h is the height of the subtree in dependent variable units
+
+      * is the max(Z[*,2] for all nodes * below and including
+        the target node.
     
     """
     if n == 0:
@@ -1437,13 +1459,20 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
     # it's label is either the empty string or the number of original
     # observations belonging to cluster i.
     if i < 2*n-p and i >= n:
+        d = Z[i-n, 2]
         if lvs is not None:
             lvs.append(int(i))
         if show_leaf_counts:
             ivl.append("(" + str(int(Z[i-n, 3])) + ")")
         else:
             ivl.append("")
-        return (iv + 5.0, 10.0, 0.0)
+#         if d >= colorthreshold:
+#             if currently_below_threshold[0]:
+#                 current_color[0] = (current_color[0] + 1) % len(_link_line_colors)
+#                 currently_below_threshold[0] = False
+#         elif colorthreshold > 0:
+#             currently_below_threshold[0] = True
+        return (iv + 5.0, 10.0, 0.0, d)
     elif i < n:
         if lvs is not None:
             lvs.append(int(i))
@@ -1451,7 +1480,9 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
             ivl.append(labels[i-n])
         else:        
             ivl.append(str(int(i)))
-        return (iv + 5.0, 10.0, 0.0)
+#         if colorthreshold > 0:
+#             currently_below_threshold[0] = True
+        return (iv + 5.0, 10.0, 0.0, 0.0)
     elif i >= 2*n-p:
         # Actual indices of a and b
         aa = Z[i-n, 0]
@@ -1532,7 +1563,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
             ubn = Z[ub-n, 3]
 
         # Updated iv variable and the amount of space used.
-        (uiva, uwa, uah) = \
+        (uiva, uwa, uah, uamd) = \
               _dendrogram_calculate_info(Z=Z, p=p, \
                                          colorthreshold=colorthreshold, \
                                          get_leaves=get_leaves, \
@@ -1543,8 +1574,11 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          show_leaf_counts=show_leaf_counts, \
                                          i=ua, iv=iv, ivl=ivl, n=n, \
                                          icoord_list=icoord_list, \
-                                         dcoord_list=dcoord_list, lvs=lvs)
-        (uivb, uwb, ubh) = \
+                                         dcoord_list=dcoord_list, lvs=lvs, \
+                                         current_color=current_color, \
+                                         color_list=color_list, \
+                                         currently_below_threshold=currently_below_threshold)
+        (uivb, uwb, ubh, ubmd) = \
               _dendrogram_calculate_info(Z=Z, p=p, \
                                          colorthreshold=colorthreshold, \
                                          get_leaves=get_leaves, \
@@ -1555,17 +1589,33 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
                                          show_leaf_counts=show_leaf_counts, \
                                          i=ub, iv=iv+uwa, ivl=ivl, n=n, \
                                          icoord_list=icoord_list, \
-                                         dcoord_list=dcoord_list, lvs=lvs)
-
+                                         dcoord_list=dcoord_list, lvs=lvs, \
+                                         current_color=current_color, \
+                                         color_list=color_list, \
+                                         currently_below_threshold=currently_below_threshold)
         # The height of clusters a and b
         ah = uad
         bh = ubd
         h = Z[i-n, 2]
 
+        max_dist = max(uamd, ubmd, h)
+
         icoord_list.append([uiva, uiva, uivb, uivb])
         dcoord_list.append([uah, h, h, ubh])
-        
-        return ( ((uiva + uivb) / 2), uwa+uwb, h )
+        if colorthreshold <= 0:
+            color_list.append('b')
+        elif max_dist >= colorthreshold:
+            color_list.append('b')
+            currently_below_threshold[0] = False
+            print 'yo'
+        else:
+            if not currently_below_threshold[0]:
+                print i
+                current_color[0] = (current_color[0] + 1) % len(_link_line_colors)
+            currently_below_threshold[0] = True
+            
+            color_list.append(_link_line_colors[current_color[0]])
+        return ( ((uiva + uivb) / 2), uwa+uwb, h, max_dist)
 
 def is_cluster_isomorphic(T1, T2):
     """
