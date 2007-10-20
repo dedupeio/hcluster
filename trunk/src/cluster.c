@@ -119,6 +119,25 @@ double chebyshev_distance(const double *u, const double *v, int n) {
   return maxv;
 }
 
+double canberra_distance(const double *u, const double *v, int n) {
+  int i;
+  double s = 0.0;
+  for (i = 0; i < n; i++) {
+    s += (fabs(u[i] - v[i]) / (fabs(u[i]) + fabs(v[i])));
+  }
+  return s;
+}
+
+double bray_curtis_distance(const double *u, const double *v, int n) {
+  int i;
+  double s1 = 0.0, s2 = 0.0;
+  for (i = 0; i < n; i++) {
+    s1 += fabs(u[i] - v[i]);
+    s2 += fabs(u[i] + v[i]);
+  }
+  return s1 / s2;
+}
+
 double mahalanobis_distance(const double *u, const double *v,
 			    const double *covinv, double *dimbuf1,
 			    double *dimbuf2, int n) {
@@ -303,6 +322,32 @@ void pdist_mahalanobis(const double *X, const double *covinv,
   }
   dimbuf2 = 0;
   free(dimbuf1);
+}
+
+void pdist_bray_curtis(const double *X, double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = bray_curtis_distance(u, v, n);
+    }
+  }
+}
+
+void pdist_canberra(const double *X, double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = canberra_distance(u, v, n);
+    }
+  }
 }
 
 void pdist_hamming(const double *X, double *dm, int m, int n) {

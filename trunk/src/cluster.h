@@ -95,6 +95,8 @@ void pdist_seuclidean(const double *X,
 		      const double *var, double *dm, int m, int n);
 void pdist_mahalanobis(const double *X, const double *covinv,
 		       double *dm, int m, int n);
+void pdist_bray_curtis(const double *X, double *dm, int m, int n);
+void pdist_canberra(const double *X, double *dm, int m, int n);
 void pdist_hamming(const double *X, double *dm, int m, int n);
 void pdist_hamming_bool(const char *X, double *dm, int m, int n);
 void pdist_city_block(const double *X, double *dm, int m, int n);

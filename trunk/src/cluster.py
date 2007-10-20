@@ -11,7 +11,7 @@ Flat cluster formation
  cluster            forms flat clusters from hierarchical clusters.
  clusterdata        forms flat clusters directly from data.
 
-Distances between raw observations
+Distance matrix computation from raw vectors.
 
  pdist              computes the distance between each point given a metric.
  randdm             computes a random distance matrix.
@@ -40,6 +40,22 @@ Tree representations of hierarchies
  cnode              represents cluster nodes in a cluster hierarchy.
  lvlist             a left-to-right traversal of the leaves.
  totree             represents a linkage matrix as a tree object.
+
+Distance functions between two vectors u and v
+
+ braycurtis         the Bray-Curtis distance.
+ canberra           the Canberra distance.
+ chebyshev          the Chebyshev distance.
+ cityblock          the Manhattan distance.
+ correlation        the Correlation distance.
+ cosine             the Cosine distance.
+ euclidean          the Euclidean distance.
+ hamming            the Hamming distance (vectors can be boolean arrays).
+ jaccard            the Jaccard distance (vectors can be boolean ararys).
+ mahalanobis        the Mahalanobis distance.
+ minkowski          the Minkowski distance.
+ seuclidean         the normalized Euclidean distance.
+ sqeuclidean        the squared Euclidean distance.
 
 Predicates
 
@@ -479,8 +495,6 @@ def totree(Z, rd=False):
     else:
         return nd
 
-    
-
 def squareform(X, force="no", checks=True):
     """ Converts a vectorform distance vector to a squareform distance
     matrix, and vice-versa. 
@@ -567,7 +581,106 @@ def squareform(X, force="no", checks=True):
     else:
         raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted' % len(s))
 
-def pdist(X, metric='euclidean', p=2):
+def minkowski(u, v, p):
+    """
+    Returns the Minkowski distance between two vectors u and v,
+
+       ||u-v||_p = (\sum {|u_i - v_i|^p})^(1/p).
+    """
+    if p < 1:
+        raise AttributeError("p must be at least 1")
+    return math.pow((abs(u-v)**p).sum(), 1.0/p)
+
+def euclidean(u, v):
+    """
+    Computes the Euclidean distance between two vectors u and v, ||u-v||_2
+    """
+    return scipy.sqrt(((u-v)*(u-v).T).sum())
+
+def sqeuclidean(u, v):
+    """
+    Computes the squared Euclidean distance between two vector u and v,
+      (||u-v||_2)^2.
+    """
+    return ((u-v)*(u-v).T).sum()
+
+def cosine(u, v):
+    """
+    Computes the Cosine distance between two vectors u and v,
+      (1-uv^T)/(||u||_2 * ||v||_2).
+    """
+    return (1.0 - (scipy.dot(u, v.T) / \
+                   (math.sqrt(scipy.dot(u, u.T)) * \
+                    math.sqrt(scipy.dot(v, v.T)))))
+
+def correlation(u, v):
+    """
+    Computes the correlation distance between two vectors u and v.
+    """
+    return 1.0 - \
+           (scipy.dot(u - u.mean(), (v - v.mean()).T) / \
+            (math.sqrt(scipy.dot(u - u.mean(), \
+                                 (u - u.mean()).T)) \
+             * math.sqrt(scipy.dot(v - v.mean(), \
+                                   (v - v.mean()).T))))
+
+def hamming(u, v):
+    """
+    Computes the hamming distance between two vector u and v.
+    """
+    return (u != v).mean()
+
+def jaccard(u, v):
+    """
+    Computes the Jaccard distance between two vectors u and v.
+    """
+    return ((scipy.bitwise_and((u != v), scipy.bitwise_or(u != 0, v != 0))).sum()) / scipy.bitwise_or(u != 0, v != 0).sum()
+
+def seuclidean(u, v, V):
+    """
+    Returns the standardized Euclidean distance between two
+    n-dimensional. V is a m-dimensional vector of component variances.
+    It is usually computed among a larger collection vectors.
+    """
+    return scipy.sqrt(((u-v)**2 / V).sum())
+
+def cityblock(u, v):
+    """
+    Computes the Manhattan distance between two vectors u and v,
+       \sum {u_i-v_i}.
+    """
+    return abs(u-v).sum()
+
+def mahalanobis(u, v, VI):
+    """
+    Computes the Mahalanobis distance between two vectors u and v,
+                (u-v)VI(u-v)^T
+    where VI is the inverse covariance matrix.
+    """
+    return scipy.sqrt(scipy.dot(scipy.dot((u-v),VI),(u-v).T).sum())
+
+def chebyshev(u, v):
+    """
+    Computes the Chebyshev distance between two vectors u and v,
+                max {|u_i-v_i|}.
+    """
+    return max(abs(u-v))
+
+def braycurtis(u, v):
+    """
+    Computes the Bray-Curtis distance between two vectors u and v,
+    \sum{|u_i-v_i|} / \sum{|u_i+v_i|}
+    """
+    return abs(u-v).sum() / abs(u+v).sum()
+
+def canberra(u, v):
+    """
+    Computes the Canberra distance between two vectors u and v,
+    \sum{|u_i-v_i|} / \sum{|u_i|+|v_i}.
+    """
+    return abs(u-v).sum() / (abs(u).sum() + abs(v).sum())    
+
+def pdist(X, metric='euclidean', p=2, V=None, VI=None):
     """ Y=pdist(X, method='euclidean', p=2)
     
            Computes the distance between m original observations in
@@ -584,20 +697,30 @@ def pdist(X, metric='euclidean', p=2):
 
         2. Y=pdist(X, 'minkowski', p)
 
-          Computes the distances using the Minkowski distance (p-norm)
-          where p is a number.
+          Computes the distances using the Minkowski distance ||u-v||_p
+          (p-norm) where p>=1.
 
         3. Y=pdist(X, 'cityblock')
 
-          Computes the city block or manhattan distance between the
+          Computes the city block or Manhattan distance between the
           points.
 
-        4. Y=pdist(X, 'seuclidean')
+        4. Y=pdist(X, 'seuclidean', V=None)
 
-          Computes the standardized euclidean distance so that the
-          distances are of unit variance.
+          Computes the standardized Euclidean distance. The standardized
+          Euclidean distance between two points u and v is
 
-        5. Y=pdist(X, 'cosine')
+            sqrt(\sum {(u_i-v_i)^2 / V[x_i]}).
+
+          V is the variance vector; V[i] is the variance computed over all
+          the i'th components of the points. If not passed, it is
+          automatically computed.
+
+        5. Y=pdist(X, 'sqeuclidean')
+
+          Computes the squared Euclidean distance (||u-v||_2)^2.
+
+        6. Y=pdist(X, 'cosine')
 
           Computes the cosine distance between vectors u and v. This is
         
@@ -607,7 +730,7 @@ def pdist(X, metric='euclidean', p=2):
 
           where |*|_2 is the 2 norm of its argument *.
 
-        6. Y=pdist(X, 'correlation')
+        7. Y=pdist(X, 'correlation')
 
           Computes the correlation distance between vectors u and v. This is
 
@@ -618,29 +741,55 @@ def pdist(X, metric='euclidean', p=2):
           where |*|_1 is the Manhattan (or 1-norm) of its argument *,
           and n is the common dimensionality of the vectors.
 
-        7. Y=pdist(X, 'hamming')
+        8. Y=pdist(X, 'hamming')
 
           Computes the normalized Hamming distance, or the proportion
           of those vector elements between two vectors u and v which
           disagree. To save memory, the matrix X can be of type boolean.
 
-        8. Y=pdist(X, 'jaccard')
+        9. Y=pdist(X, 'jaccard')
 
           Computes the Jaccard distance between the points. Given two
           vectors, u and v, the Jaccard disaance is the proportion of
           those elements u_i and v_i that disagree where at least one
           of them is non-zero.
 
-        9. Y=pdist(X, 'chebyshev')
+        10. Y=pdist(X, 'chebyshev')
 
           Computes the Chebyshev distance between the points. The
           Chebyshev distance between two vectors u and v is the maximum
           norm-1 distance between their respective elements. More
           precisely, the distance is given by
 
-            d(u,v) = max_{i=1}^{n}{|u_i-v_i|}.
+            d(u,v) = max {|u_i-v_i|}.
 
-        10. Y=pdist(X, f)
+        11. Y=pdist(X, 'canberra')
+
+          Computes the Canberra distance between the points. The
+          Canberra distance between two points u and v is
+
+                      |u_1-v_1|     |u_2-v_2|           |u_n-v_n|
+            d(u,v) = ----------- + ----------- + ... + -----------
+                     |u_1|+|v_1|   |u_2|+|v_2|         |u_n|+|v_n|
+
+        12. Y=pdist(X, 'braycurtis')
+
+          Computes the Canberra distance between the points. The
+          Canberra distance between two points u and v is
+
+                     |u_1-v_1| + |u_2-v_2| + ... + |u_n-v_n|
+            d(u,v) = ---------------------------------------
+                     |u_1+v_1| + |u_2+v_2| + ... + |u_n+v_n|
+
+        13. Y=pdist(X, 'mahalanobis', VI=None)
+
+          Computes the Mahalanobis distance between the points. The
+          Mahalanobis distance between two points u and v is
+                (u-v)(1/V)(u-v)^T
+          where (1/V) is the inverse covariance. If VI is not None,
+          VI will be used as the inverse covariance matrix.
+
+        13. Y=pdist(X, f)
         
           Computes the distance between all pairs of vectors in X
           using the user supplied 2-arity function f. For example,
@@ -650,7 +799,7 @@ def pdist(X, metric='euclidean', p=2):
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
        """
 #         11. Y=pdist(X, 'test_Y')
-
+#
 #           Computes the distance between all pairs of vectors in X
 #           using the distance metric Y but with a more succint,
 #           verifiable, but less efficient implementation.
@@ -684,6 +833,9 @@ def pdist(X, metric='euclidean', p=2):
             AttributeError('A double array must be passed.')
         if mstr in set(['euclidean', 'euclid', 'eu', 'e']):
             _cluster_wrap.pdist_euclidean_wrap(X, dm)
+        elif mstr in set(['sqeuclidean']):
+            _cluster_wrap.pdist_euclidean_wrap(X, dm)
+            dm = dm ** 2.0
         elif mstr in set(['cityblock', 'cblock', 'cb', 'c']):
             _cluster_wrap.pdist_city_block_wrap(X, dm)
         elif mstr in set(['hamming', 'hamm', 'ha', 'h']):
@@ -705,7 +857,21 @@ def pdist(X, metric='euclidean', p=2):
         elif mstr in set(['minkowski', 'mi', 'm']):
             _cluster_wrap.pdist_minkowski_wrap(X, dm, p)
         elif mstr in set(['seuclidean', 'se', 's']):
-            VV = scipy.stats.var(X, axis=0)
+            if V:
+                if type(V) is not _array_type:
+                    raise AttributeError('V must be a numpy array')
+                if V.dtype != 'double':
+                    raise AttributeError('V must contain doubles.')
+                if len(V.shape) != 1:
+                    raise AttributeError('V must be one-dimensional.')
+                if V.shape[0] != n:
+                    raise AttributeError('V must be a vector of the same dimension as the points.')
+                if V.base is not None:
+                    VV = V.copy()
+                else:
+                    VV = V
+            else:
+                VV = scipy.stats.var(X, axis=0)
             _cluster_wrap.pdist_seuclidean_wrap(X, VV, dm)
         # Need to test whether vectorized cosine works better.
         # Find out: Is there a dot subtraction operator so I can
@@ -719,10 +885,8 @@ def pdist(X, metric='euclidean', p=2):
             nV = norms.reshape(m, 1)
             # The numerator u * v
             nm = scipy.dot(X, X.T)
-            
             # The denom. ||u||*||v||
             de = scipy.dot(nV, nV.T);
-
             dm = 1 - (nm / de)
             dm[xrange(0,m),xrange(0,m)] = 0
             dm = squareform(dm)
@@ -731,50 +895,50 @@ def pdist(X, metric='euclidean', p=2):
             norms = scipy.sqrt(scipy.sum(X2 * X2, axis=1))
             _cluster_wrap.pdist_cosine_wrap(X2, dm, norms)
         elif mstr in set(['mahalanobis', 'mahal', 'mah']):
-            V = scipy.cov(X.T)
-            VI = scipy.linalg.inv(V).T.copy()
+            if VI:
+                if type(VI) != _array_type:
+                    raise AttributeError('VI must be a numpy array.')
+                if VI.dtype != 'double':
+                    raise AttributeError('The array must contain doubles.')
+                if VI.base is not None:
+                    VI = VI.copy()
+            else:
+                V = scipy.cov(X.T)
+                VI = scipy.linalg.inv(V).T.copy()
             # (u-v)V^(-1)(u-v)^T
             _cluster_wrap.pdist_mahalanobis_wrap(X, VI, dm)
+        elif mstr == 'canberra':
+            _cluster_wrap.pdist_canberra_wrap(X, dm)
+        elif mstr == 'braycurtis':
+            _cluster_wrap.pdist_bray_curtis_wrap(X, dm)
         elif metric == 'test_euclidean':
-            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
+            dm = pdist(X, euclidean)
         elif metric == 'test_seuclidean':
-            D = scipy.diagflat(scipy.stats.var(X, axis=0))
-            DI = scipy.linalg.inv(D)
-            dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*DI*(u-v).T).sum())))
+            if V is None:
+                V = scipy.stats.var(X, axis=0)
+            dm = pdist(X, lambda u, v: seuclidean(u, v, V))
+        elif metric == 'test_braycurtis':
+            dm = pdist(X, braycurtis)
         elif metric == 'test_mahalanobis':
-            V = scipy.cov(X.T)
-            VI = scipy.linalg.inv(V)
+            if VI is None:
+                V = scipy.cov(X.T)
+                VI = scipy.linalg.inv(V)
             # (u-v)V^(-1)(u-v)^T
-            dm = pdist(X, (lambda u, v: scipy.sqrt(scipy.dot(scipy.dot((u-v),VI),(u-v).T).sum())))
+            dm = pdist(X, (lambda u, v: mahalanobis(u, v, VI)))
         elif metric == 'test_cityblock':
-            dm = pdist(X, (lambda u, v: abs(u-v).sum()))
+            dm = pdist(X, cityblock)
         elif metric == 'test_minkowski':
-            dm = pdist(X, (lambda u, v: math.pow((abs(u-v)**p).sum(), 1.0/p)))
+            dm = pdist(X, minkowski)
         elif metric == 'test_cosine':
-            dm = pdist(X, \
-                       (lambda u, v: \
-                        (1.0 - (scipy.dot(u, v.T) / \
-                                (math.sqrt(scipy.dot(u, u.T)) * \
-                                 math.sqrt(scipy.dot(v, v.T)))))))
+            dm = pdist(X, cosine)
         elif metric == 'test_correlation':
-            dm = pdist(X, \
-                       (lambda u, v: 1.0 - \
-                        (scipy.dot(u - u.mean(), (v - v.mean()).T) / \
-                         (math.sqrt(scipy.dot(u - u.mean(), \
-                                              (u - u.mean()).T)) \
-                          * math.sqrt(scipy.dot(v - v.mean(), \
-                                                (v - v.mean()).T))))))
+            dm = pdist(X, correlation)
         elif metric == 'test_hamming':
-            dm = pdist(X, (lambda u, v: (u != v).mean()))
+            dm = pdist(X, hamming)
         elif metric == 'test_jaccard':
-            dm = pdist(X, \
-                       (lambda u, v: \
-                        ((scipy.bitwise_and((u != v),
-                                       scipy.bitwise_or(u != 0, \
-                                                   v != 0))).sum()) / \
-                        (scipy.bitwise_or(u != 0, v != 0)).sum()))
+            dm = pdist(X, jaccard)
         elif metric == 'test_chebyshev':
-            dm = pdist(X, lambda u, v: max(abs(u-v)))
+            dm = pdist(X, chebyshev)
         else:
             raise AttributeError('Unknown Distance Metric: %s' % mstr)
     else:

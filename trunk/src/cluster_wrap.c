@@ -408,6 +408,49 @@ extern PyObject *pdist_euclidean_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *pdist_canberra_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const double *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const double*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_canberra(X, dm, m, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
+extern PyObject *pdist_bray_curtis_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const double *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const double*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_bray_curtis(X, dm, m, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
+
 extern PyObject *pdist_mahalanobis_wrap(PyObject *self, PyObject *args) {
   PyArrayObject *_X, *_covinv, *_dm;
   int m, n;
@@ -647,6 +690,8 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
+  {"pdist_bray_curtis_wrap", pdist_bray_curtis_wrap, METH_VARARGS},
+  {"pdist_canberra_wrap", pdist_canberra_wrap, METH_VARARGS},
   {"pdist_chebyshev_wrap", pdist_chebyshev_wrap, METH_VARARGS},
   {"pdist_city_block_wrap", pdist_city_block_wrap, METH_VARARGS},
   {"pdist_cosine_wrap", pdist_cosine_wrap, METH_VARARGS},
