@@ -93,6 +93,8 @@ void dist_to_vector_from_squareform(const double *M, double *v, int n);
 void pdist_euclidean(const double *X, double *dm, int m, int n);
 void pdist_seuclidean(const double *X,
 		      const double *var, double *dm, int m, int n);
+void pdist_mahalanobis(const double *X, const double *covinv,
+		       double *dm, int m, int n);
 void pdist_hamming(const double *X, double *dm, int m, int n);
 void pdist_hamming_bool(const char *X, double *dm, int m, int n);
 void pdist_city_block(const double *X, double *dm, int m, int n);
@@ -122,11 +124,25 @@ void linkage(double *dm, double *Z, double *X, int m, int n, int ml, int kc, dis
 void linkage_alt(double *dm, double *Z, double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);
 
 void cophenetic_distances(const double *Z, double *d, int n);
-void cophenetic_distances_nonrecursive(const double *Z, double *d, int n);
 void cpy_to_tree(const double *Z, cnode **tnodes, int n);
 void calculate_cluster_sizes(const double *Z, double *CS, int n);
 
 void form_member_list(const double *Z, int *members, int n);
-void form_flat_clusters_from_ic(const double *Z, const double *R,
-				int *T, double cutoff, int n, int method);
+void form_flat_clusters_from_in(const double *Z, const double *R, int *T,
+				double cutoff, int n);
+void form_flat_clusters_from_dist(const double *Z, int *T,
+				  double cutoff, int n);
+void form_flat_clusters_from_monotonic_criterion(const double *Z,
+						 const double *mono_crit,
+						 int *T, double cutoff, int n);
+
+void form_flat_clusters_maxclust_dist(const double *Z, int *T, int n, int mc);
+
+void form_flat_clusters_maxclust_monocrit(const double *Z,
+					  const double *mono_crit,
+					  int *T, int n, int mc);
+
+void get_max_dist_for_each_cluster(const double *Z, double *max_dists, int n);
+void get_max_Rfield_for_each_cluster(const double *Z, const double *R,
+				     double *max_rfs, int n, int rf);
 #endif

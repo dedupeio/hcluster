@@ -119,12 +119,26 @@ double chebyshev_distance(const double *u, const double *v, int n) {
   return maxv;
 }
 
-double mahalanobis_distance(const double *u, const double *v, int n) {
-  int i = 0;
-  double s = 0.0, d;
+double mahalanobis_distance(const double *u, const double *v,
+			    const double *covinv, double *dimbuf1,
+			    double *dimbuf2, int n) {
+  int i, j;
+  double s;
+  const double *covrow = covinv;
   for (i = 0; i < n; i++) {
-    d = fabs(u[i] - v[i]);
-    s = s + d;
+    dimbuf1[i] = u[i] - v[i];
+  }
+  for (i = 0; i < n; i++) {
+    covrow = covinv + (i * n);
+    s = 0.0;
+    for (j = 0; j < n; j++) {
+      s += dimbuf1[j] * covrow[j];
+    }
+    dimbuf2[i] = s;
+  }
+  s = 0.0;
+  for (i = 0; i < n; i++) {
+    s += dimbuf1[i] * dimbuf2[i];
   }
   return sqrt(s);
 }
@@ -272,6 +286,25 @@ void pdist_euclidean(const double *X, double *dm, int m, int n) {
   }
 }
 
+void pdist_mahalanobis(const double *X, const double *covinv,
+		       double *dm, int m, int n) {
+  int i, j;
+  const double *u, *v;
+  double *it = dm;
+  double *dimbuf1, *dimbuf2;
+  dimbuf1 = (double*)malloc(sizeof(double) * 2 * n);
+  dimbuf2 = dimbuf1 + n;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = mahalanobis_distance(u, v, covinv, dimbuf1, dimbuf2, n);
+    }
+  }
+  dimbuf2 = 0;
+  free(dimbuf1);
+}
+
 void pdist_hamming(const double *X, double *dm, int m, int n) {
   int i, j;
   const double *u, *v;
@@ -394,22 +427,12 @@ void pdist_minkowski(const double *X, double *dm, int m, int n, double p) {
 
 void chopmins(int *ind, int mini, int minj, int np) {
   int i;
-  /**  if (mini < np - 2) {**/
   for (i = mini; i < minj - 1; i++) {
     ind[i] = ind[i + 1];
   }
-  /**}**/
-  /**  if (minj < np - 2) {**/
   for (i = minj - 1; i < np - 2; i++) {
     ind[i] = ind[i + 2];
   }
-  /**  }**/
-  /**  if (np > 0) {
-    ind[np - 1] = HUGE_VALF;
-  }
-  if (np > 1) {
-    ind[np - 2] = INFINITY;
-    }***/
   /**  fprintf(stderr, "[Remove mini=%d minj=%d]\n", mini, minj);**/
 }
 
@@ -418,44 +441,24 @@ void chopmin(int *ind, int minj, int np) {
   for (i = minj; i < np - 1; i++) {
     ind[i] = ind[i + 1];
   }
-  /**  }**/
-  /**  if (np > 0) {
-    ind[np - 1] = HUGE_VALF;
-  }
-  if (np > 1) {
-    ind[np - 2] = INFINITY;
-    }***/
   /**  fprintf(stderr, "[Remove mini=%d minj=%d]\n", mini, minj);**/
 }
 
 void chopmins_ns_ij(double *ind, int mini, int minj, int np) {
   int i;
-  /**if (mini < np - 2) {**/
   for (i = mini; i < minj - 1; i++) {
     ind[i] = ind[i + 1];
   }
-  /**}**/
-  /**if (minj < np - 2) {**/
   for (i = minj - 1; i < np - 2; i++) {
     ind[i] = ind[i + 2];
   }
-  /**}**/
-  /**  if (np > 0) {
-    ind[np - 1] = INFINITY;
-  }
-  if (np > 1) {
-    ind[np - 2] = INFINITY;
-    }**/
 }
 
 void chopmins_ns_i(double *ind, int mini, int np) {
   int i;
-    for (i = mini; i < np - 1; i++) {
-      ind[i] = ind[i + 1];
-    }
-    /**  if (np > 0) {
-    ind[np - 1] = INFINITY;
-    }**/
+  for (i = mini; i < np - 1; i++) {
+    ind[i] = ind[i + 1];
+  }
 }
 
 void dist_single(cinfo *info, int mini, int minj, int np, int n) {
@@ -473,11 +476,6 @@ void dist_single(cinfo *info, int mini, int minj, int np, int n) {
   for (i = minj + 1; i < np; i++, bit++) {
     *bit = CPY_MIN(*(rows[mini] + i - mini - 1), *(rows[minj] + i - minj - 1));
   }
-  /**  fprintf(stderr, "[");
-  for (i = 0; i < np - 2; i++) {
-    fprintf(stderr, "%5.5f ", buf[i]);
-  }
-  fprintf(stderr, "]");**/
 }
 
 void dist_complete(cinfo *info, int mini, int minj, int np, int n) {
@@ -958,6 +956,10 @@ void linkage(double *dm, double *Z, double *X,
   free(centroids);
 }
 
+/** Trying to reimplement so that output is consistent with MATLAB's in
+    cases where there are is than one correct choice to make at each
+    iteration of the algorithm. This implementation is not active. */
+
 void linkage_alt(double *dm, double *Z, double *X,
 	     int m, int n, int ml, int kc, distfunc dfunc,
 	     int method) {
@@ -1279,60 +1281,7 @@ inline void set_dist_entry(double *d, double val, int i, int j, int n) {
   }
 }
 
-void cophenetic_discover(double *d, int n, const cnode *current, int *members) {
-  const cnode *left = current->left;
-  const cnode *right = current->right;
-  int *membersRight;
-  int ii, jj, i, j, k, ln, rn;
-  int nc2 = NCHOOSE2(n);
-  double dist;
-
-  /** If leaf node. */
-  if (current->id < n) {
-    *members = current->id;
-  }
-  else {
-    membersRight = members + left->n;
-    cophenetic_discover(d, n, left, members);
-    cophenetic_discover(d, n, right, membersRight);
-    dist = current->d;
-    ln = current->left->n;
-    rn = current->right->n;
-    for (ii = 0; ii < ln; ii++) {
-      i = members[ii];
-      for (jj = 0; jj < rn; jj++) {
-	j = membersRight[jj];
-	if (i < j) {
-	  k = nc2 - NCHOOSE2(n - i) + (j - i - 1);
-	}
-	if (j < i) {
-	  k = nc2 - NCHOOSE2(n - j) + (i - j - 1);
-	}
-	d[k] = dist;
-	/**	fprintf(stderr, "i=%d j=%d k=%d d=%5.5f \n", i, j, k, dist);**/
-      }
-    }
-  }
-
-}
-
-/** need non-recursive implementation. */
 void cophenetic_distances(const double *Z, double *d, int n) {
-  int *members = (int*)malloc(n * sizeof(int));
-  cnode *nodes, *root;
-  /**  fprintf(stderr, "copying into tree.\n");**/
-  cpy_to_tree(Z, &nodes, n);
-  /**  fprintf(stderr, "done copying into tree.\n");**/
-  root = nodes + (n * 2) - 2; /** The root node is the 2*n-1'th node,
-				  or the last node in the array.*/
-  /**  fprintf(stderr, "begin discover.\n");**/
-  cophenetic_discover(d, n, root, members);
-  /**  fprintf(stderr, "end discover.\n");**/
-  free(members);
-  free(nodes);
-}
-
-void cophenetic_distances_nonrecursive(const double *Z, double *d, int n) {
   int *curNode, *left;
   int ndid, lid, rid, i, j, k, t, ln, rn, ii, jj, nc2;
   unsigned char *lvisited, *rvisited;
@@ -1521,7 +1470,7 @@ void calculate_cluster_sizes(const double *Z, double *CS, int n) {
 /** Returns an array of original observation indices (pre-order traversal). */
 void form_member_list(const double *Z, int *members, int n) {
   int *curNode, *left;
-  int ndid, lid, rid, k, ln, rn, nc2;
+  int ndid, lid, rid, k, ln, rn;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
   const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
@@ -1533,7 +1482,6 @@ void form_member_list(const double *Z, int *members, int n) {
   rvisited = (unsigned char*)malloc(bff);
   curNode[k] = (n * 2) - 2;
   left[k] = 0;
-  nc2 = NCHOOSE2(n);
   bzero(lvisited, bff);
   bzero(rvisited, bff);
 
@@ -1580,198 +1528,230 @@ void form_member_list(const double *Z, int *members, int n) {
     }
     k--;
   }
+  free(curNode);
   free(left);
+  free(lvisited);
+  free(rvisited);
+}
+
+void form_flat_clusters_from_in(const double *Z, const double *R, int *T,
+				double cutoff, int n) {
+  double *max_inconsists = (double*)malloc(sizeof(double) * n);
+  get_max_Rfield_for_each_cluster(Z, R, max_inconsists, n, 3);
+  form_flat_clusters_from_monotonic_criterion(Z, max_inconsists, T, cutoff, n);
+  free(max_inconsists);
+}
+
+void form_flat_clusters_from_dist(const double *Z, int *T,
+				  double cutoff, int n) {
+  double *max_dists = (double*)malloc(sizeof(double) * n);
+  get_max_dist_for_each_cluster(Z, max_dists, n);
+  form_flat_clusters_from_monotonic_criterion(Z, max_dists, T, cutoff, n);
+  free(max_dists);
+}
+
+void form_flat_clusters_maxclust_dist(const double *Z, int *T, int n, int mc) {
+  
+  double *MD = (double*)malloc(sizeof(double) * (n-1));
+  get_max_dist_for_each_cluster(Z, MD, n);
+  form_flat_clusters_maxclust_monocrit(Z, MD, T, n, mc);
+  free(MD);
+}
+						 
+/** form flat clusters by thresholding a monotonic criterion. */
+void form_flat_clusters_from_monotonic_criterion(const double *Z,
+						 const double *mono_crit,
+						 int *T, double cutoff, int n) {
+  int *curNode;
+  int ndid, lid, rid, k, ms, nc;
+  unsigned char *lvisited, *rvisited;
+  double max_crit;
+  const double *Zrow;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
+
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
+  curNode[k] = (n * 2) - 2;
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
+  /** number of clusters formed so far. */
+  nc = 0;
+  /** are we in part of a tree below the cutoff? .*/
+  ms = -1;
+  k = 0;
+  curNode[k] = (n * 2) - 2;
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
+  ms = -1;
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    max_crit = mono_crit[ndid-n];
+    fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, max_crit, nc);
+    if (ms == -1 && max_crit <= cutoff) {
+      ms = k;
+      nc++;
+    }
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    if (ndid >= n) {
+      if (lid < n) {
+	if (ms == -1) {
+	  T[lid] = ++nc;
+	}
+	else {
+	  T[lid] = nc;
+	}
+      }
+      if (rid < n) {
+	if (ms == -1) {
+	  T[rid] = ++nc;
+	}
+	else {
+	  T[rid] = nc;
+	}
+      }
+      if (ms == k) {
+	ms = -1;
+      }
+    }
+    k--;
+  }
+
+  free(curNode);
+  free(lvisited);
+  free(rvisited);  
+}
+
+void form_flat_clusters_maxclust_monocrit(const double *Z,
+					  const double *mono_crit,
+					  int *T, int n, int mc) {
+  int *curNode;
+  int ndid, lid, rid, k, ms, nc, g;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow;
+  double thresh, maxmono_crit;
+  /** The maximum unsuccessful distance is initially -1.0 (hack). */
+  double max_illegal = -1.0;
+  double min_legal = mono_crit[n-1];
+  int min_legal_nc = 1;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
+  k = 0;
+
+  /**  MD = (double*)malloc(n * sizeof(double));
+       get_max_dist_for_each_cluster(Z, MD, n);**/
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
+  curNode[k] = (n * 2) - 2;
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
+
+  /** number of clusters formed so far. */
+  nc = 0;
+  ms = -1;
+
+  for (g = n - 2; g >= 0; g--) {
+    thresh = mono_crit[g];
+    /** 1. If the threshold is <= the minimum threshold we've tried
+        unsuccessfully, skip the threshold. (or)
+
+        2. If the threshold is > the minimum legal threshold, it is
+	less optimal so skip it. */
+    if (thresh <= max_illegal || thresh > min_legal) {
+      continue;
+    }
+    k = 0;
+    curNode[k] = (n * 2) - 2;
+    bzero(lvisited, bff);
+    bzero(rvisited, bff);
+    nc = 0;
+    /** See if the threshold MD[g] works. **/
+    while (k >= 0) {
+      ndid = curNode[k];
+      Zrow = Z + ((ndid-n) * CPY_LIS);
+      lid = (int)Zrow[CPY_LIN_LEFT];
+      rid = (int)Zrow[CPY_LIN_RIGHT];
+      maxmono_crit = mono_crit[ndid-n];
+      /**      fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, max_mono_crit, nc);**/
+
+      /** If the current nodes maxmono_crit is <= the threshold, stop exploring
+	  deeper in the tree. The node and its descendent leaves will be their
+	  own cluster. */
+      if (maxmono_crit <= thresh) {
+	nc++;
+	k--;
+	CPY_SET_BIT(lvisited, ndid-n);
+	CPY_SET_BIT(rvisited, ndid-n);
+      }
+      /** Otherwise, the node is above the threshold, so we need to explore
+	  it's children. */
+      if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+	CPY_SET_BIT(lvisited, ndid-n);
+	curNode[k+1] = lid;
+	k++;
+	continue;
+      }
+      if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+	CPY_SET_BIT(rvisited, ndid-n);
+	curNode[k+1] = rid;
+	k++;
+	continue;
+      }
+      k--;
+    }
+
+    if (thresh > max_illegal && nc > mc) {
+      max_illegal = thresh;
+      continue;
+    }
+    /** If the threshold is less than the current minimum legal threshold
+	but has a legal number of clusters, set the new legal minimum. */
+    if (thresh < min_legal && nc <= mc) {
+      min_legal = thresh;
+      min_legal_nc = nc;
+    }
+  }
+
+  form_flat_clusters_from_monotonic_criterion(Z, mono_crit, T, min_legal, n);
+
   free(curNode);
   free(lvisited);
   free(rvisited);
 }
 
-void form_flat_clusters_from_ic_alt(const double *Z, const double *R,
-				    int *T, double cutoff, int n, int method) {
+void get_max_dist_for_each_cluster(const double *Z, double *max_dists, int n) {
   int *curNode;
-  int ndid, lid, rid, k, nc2, ms, nc;
+  int ndid, lid, rid, k;
   unsigned char *lvisited, *rvisited;
-  const double *Zrow, *Rrow;
-  double *maxsinconsist;
-  double maxinconsist;
-  const double * const *crit;
-  int crit_off;
+  const double *Zrow;
+  double max_dist;
   const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
 
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   lvisited = (unsigned char*)malloc(bff);
   rvisited = (unsigned char*)malloc(bff);
-  maxsinconsist = (double*)malloc(n * sizeof(double));
-  curNode[k] = (n * 2) - 2;
-  nc2 = NCHOOSE2(n);
-  bzero(lvisited, bff);
-  bzero(rvisited, bff);
-  /** number of clusters formed so far. */
-  nc = 0;
-
-  
-  /** if method is distance. */
-  if (method == CPY_CRIT_DISTANCE) {
-    crit = &Zrow;
-    crit_off = CPY_LIN_DIST;
-  }
-  else if (method == CPY_CRIT_INCONSISTENT) {
-    crit = &Rrow;
-    crit_off = CPY_INS_INS;
-  }
-
-  curNode[0] = 0;
-  for (k = 0; k < n - 1; k++) {
-    ndid = curNode[k];
-    Zrow = Z + (ndid * CPY_LIS);
-    Rrow = R + (ndid * CPY_NIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    maxinconsist = Rrow[CPY_INS_INS];
-    if (lid >= n && !CPY_GET_BIT(lvisited, ndid)) {
-      maxinconsist = CPY_MAX(maxinconsist, maxinconsist);
-      CPY_SET_BIT(lvisited, ndid);
-      curNode[k+1] = lid - n;
-      k++;
-      continue;
-    }
-    if (rid >= n && !CPY_GET_BIT(rvisited, ndid)) {
-      CPY_SET_BIT(lvisited, ndid);
-      curNode[k+1] = rid-n;
-      k++;
-      continue;
-    }
-  }
-  while (k >= 0) {
-    ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * CPY_LIS);
-    Rrow = R + ((ndid-n) * CPY_NIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    maxinconsist = Rrow[CPY_INS_INS];
-    /**    maxinconsist = *(*crit + crit_off);**/
-    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
-      CPY_SET_BIT(lvisited, ndid-n);
-      curNode[k+1] = lid;
-      k++;
-      continue;
-    }
-    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
-      CPY_SET_BIT(rvisited, ndid-n);
-      curNode[k+1] = rid;
-      k++;
-      continue;
-    }
-    if (ndid >= n) {
-      if (lid >= n) {
-	maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[lid-n]);
-      }
-      if (rid >= n) {
-	maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[rid-n]);
-      }
-      maxsinconsist[ndid-n] = maxinconsist;
-    }
-    k--;
-  }
-  k = 0;
   curNode[k] = (n * 2) - 2;
   bzero(lvisited, bff);
   bzero(rvisited, bff);
-  ms = -1;
   while (k >= 0) {
     ndid = curNode[k];
     Zrow = Z + ((ndid-n) * CPY_LIS);
-    Rrow = R + ((ndid-n) * CPY_NIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    maxinconsist = maxsinconsist[ndid-n];
-    fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, maxinconsist, nc);
-    if (ms == -1 && maxinconsist < cutoff) {
-      ms = k;
-      nc++;
-    }
-    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
-      CPY_SET_BIT(lvisited, ndid-n);
-      curNode[k+1] = lid;
-      k++;
-      continue;
-    }
-    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
-      CPY_SET_BIT(rvisited, ndid-n);
-      curNode[k+1] = rid;
-      k++;
-      continue;
-    }
-    if (ndid >= n) {
-      if (lid < n) {
-	if (ms == -1) {
-	  T[lid] = ++nc;
-	}
-	else {
-	  T[lid] = nc;
-	}
-      }
-      if (rid < n) {
-	if (ms == -1) {
-	  T[rid] = ++nc;
-	}
-	else {
-	  T[rid] = nc;
-	}
-      }
-      if (ms == k) {
-	ms = -1;
-      }
-    }
-    k--;
-  }
-
-  free(maxsinconsist);
-  free(curNode);
-  free(lvisited);
-  free(rvisited);  
-}
-
-/** form flat cluster from inconsistency coefficient.
-    (don't need to assume monotonicity) */
-void form_flat_clusters_from_ic(const double *Z, const double *R,
-				int *T, double cutoff, int n, int method) {
-  int *curNode;
-  int ndid, lid, rid, k, nc2, ms, nc;
-  unsigned char *lvisited, *rvisited;
-  const double *Zrow, *Rrow;
-  double *maxsinconsist;
-  double maxinconsist;
-  const double * const *crit;
-  int crit_off;
-  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
-
-  k = 0;
-  curNode = (int*)malloc(n * sizeof(int));
-  lvisited = (unsigned char*)malloc(bff);
-  rvisited = (unsigned char*)malloc(bff);
-  maxsinconsist = (double*)malloc(n * sizeof(double));
-  curNode[k] = (n * 2) - 2;
-  nc2 = NCHOOSE2(n);
-  bzero(lvisited, bff);
-  bzero(rvisited, bff);
-  /** number of clusters formed so far. */
-  nc = 0;
-  ms = -1;
-  /** if method is distance. */
-  if (method == CPY_CRIT_DISTANCE) {
-    crit = &Zrow;
-    crit_off = CPY_LIN_DIST;
-  }
-  else if (method == CPY_CRIT_INCONSISTENT) {
-    crit = &Rrow;
-    crit_off = CPY_INS_INS;
-  }
-  while (k >= 0) {
-    ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * CPY_LIS);
-    Rrow = R + ((ndid-n) * CPY_NIS);
     lid = (int)Zrow[CPY_LIN_LEFT];
     rid = (int)Zrow[CPY_LIN_RIGHT];
     if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
@@ -1786,109 +1766,40 @@ void form_flat_clusters_from_ic(const double *Z, const double *R,
       k++;
       continue;
     }
-    maxinconsist = *(*crit + crit_off);
-    /**    maxinconsist = Rrow[CPY_INS_INS];**/
+    max_dist = Zrow[CPY_LIN_DIST];
     if (lid >= n) {
-      maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[lid-n]);
+      max_dist = CPY_MAX(max_dist, max_dists[lid-n]);
     }
     if (rid >= n) {
-      maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[rid-n]);
+      max_dist = CPY_MAX(max_dist, max_dists[rid-n]);
     }
-    maxsinconsist[ndid-n] = maxinconsist;
+    max_dists[ndid-n] = max_dist;
     k--;
   }
-  k = 0;
-  curNode[k] = (n * 2) - 2;
-  bzero(lvisited, bff);
-  bzero(rvisited, bff);
-  ms = -1;
-  while (k >= 0) {
-    ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * CPY_LIS);
-    Rrow = R + ((ndid-n) * CPY_NIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    maxinconsist = maxsinconsist[ndid-n];
-    fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, maxinconsist, nc);
-    if (ms == -1 && maxinconsist < cutoff) {
-      ms = k;
-      nc++;
-    }
-    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
-      CPY_SET_BIT(lvisited, ndid-n);
-      curNode[k+1] = lid;
-      k++;
-      continue;
-    }
-    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
-      CPY_SET_BIT(rvisited, ndid-n);
-      curNode[k+1] = rid;
-      k++;
-      continue;
-    }
-    if (ndid >= n) {
-      if (lid < n) {
-	if (ms == -1) {
-	  T[lid] = ++nc;
-	}
-	else {
-	  T[lid] = nc;
-	}
-      }
-      if (rid < n) {
-	if (ms == -1) {
-	  T[rid] = ++nc;
-	}
-	else {
-	  T[rid] = nc;
-	}
-      }
-      if (ms == k) {
-	ms = -1;
-      }
-    }
-    k--;
-  }
-
-  free(maxsinconsist);
   free(curNode);
   free(lvisited);
-  free(rvisited);  
+  free(rvisited);
 }
 
-void form_flat_clusters_maxclust(const double *Z, const double *R,
-				 int *T, double cutoff, int n, int method) {
+/**
+   Returns the maximum Rrow[rf] field for each cluster node where
+   0 <= rf < 3. */
+
+void get_max_Rfield_for_each_cluster(const double *Z, const double *R,
+				     double *max_rfs, int n, int rf) {
   int *curNode;
-  int ndid, lid, rid, k, nc2, ms, nc;
+  int ndid, lid, rid, k;
   unsigned char *lvisited, *rvisited;
   const double *Zrow, *Rrow;
-  double *maxsinconsist;
-  double maxinconsist;
-  const double * const *crit;
-  int crit_off;
+  double max_rf;
   const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
-
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
   lvisited = (unsigned char*)malloc(bff);
   rvisited = (unsigned char*)malloc(bff);
-  maxsinconsist = (double*)malloc(n * sizeof(double));
   curNode[k] = (n * 2) - 2;
-  nc2 = NCHOOSE2(n);
   bzero(lvisited, bff);
   bzero(rvisited, bff);
-  /** number of clusters formed so far. */
-  nc = 0;
-  ms = -1;
-  /** if method is distance. */
-  if (method == CPY_CRIT_DISTANCE) {
-    crit = &Zrow;
-    crit_off = CPY_LIN_DIST;
-  }
-  else if (method == CPY_CRIT_INCONSISTENT) {
-    crit = &Rrow;
-    crit_off = CPY_INS_INS;
-  }
   while (k >= 0) {
     ndid = curNode[k];
     Zrow = Z + ((ndid-n) * CPY_LIS);
@@ -1907,72 +1818,17 @@ void form_flat_clusters_maxclust(const double *Z, const double *R,
       k++;
       continue;
     }
-    maxinconsist = *(*crit + crit_off);
-    /**    maxinconsist = Rrow[CPY_INS_INS];**/
+    max_rf = Rrow[rf];
     if (lid >= n) {
-      maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[lid-n]);
+      max_rf = CPY_MAX(max_rf, max_rfs[lid-n]);
     }
     if (rid >= n) {
-      maxinconsist = CPY_MAX(maxinconsist, maxsinconsist[rid-n]);
+      max_rf = CPY_MAX(max_rf, max_rfs[rid-n]);
     }
-    maxsinconsist[ndid-n] = maxinconsist;
+    max_rfs[ndid-n] = max_rf;
     k--;
   }
-  k = 0;
-  curNode[k] = (n * 2) - 2;
-  bzero(lvisited, bff);
-  bzero(rvisited, bff);
-  ms = -1;
-  while (k >= 0) {
-    ndid = curNode[k];
-    Zrow = Z + ((ndid-n) * CPY_LIS);
-    Rrow = R + ((ndid-n) * CPY_NIS);
-    lid = (int)Zrow[CPY_LIN_LEFT];
-    rid = (int)Zrow[CPY_LIN_RIGHT];
-    maxinconsist = maxsinconsist[ndid-n];
-    fprintf(stderr, "cutoff: %5.5f maxi: %5.5f nc: %d\n", cutoff, maxinconsist, nc);
-    if (ms == -1 && maxinconsist < cutoff) {
-      ms = k;
-      nc++;
-    }
-    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
-      CPY_SET_BIT(lvisited, ndid-n);
-      curNode[k+1] = lid;
-      k++;
-      continue;
-    }
-    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
-      CPY_SET_BIT(rvisited, ndid-n);
-      curNode[k+1] = rid;
-      k++;
-      continue;
-    }
-    if (ndid >= n) {
-      if (lid < n) {
-	if (ms == -1) {
-	  T[lid] = ++nc;
-	}
-	else {
-	  T[lid] = nc;
-	}
-      }
-      if (rid < n) {
-	if (ms == -1) {
-	  T[rid] = ++nc;
-	}
-	else {
-	  T[rid] = nc;
-	}
-      }
-      if (ms == k) {
-	ms = -1;
-      }
-    }
-    k--;
-  }
-
-  free(maxsinconsist);
   free(curNode);
   free(lvisited);
-  free(rvisited);  
+  free(rvisited);
 }

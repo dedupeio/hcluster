@@ -1,4 +1,69 @@
 """
+-------------------------------------
+Scipy Hierarchical Clustering Library
+ Copyright (C) Damian R. Eads, 2007.
+        All Rights Reserved.
+          New BSD License
+-------------------------------------
+
+Flat cluster formation
+
+ cluster            forms flat clusters from hierarchical clusters.
+ clusterdata        forms flat clusters directly from data.
+
+Distances between raw observations
+
+ pdist              computes the distance between each point given a metric.
+ randdm             computes a random distance matrix.
+ squareform         converts a sq. D.M. to a condensed one and vice versa.
+
+Hierarchical cluster formation
+
+ linkage            agglomoratively clusters based on a distance matrix.
+
+Statistic computations on hierarchies
+
+ cophenet           computes the cophenetic distance between leaves.
+ from_mlab_linkage  converts a linkage produced by MATLAB.
+ inconsistent       the inconsistency coefficients for cluster.
+ maxRmean           the maximum mean distance for each cluster.
+ maxdists           the maximum distance for each cluster.
+ maxinconsts        the maximum inconsistency coefficient for each cluster. 
+ to_mlab_linkage    converts a linkage to one MATLAB can understand.
+
+Visualization
+
+ dendrogram         for visualizing a hierarchical clustering.
+
+Tree representations of hierarchies
+
+ cnode              represents cluster nodes in a cluster hierarchy.
+ lvlist             a left-to-right traversal of the leaves.
+ totree             represents a linkage matrix as a tree object.
+
+Predicates
+
+ is_valid_dm        checks for a valid distance matrix.
+ is_valid_im        checks for a valid an inconsistency matrix.
+ is_valid_linkage   checks for a valid hierarchical clustering.
+ is_valid_y         checks for a valid condensed distance matrix.
+ is_isomorphic      checks if two flat clusterings are isomorphic.
+ is_monotonic       checks if a linkage is monotonic.
+
+Utility Functions
+
+ numobs_dm          # of observations in a distance matrix.
+ numobs_linkage     # of observations in a linkage.
+ numobs_y           # of observations in a condensed distance matrix.
+
+Legal stuff
+
+ copying            Displays the license for this package.
+
+MATLAB and MathWorks are registered trademarks of The MathWorks, Inc.
+"""
+
+_copyingtxt="""
 cluster.py
 
 Author: Damian Eads
@@ -47,6 +112,10 @@ _cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
 _cpy_linkage_methods = set(_cpy_non_euclid_methods.keys()).union(set(_cpy_euclid_methods.keys()))
 _array_type = type(scipy.array([]))
 
+def copying():
+    """ Displays the license for this package."""
+    print _copyingtxt
+    return None
 
 def randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
@@ -579,16 +648,14 @@ def pdist(X, metric='euclidean', p=2):
           as follows,
 
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
-
-        11. Y=pdist(X, 'test_Y')
-
-          Computes the distance between all pairs of vectors in X
-          using the distance metric Y but with a more succint,
-          verifiable, but less efficient implementation.
-
        """
+#         11. Y=pdist(X, 'test_Y')
 
-    # FIXME: need more efficient mahalanobis distance.
+#           Computes the distance between all pairs of vectors in X
+#           using the distance metric Y but with a more succint,
+#           verifiable, but less efficient implementation.
+
+
     # TODO: canberra, bray-curtis, matching, dice, rogers-tanimoto,
     #       russell-rao, sokal-sneath, yule
     
@@ -663,22 +730,21 @@ def pdist(X, metric='euclidean', p=2):
             X2 = X - scipy.repmat(scipy.mean(X, axis=1).reshape(m, 1), 1, n)
             norms = scipy.sqrt(scipy.sum(X2 * X2, axis=1))
             _cluster_wrap.pdist_cosine_wrap(X2, dm, norms)
-        elif mstr in set(['stub_mahalanobis']):
-            k = 0;
-            XV = scipy.dot(X, scipy.cov(X.T))
-            dm = scipy.dot(XV, X.T)
-            print dm.shape
-            dm[xrange(0,m),xrange(0,m)] = 0
-            dm = squareform(dm, checks=False)
+        elif mstr in set(['mahalanobis', 'mahal', 'mah']):
+            V = scipy.cov(X.T)
+            VI = scipy.linalg.inv(V).T.copy()
+            # (u-v)V^(-1)(u-v)^T
+            _cluster_wrap.pdist_mahalanobis_wrap(X, VI, dm)
         elif metric == 'test_euclidean':
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
         elif metric == 'test_seuclidean':
             D = scipy.diagflat(scipy.stats.var(X, axis=0))
             DI = scipy.linalg.inv(D)
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*DI*(u-v).T).sum())))
-        elif metric == 'mahalanobis':
+        elif metric == 'test_mahalanobis':
             V = scipy.cov(X.T)
             VI = scipy.linalg.inv(V)
+            # (u-v)V^(-1)(u-v)^T
             dm = pdist(X, (lambda u, v: scipy.sqrt(scipy.dot(scipy.dot((u-v),VI),(u-v).T).sum())))
         elif metric == 'test_cityblock':
             dm = pdist(X, (lambda u, v: abs(u-v).sum()))
@@ -883,9 +949,9 @@ def to_mlab_linkage(Z):
     
     return scipy.hstack([Z[:,0:2] + 1, Z[:,2]])
 
-def is_linkage_monotonic(Z):
+def is_monotonic(Z):
     """
-    is_linkage_monotonic(Z)
+    is_monotonic(Z)
     
       Returns True if the linkage Z is monotonic. The linkage is monotonic
       if for every cluster s and t joined, the distance between them is
@@ -1023,35 +1089,61 @@ def Z_y_correspond(Z, Y):
 
 #def cluster(*args, **kwargs):
 
-def cluster(Z, t, criterion='inconsistent', depth=2, R=None):
+def cluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
     """
 
-    T = cluster(Z, t, criterion='inconsistent', d=2, R=None):
+    T = cluster(Z, t, criterion, depth=2, R=None, monocrit=None):
 
-      Forms flat clusters from the hiearchical clustering defined by
+      Forms flat clusters from the hierarchical clustering defined by
       the linkage matrix Z. The threshold t is a required parameter.
 
-      T is a vector of length n; T[i] is the cluster number to which the
-      original observation i belongs. 
+      T is a vector of length n; T[i] is the cluster number to which
+      original observation i belongs.
 
       The criterion parameter can be any of the following values,
       
-        * 'inconsistent': A cluster node and all its decendents have an
-        inconsistent value less than or equal to c iff all their leaf
-        descendents belong to the same cluster. When no non-singleton
+        * 'inconsistent': If a cluster node and all its decendents have an
+        inconsistent value less than or equal to c then all its leaf
+        descendents belong to the same flat cluster. When no non-singleton
         cluster meets this criterion, every node is assigned to its
-        own cluster. The d parameter is the maximum depth to perform
+        own cluster. The depth parameter is the maximum depth to perform
         the inconsistency calculation; it has no meaning for the other
         criteria.
 
         * 'distance': Forms flat clusters so that the original
-        observations in each cluster has no greater a cophenetic
-        distance than c.
+        observations in each flat cluster have no greater a cophenetic
+        distance than t.
 
-        * 'maxclust': Finds a minimum threshold r such that the cophenetic
+        * 'maxclust': Finds a minimum threshold r so that the cophenetic
         distance between any two original observations in the same flat
         cluster is no more than r and no more than t flat clusters are
         formed.
+
+        * 'monocrit': Forms a flat cluster from a cluster node c with
+        index i when monocrit[j] <= t. monocrit must be monotonic.
+
+        monocrit is a (n-1) numpy vector of doubles representing the
+        criterion values to threshold. monocrit must be monotonic, i.e.
+        given a node c with index i, for all node indices j corresponding
+        to nodes below c, monocrit[i] >= monocrit[j].
+
+        For example, to threshold on the maximum mean distance as computed
+        in the inconsistency matrix R with a threshold of 0.8 do
+
+          MR = maxRmean(Z, R)
+          cluster(Z, t=0.8, criterion='monocrit', monocrit=MR)
+
+        * 'maxclust_monocrit': Forms a flat cluster from a cluster node c
+        when monocrit[i] <= r for all cluster indices i below and including
+        c. r is minimized such that no more than t flat clusters are formed.
+        monocrit must be monotonic.
+        
+        For example, to minimize the threshold t on maximum inconsistency
+        values so that no more than 3 flat clusters are formed, do:
+
+          MI = maxinconsts(Z, R)
+          cluster(Z, t=3, criterion='maxclust_monocrit', monocrit=MI)
+        
     """
     if not is_valid_linkage(Z):
         raise AttributeError('Z is not a valid linkage matrix.')
@@ -1071,7 +1163,14 @@ def cluster(Z, t, criterion='inconsistent', depth=2, R=None):
         else:
             if not is_valid_im(R):
                 raise AttributeError('R passed is not a valid inconsistency matrix.')
-        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(1))
+        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n))
+    elif criterion == 'maxclust':
+        _cluster.wrap.cluster_maxclust_dist_wrap(Z, T, int(n), int(t))
+    elif criterion == 'monocrit':
+        _cluster.wrap.cluster_monocrit_wrap(Z, monocrit, T, int(n), int(t))
+    elif criterion == 'maxclust_monocrit':
+        _cluster.wrap.cluster_maxclust_monocrit_wrap(Z, monocrit, T,
+                                                     float(t), int(n))
     else:
         raise AttributeError('Invalid cluster formation criterion: %s' % str(criterion))
     return T
@@ -1133,12 +1232,12 @@ def clusterdata(X, t, criterion='inconsistent', linkage='single', \
     T = cluster(Z, criterion=criterion, depth=depth, R=R, t=t)
     return T
 
-def prelist(Z):
+def lvlist(Z):
     """
-    L = prelist(Z):
+    L = lvlist(Z):
 
-      Returns a list of leaf node indices as they appear in the pre-order
-      traversal of the tree defined by the linkage matrix Z.
+      Returns a list of leaf node indices as they appear in the tree
+      from left to right. Z is a linkage matrix.
     """
     if not is_valid_linkage(Z):
         raise AttributeError('Linkage matrix is not valid.')
@@ -1151,7 +1250,7 @@ def prelist(Z):
 try:
     import matplotlib
     import matplotlib.pylab
-    mpl = True
+    _mpl = True
     def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation, no_labels, color_list):
         axis = matplotlib.pylab.gca()
         # Independent variable plot width
@@ -1209,7 +1308,7 @@ try:
         matplotlib.pylab.draw_if_interactive()
             
 except ImportError:
-    mpl = False
+    _mpl = False
     def _plot_dendrogram(*args, **kwargs):
         raise AttributeError('matplotlib not available. Plot request denied.')
 
@@ -1628,7 +1727,7 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
         
         return ( ((uiva + uivb) / 2), uwa+uwb, h, max_dist)
 
-def is_cluster_isomorphic(T1, T2):
+def is_isomorphic(T1, T2):
     """
       Returns True iff two different cluster assignments T1 and T2 are
       equivalent. T1 and T2 must be arrays of the same size.
@@ -1657,3 +1756,54 @@ def is_cluster_isomorphic(T1, T2):
             d[T1[i]] = T2[i]
     return True
     
+def maxdists(Z):
+    """
+    MD = maxdists(Z)
+
+      Calculates the maximum distance between any cluster in the linkage Z.
+      MD is a (n-1)-sized numpy array of doubles; MD[i] represents the
+      maximum distance between any cluster (including singletons) below
+      and including the node with index i.
+      
+      Note that when Z[:,2] is monotonic, Z[:,2] and MD should not differ.
+      See linkage for more information on this issue.
+    """
+    if not is_valid_linkage(Z):
+        raise AttributeError('The first argument Z is not a valid linkage.')
+    
+    n = Z.shape[0] + 1
+    MD = scipy.zeros((n-1,))
+    _cluster_wrap.get_max_dist_for_each_cluster_wrap(Z, MD, int(n))
+    return MD
+
+def maxinconsts(Z, R):
+    """
+    MI = maxinconsts(Z, R)
+
+    Calculates the maximum inconsistency coefficient for each node and its
+    descendents. Z is a valid linkage matrix and R is a valid inconsistency
+    matrix. MI is a (n-1)-sized numpy array of doubles.
+    """
+    if not is_valid_linkage(Z):
+        raise AttributeError('The first argument Z is not a valid linkage.')
+
+    n = Z.shape[0] + 1
+    MI = scipy.zeros((n-1,))
+    _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MI, int(n), 3)
+    return MI
+
+def maxRmean(Z, R):
+    """
+    MR = maxRmean(Z, R)
+
+    Calculates the maximum mean coefficient for each node and its
+    descendents. Z is a valid linkage matrix and R is a valid inconsistency
+    matrix. MI is a (n-1)-sized numpy array of doubles.
+    """
+    if not is_valid_linkage(Z):
+        raise AttributeError('The first argument Z is not a valid linkage.')
+
+    n = Z.shape[0] + 1
+    MR = scipy.zeros((n-1,))
+    _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MR, int(n), 3)
+    return MR

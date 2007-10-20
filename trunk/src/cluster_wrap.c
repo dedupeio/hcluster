@@ -40,10 +40,6 @@
 #include <numpy/arrayobject.h>
 #include <stdio.h>
 
-PyObject *chopmin_ns_ij_wrap(PyObject *self, PyObject *args);
-PyObject *chopmin_ns_i_wrap(PyObject *self, PyObject *args);
-PyObject *chopmins_wrap(PyObject *self, PyObject *args);
-
 extern PyObject *linkage_wrap(PyObject *self, PyObject *args) {
   int method, n;
   PyArrayObject *dm, *Z;
@@ -130,6 +126,38 @@ extern PyObject *calculate_cluster_sizes_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
+extern PyObject *get_max_dist_for_each_cluster_wrap(PyObject *self,
+						    PyObject *args) {
+  int n;
+  PyArrayObject *Z, *md;
+  if (!PyArg_ParseTuple(args, "O!O!i",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &md,
+			&n)) {
+    return 0;
+  }
+  get_max_dist_for_each_cluster((const double*)Z->data, (double*)md->data, n);
+  return Py_BuildValue("");
+}
+
+extern PyObject *get_max_Rfield_for_each_cluster_wrap(PyObject *self,
+						      PyObject *args) {
+  int n, rf;
+  PyArrayObject *Z, *R, *max_rfs;
+  if (!PyArg_ParseTuple(args, "O!O!O!ii",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &R,
+			&PyArray_Type, &max_rfs,
+			&n, &rf)) {
+    return 0;
+  }
+  get_max_Rfield_for_each_cluster((const double *)Z->data,
+				  (const double *)R->data,
+				  (double *)max_rfs->data, n, rf);
+  return Py_BuildValue("");
+}
+
+
 extern PyObject *prelist_wrap(PyObject *self, PyObject *args) {
   int n;
   PyArrayObject *Z, *ML;
@@ -156,11 +184,90 @@ extern PyObject *cluster_in_wrap(PyObject *self, PyObject *args) {
 			&n, &method)) {
     return 0;
   }
-  form_flat_clusters_from_ic((const double *)Z->data, (const double *)R->data,
-			     (int *)T->data, cutoff, n, method);
+  form_flat_clusters_from_in((const double *)Z->data, (const double *)R->data,
+			     (int *)T->data, cutoff, n);
 
   return Py_BuildValue("d", 0.0);
 }
+
+extern PyObject *cluster_dist_wrap(PyObject *self, PyObject *args) {
+  int n;
+  double cutoff;
+  PyArrayObject *Z, *T;
+  if (!PyArg_ParseTuple(args, "O!O!di",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &T,
+			&cutoff,
+			&n)) {
+    return 0;
+  }
+  form_flat_clusters_from_dist((const double *)Z->data,
+			       (int *)T->data, cutoff, n);
+
+  return Py_BuildValue("d", 0.0);
+}
+
+extern PyObject *cluster_monocrit(PyObject *self, PyObject *args) {
+  int n;
+  double cutoff;
+  PyArrayObject *Z, *MV, *T;
+  if (!PyArg_ParseTuple(args, "O!O!di",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &MV,
+			&PyArray_Type, &T,
+			&cutoff,
+			&n)) {
+    return 0;
+  }
+  form_flat_clusters_from_monotonic_criterion((const double *)Z->data,
+					      (const double *)MV->data,
+					      (int *)T->data,
+					      cutoff,
+					      n);
+
+  form_flat_clusters_from_dist((const double *)Z->data,
+			       (int *)T->data, cutoff, n);
+
+  return Py_BuildValue("d", 0.0);
+}
+
+
+
+extern PyObject *cluster_maxclust_dist_wrap(PyObject *self, PyObject *args) {
+  int n, mc;
+  PyArrayObject *Z, *T;
+  if (!PyArg_ParseTuple(args, "O!O!ii",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &T,
+			&n, &mc)) {
+    return 0;
+  }
+  form_flat_clusters_maxclust_dist((const double*)Z->data, (int *)T->data,
+				   n, mc);
+
+  return Py_BuildValue("");
+}
+
+
+extern PyObject *cluster_maxclust_monocrit_wrap(PyObject *self, PyObject *args) {
+  int n, mc;
+  double cutoff;
+  PyArrayObject *Z, *MC, *T;
+  if (!PyArg_ParseTuple(args, "O!O!O!ii",
+			&PyArray_Type, &Z,
+			&PyArray_Type, &MC,
+			&PyArray_Type, &T,
+			&cutoff,
+			&n, &mc)) {
+    return 0;
+  }
+  form_flat_clusters_maxclust_monocrit((const double *)Z->data,
+				       (const double *)MC->data,
+				       (int *)T->data, n, mc);
+
+  return Py_BuildValue("");
+}
+
 
 extern PyObject *inconsistent_wrap(PyObject *self, PyObject *args) {
   int n, d;
@@ -184,7 +291,7 @@ extern PyObject *cophenetic_distances_wrap(PyObject *self, PyObject *args) {
 			&n)) {
     return 0;
   }
-  cophenetic_distances_nonrecursive((const double*)Z->data, (double*)d->data, n);
+  cophenetic_distances((const double*)Z->data, (double*)d->data, n);
   return Py_BuildValue("d", 0.0);
 }
 
@@ -300,6 +407,31 @@ extern PyObject *pdist_euclidean_wrap(PyObject *self, PyObject *args) {
   }
   return Py_BuildValue("d", 0.0);
 }
+
+extern PyObject *pdist_mahalanobis_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_covinv, *_dm;
+  int m, n;
+  double *dm;
+  const double *X;
+  const double *covinv;
+  if (!PyArg_ParseTuple(args, "O!O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_covinv,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const double*)_X->data;
+    covinv = (const double*)_covinv->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_mahalanobis(X, covinv, dm, m, n);
+  }
+  return Py_BuildValue("d", 0.0);
+}
+
 
 extern PyObject *pdist_chebyshev_wrap(PyObject *self, PyObject *args) {
   PyArrayObject *_X, *_dm;
@@ -498,27 +630,35 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef _clusterWrapMethods[] = {
-  {"cluster_in_wrap", cluster_in_wrap, METH_VARARGS},
-  {"linkage_wrap", linkage_wrap, METH_VARARGS},
-  {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
-  {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
-  {"prelist_wrap", prelist_wrap, METH_VARARGS},
   {"calculate_cluster_sizes_wrap", calculate_cluster_sizes_wrap, METH_VARARGS},
-  {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
-  {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
-  {"chopmins_ns_i", chopmin_ns_i_wrap, METH_VARARGS},
   {"chopmins", chopmins_wrap, METH_VARARGS},
+  {"chopmins_ns_i", chopmin_ns_i_wrap, METH_VARARGS},
+  {"chopmins_ns_ij", chopmin_ns_ij_wrap, METH_VARARGS},
+  {"cluster_in_wrap", cluster_in_wrap, METH_VARARGS},
+  {"cluster_dist_wrap", cluster_dist_wrap, METH_VARARGS},
+  {"cluster_maxclust_dist_wrap", cluster_maxclust_dist_wrap, METH_VARARGS},
+  {"cluster_maxclust_monocrit_wrap", cluster_maxclust_monocrit_wrap, METH_VARARGS},
+  {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
   {"dot_product_wrap", dot_product_wrap, METH_VARARGS},
+  {"get_max_dist_for_each_cluster_wrap",
+   get_max_dist_for_each_cluster_wrap, METH_VARARGS},
+  {"get_max_Rfield_for_each_cluster_wrap",
+   get_max_Rfield_for_each_cluster_wrap, METH_VARARGS},
+  {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
+  {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
+  {"linkage_wrap", linkage_wrap, METH_VARARGS},
+  {"pdist_chebyshev_wrap", pdist_chebyshev_wrap, METH_VARARGS},
+  {"pdist_city_block_wrap", pdist_city_block_wrap, METH_VARARGS},
+  {"pdist_cosine_wrap", pdist_cosine_wrap, METH_VARARGS},
   {"pdist_euclidean_wrap", pdist_euclidean_wrap, METH_VARARGS},
   {"pdist_hamming_wrap", pdist_hamming_wrap, METH_VARARGS},
   {"pdist_hamming_bool_wrap", pdist_hamming_bool_wrap, METH_VARARGS},
   {"pdist_jaccard_wrap", pdist_jaccard_wrap, METH_VARARGS},
   {"pdist_jaccard_bool_wrap", pdist_jaccard_bool_wrap, METH_VARARGS},
-  {"pdist_chebyshev_wrap", pdist_chebyshev_wrap, METH_VARARGS},
-  {"pdist_seuclidean_wrap", pdist_seuclidean_wrap, METH_VARARGS},
-  {"pdist_city_block_wrap", pdist_city_block_wrap, METH_VARARGS},
+  {"pdist_mahalanobis_wrap", pdist_mahalanobis_wrap, METH_VARARGS},
   {"pdist_minkowski_wrap", pdist_minkowski_wrap, METH_VARARGS},
-  {"pdist_cosine_wrap", pdist_cosine_wrap, METH_VARARGS},
+  {"pdist_seuclidean_wrap", pdist_seuclidean_wrap, METH_VARARGS},
+  {"prelist_wrap", prelist_wrap, METH_VARARGS},
   {"to_squareform_from_vector_wrap",
    to_squareform_from_vector_wrap, METH_VARARGS},
   {"to_vector_from_squareform_wrap",
