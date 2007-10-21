@@ -11,15 +11,19 @@ Flat cluster formation
  cluster            forms flat clusters from hierarchical clusters.
  clusterdata        forms flat clusters directly from data.
 
+Agglomorative cluster formation
+
+ linkage            agglomoratively clusters based on a distance matrix.
+
+Divisive cluster formation
+
+ (not available yet)
+
 Distance matrix computation from raw vectors.
 
  pdist              computes the distance between each point given a metric.
  randdm             computes a random distance matrix.
  squareform         converts a sq. D.M. to a condensed one and vice versa.
-
-Hierarchical cluster formation
-
- linkage            agglomoratively clusters based on a distance matrix.
 
 Statistic computations on hierarchies
 
@@ -50,8 +54,8 @@ Distance functions between two vectors u and v
  correlation        the Correlation distance.
  cosine             the Cosine distance.
  euclidean          the Euclidean distance.
- hamming            the Hamming distance (vectors can be boolean arrays).
- jaccard            the Jaccard distance (vectors can be boolean ararys).
+ hamming            the Hamming distance (vectors can be boolean).
+ jaccard            the Jaccard distance (vectors can be boolean).
  mahalanobis        the Mahalanobis distance.
  minkowski          the Minkowski distance.
  seuclidean         the normalized Euclidean distance.
@@ -140,7 +144,7 @@ def randdm(pnts):
     if pnts >= 2:
         D = scipy.rand(pnts * (pnts - 1) / 2)
     else:
-        raise AttributeError("The number of points in the distance matrix must be at least 2.")
+        raise ValueError("The number of points in the distance matrix must be at least 2.")
     return D
 
 def linkage(y, method='single', metric='euclidean'):
@@ -254,19 +258,19 @@ def linkage(y, method='single', metric='euclidean'):
            different minimum than the MATLAB version.
         """
     if type(y) != _array_type:
-        raise AttributeError('Incompatible data type. y must be an array.')
+        raise TypeError('Incompatible data type. y must be an array.')
     s = y.shape
     if type(method) != types.StringType:
-        raise AttributeError("Argument 'method' must be a string.")
+        raise TypeError("Argument 'method' must be a string.")
     if y.dtype != 'double':
-        raise AttributeError('Incompatible data type. y must be a matrix of doubles.')
+        raise TypeError('Incompatible data type. y must be a matrix of doubles.')
 
     if len(s) == 1:
         d = scipy.ceil(scipy.sqrt(s[0] * 2))
         if d * (d - 1)/2 != s[0]:
-            raise AttributeError('Incompatible vector size. It must be a binomial coefficient.')
+            raise ValueError('Incompatible vector size. It must be a binomial coefficient.')
         if method not in _cpy_non_euclid_methods.keys():
-            raise AttributeError("Valid methods when the raw observations are omitted are 'single', 'complete', 'weighted', and 'average'.")
+            raise ValueError("Valid methods when the raw observations are omitted are 'single', 'complete', 'weighted', and 'average'.")
         Z = scipy.zeros((d - 1, 4))
         _cluster_wrap.linkage_wrap(y, Z, int(d), \
                                    int(_cpy_non_euclid_methods[method]))
@@ -275,7 +279,7 @@ def linkage(y, method='single', metric='euclidean'):
         n = s[0]
         m = s[1]
         if method not in _cpy_linkage_methods:
-            raise AttributeError('Invalid method: %s' % method)
+            raise ValueError('Invalid method: %s' % method)
         if method in _cpy_non_euclid_methods.keys():
             dm = pdist(X, metric)
             Z = scipy.zeros((n - 1, 4))
@@ -283,7 +287,7 @@ def linkage(y, method='single', metric='euclidean'):
                                        int(_cpy_non_euclid_methods[method]))
         elif method in _cpy_euclid_methods.keys():
             if metric != 'euclidean':
-                raise AttributeError('Method %s requires the distance metric to be euclidean' % s)
+                raise ValueError('Method %s requires the distance metric to be euclidean' % s)
             dm = pdist(X, metric)
             Z = scipy.zeros((n - 1, 4))
             _cluster_wrap.linkage_euclid_wrap(dm, Z, X, m, n,
@@ -302,14 +306,14 @@ class cnode:
 
     def __init__(self, id, left=None, right=None, dist=0, count=1):
         if id < 0:
-            raise AttributeError('The id must be non-negative.')
+            raise ValueError('The id must be non-negative.')
         if dist < 0:
-            raise AttributeError('The distance must be non-negative.')
+            raise ValueError('The distance must be non-negative.')
         if (left is None and right is not None) or \
            (left is not None and right is None):
-            raise AttributeError('Only full or proper binary trees are permitted. This node has one child.')
+            raise ValueError('Only full or proper binary trees are permitted. This node has one child.')
         if count < 1:
-            raise AttributeError('A cluster must contain at least one original observation.')
+            raise ValueError('A cluster must contain at least one original observation.')
         self.id = id
         self.left = left
         self.right = right
@@ -439,15 +443,15 @@ def totree(Z, rd=False):
     """
 
     if type(Z) is not _array_type:
-        raise AttributeError('Z must be a numpy.ndarray')
+        raise TypeError('Z must be a numpy.ndarray')
 
     if Z.dtype != 'double':
-        raise AttributeError('Z must have double elements, not %s', str(Z.dtype))
+        raise TypeError('Z must have double elements, not %s', str(Z.dtype))
     if len(Z.shape) != 2:
-        raise AttributeError('Z must be a matrix')
+        raise TypeError('Z must be a matrix')
 
     if Z.shape[1] != 4:
-        raise AttributeError('Z must be a (n-1) by 4 matrix')
+        raise ValueError('Z must be a (n-1) by 4 matrix')
 
     # The number of original objects is equal to the number of rows minus
     # 1.
@@ -459,17 +463,17 @@ def totree(Z, rd=False):
     # If we encounter a cluster being combined more than once, the matrix
     # must be corrupt.
     if len(scipy.unique(Z[:, 0:2].reshape((2 * (n - 1),)))) != 2 * (n - 1):
-        raise AttributeError('Corrupt matrix Z. Some clusters are more than once.')
+        raise ValueError('Corrupt matrix Z. Some clusters are more than once.')
     # If a cluster index is out of bounds, report an error.
     if (Z[:, 0:2] >= 2 * n - 1).any():
-        raise AttributeError('Corrupt matrix Z. Some cluster indices (first and second) are out of bounds.')
+        raise ValueError('Corrupt matrix Z. Some cluster indices (first and second) are out of bounds.')
     if (Z[:, 0:2] < 0).any():
-        raise AttributeError('Corrupt matrix Z. Some cluster indices (first and second columns) are negative.')
+        raise ValueError('Corrupt matrix Z. Some cluster indices (first and second columns) are negative.')
     if (Z[:, 2] < 0).any():
-        raise AttributeError('Corrupt matrix Z. Some distances (third column) are negative.')
+        raise ValueError('Corrupt matrix Z. Some distances (third column) are negative.')
 
     if (Z[:, 3] < 0).any():
-        raise AttributeError('Counts (fourth column) are invalid.')
+        raise ValueError('Some counts (fourth column) are negative.')
 
     # Create the nodes corresponding to the n original objects.
     for i in xrange(0, n):
@@ -481,13 +485,13 @@ def totree(Z, rd=False):
         fi = int(Z[i, 0])
         fj = int(Z[i, 1])
         if fi > i + n:
-            raise AttributeError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 0' % fi)
+            raise ValueError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 0' % fi)
         if fj > i + n:
-            raise AttributeError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 1' % fj)
+            raise ValueError('Corrupt matrix Z. Index to derivative cluster is used before it is formed. See row %d, column 1' % fj)
         nd = cnode(i + n, d[fi], d[fj],  Z[i, 2])
         #          ^ id   ^ left ^ right ^ dist
         if Z[i,3] != nd.count:
-            raise AttributeError('Corrupt matrix Z. The count Z[%d,3] is incorrect.' % i)
+            raise ValueError('Corrupt matrix Z. The count Z[%d,3] is incorrect.' % i)
         d[n + i] = nd
 
     if rd:
@@ -501,7 +505,7 @@ def squareform(X, force="no", checks=True):
 
     v = squareform(X)
 
-      Given a square dxd symmetric distance matrix X, v=squareform(X)
+      Given a square d by d symmetric distance matrix X, v=squareform(X)
       returns a d*(d-1)/2 (n \choose 2) sized vector v.
 
       v[(n \choose 2)-(n-i \choose 2) + (j-i-1)] is the distance
@@ -528,10 +532,10 @@ def squareform(X, force="no", checks=True):
     """
     
     if type(X) is not _array_type:
-        raise AttributeError('The parameter passed must be an array.')
+        raise TypeError('The parameter passed must be an array.')
 
     if X.dtype != 'double':
-        raise AttributeError('A double array must be passed.')
+        raise TypeError('A double array must be passed.')
 
     s = X.shape
 
@@ -545,7 +549,7 @@ def squareform(X, force="no", checks=True):
         print d, s[0]
         # Check that v is of valid dimensions.
         if d * (d - 1) / 2 != int(s[0]):
-            raise AttributeError('Incompatible vector size. It must be a binomial coefficient n choose 2 for some integer n >= 2.')
+            raise ValueError('Incompatible vector size. It must be a binomial coefficient n choose 2 for some integer n >= 2.')
         
         # Allocate memory for the distance matrix.
         M = scipy.zeros((d, d), 'double')
@@ -557,15 +561,15 @@ def squareform(X, force="no", checks=True):
         M = M + M.transpose()
         return M
     elif len(s) != 1 and force.lower() == 'tomatrix':
-        raise AttributeError("Forcing 'tomatrix' but input X is not a distance vector.")
+        raise ValueError("Forcing 'tomatrix' but input X is not a distance vector.")
     elif len(s) == 2 and force.lower() != 'tovector':
         if s[0] != s[1]:
-            raise AttributeError('The matrix argument must be square.')
+            raise ValueError('The matrix argument must be square.')
         if checks:
             if scipy.sum(scipy.sum(X == X.transpose())) != scipy.product(X.shape):
-                raise AttributeError('The distance matrix must be symmetrical.')
+                raise ValueError('The distance matrix must be symmetrical.')
             if (X.diagonal() != 0).any():
-                raise AttributeError('The distance matrix must have zeros along the diagonal.')
+                raise ValueError('The distance matrix must have zeros along the diagonal.')
 
         # One-side of the dimensions is set here.
         d = s[0]
@@ -577,9 +581,9 @@ def squareform(X, force="no", checks=True):
         _cluster_wrap.to_vector_from_squareform_wrap(X, v)
         return v
     elif len(s) != 2 and force.lower() == 'tomatrix':
-        raise AttributeError("Forcing 'tomatrix' but input X is not a distance vector.")
+        raise ValueError("Forcing 'tomatrix' but input X is not a distance vector.")
     else:
-        raise AttributeError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted' % len(s))
+        raise ValueError('The first argument must be a vector or matrix. A %d-dimensional array is not permitted' % len(s))
 
 def minkowski(u, v, p):
     """
@@ -588,7 +592,7 @@ def minkowski(u, v, p):
        ||u-v||_p = (\sum {|u_i - v_i|^p})^(1/p).
     """
     if p < 1:
-        raise AttributeError("p must be at least 1")
+        raise ValueError("p must be at least 1")
     return math.pow((abs(u-v)**p).sum(), 1.0/p)
 
 def euclidean(u, v):
@@ -642,6 +646,8 @@ def seuclidean(u, v, V):
     n-dimensional. V is a m-dimensional vector of component variances.
     It is usually computed among a larger collection vectors.
     """
+    if type(V) is not _array_type or len(V.shape) != 1 or V.shape[0] != u.shape[0] or u.shape[0] != v.shape[0]
+        raise TypeError('V must be a 1-D numpy array of doubles of the same dimension as u and v.')
     return scipy.sqrt(((u-v)**2 / V).sum())
 
 def cityblock(u, v):
@@ -657,6 +663,8 @@ def mahalanobis(u, v, VI):
                 (u-v)VI(u-v)^T
     where VI is the inverse covariance matrix.
     """
+    if type(V) is not _array_type:
+        raise TypeError('V must be a 1-D numpy array of doubles of the same dimension as u and v.')
     return scipy.sqrt(scipy.dot(scipy.dot((u-v),VI),(u-v).T).sum())
 
 def chebyshev(u, v):
@@ -809,12 +817,12 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
     #       russell-rao, sokal-sneath, yule
     
     if type(X) is not _array_type:
-        raise AttributeError('The parameter passed must be an array.')
+        raise TypeError('The parameter passed must be an array.')
     
     s = X.shape
 
     if len(s) != 2:
-        raise AttributeError('A matrix must be passed.');
+        raise ValueError('A matrix must be passed.');
 
     m = s[0]
     n = s[1]
@@ -830,7 +838,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
     elif mtype is types.StringType:
         mstr = metric.lower()
         if X.dtype != 'double' and (mstr != 'hamming' and mstr != 'jaccard'):
-            AttributeError('A double array must be passed.')
+            TypeError('A double array must be passed.')
         if mstr in set(['euclidean', 'euclid', 'eu', 'e']):
             _cluster_wrap.pdist_euclidean_wrap(X, dm)
         elif mstr in set(['sqeuclidean']):
@@ -844,14 +852,14 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             elif X.dtype == 'bool':
                 _cluster_wrap.pdist_hamming_bool_wrap(X, dm)
             else:
-                raise AttributeError('Invalid input matrix type %s for hamming.' % str(X.dtype))
+                raise TypeError('Invalid input matrix type %s for hamming.' % str(X.dtype))
         elif mstr in set(['jaccard', 'jacc', 'ja', 'j']):
             if X.dtype == 'double':
                 _cluster_wrap.pdist_hamming_wrap(X, dm)
             elif X.dtype == 'bool':
                 _cluster_wrap.pdist_hamming_bool_wrap(X, dm)
             else:
-                raise AttributeError('Invalid input matrix type %s for jaccard.' % str(X.dtype))
+                raise TypeError('Invalid input matrix type %s for jaccard.' % str(X.dtype))
         elif mstr in set(['chebyshev', 'cheby', 'cheb', 'ch']):
             _cluster_wrap.pdist_chebyshev_wrap(X, dm)            
         elif mstr in set(['minkowski', 'mi', 'm']):
@@ -859,13 +867,13 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         elif mstr in set(['seuclidean', 'se', 's']):
             if V:
                 if type(V) is not _array_type:
-                    raise AttributeError('V must be a numpy array')
+                    raise TypeError('V must be a numpy array')
                 if V.dtype != 'double':
-                    raise AttributeError('V must contain doubles.')
+                    raise TypeError('V must contain doubles.')
                 if len(V.shape) != 1:
-                    raise AttributeError('V must be one-dimensional.')
+                    raise ValueError('V must be one-dimensional.')
                 if V.shape[0] != n:
-                    raise AttributeError('V must be a vector of the same dimension as the points.')
+                    raise ValueError('V must be a vector of the same dimension as the points.')
                 if V.base is not None:
                     VV = V.copy()
                 else:
@@ -897,9 +905,9 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         elif mstr in set(['mahalanobis', 'mahal', 'mah']):
             if VI:
                 if type(VI) != _array_type:
-                    raise AttributeError('VI must be a numpy array.')
+                    raise TypeError('VI must be a numpy array.')
                 if VI.dtype != 'double':
-                    raise AttributeError('The array must contain doubles.')
+                    raise TypeError('The array must contain doubles.')
                 if VI.base is not None:
                     VI = VI.copy()
             else:
@@ -940,9 +948,9 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         elif metric == 'test_chebyshev':
             dm = pdist(X, chebyshev)
         else:
-            raise AttributeError('Unknown Distance Metric: %s' % mstr)
+            raise ValueError('Unknown Distance Metric: %s' % mstr)
     else:
-        raise AttributeError('2nd argument metric must be a string identifier or a function.')
+        raise TypeError('2nd argument metric must be a string identifier or a function.')
     return dm
 
 def cophenet(*args, **kwargs):
@@ -977,18 +985,18 @@ def cophenet(*args, **kwargs):
     nargs = len(args)
 
     if nargs < 1:
-        raise AttributeError('At least one argument must be passed to cophenet.')
+        raise ValueError('At least one argument must be passed to cophenet.')
     Z = args[0]
 
     if (type(Z) is not _array_type) or Z.dtype != 'double':
-        raise AttributeError('First argument Z must be an array of doubles.')
+        raise TypeError('First argument Z must be an array of doubles.')
     Zs = Z.shape
 
     if len(Zs) != 2:
-        raise AttributeError('First argument Z must be a 2-dimensional array.')
+        raise ValueError('First argument Z must be a 2-dimensional array.')
 
     if Zs[1] != 4:
-        raise AttributeError('First argument Z must have exactly 4 columns.')
+        raise ValueError('First argument Z must have exactly 4 columns.')
     
     n = Zs[0] + 1
 
@@ -999,15 +1007,15 @@ def cophenet(*args, **kwargs):
 
     Y = args[1]
     if (type(Y) is not _array_type) and Y.dtype != 'double':
-        raise AttributeError('Second argument Y must be an array of doubles.')
+        raise TypeError('Second argument Y must be an array of doubles.')
 
     Ys = Y.shape
 
     if len(Ys) != 1:
-        raise AttributeError('Second argument Y must be a 1-D array.')
+        raise ValueError('Second argument Y must be a 1-D array.')
 
     if Ys[0] != n*(n-1)/2:
-        raise AttributeError('Incorrect size of Y. It must be a distance vector containing n*(n-1) elements.')
+        raise ValueError('Incorrect size of Y. It must be a distance vector containing n*(n-1) elements.')
     
     z = zz.mean()
     y = Y.mean()
@@ -1046,9 +1054,9 @@ def inconsistent(Z, d=2):
 
     Zs = Z.shape
     if not is_valid_linkage(Z):
-        raise AttributeError('The first argument Z is not a valid linkage.')
+        raise ValueError('The first argument Z is not a valid linkage.')
     if (not d == numpy.floor(d)) or d < 0:
-        raise AttributeError('The second argument d must be a nonnegative integer value.')
+        raise ValueError('The second argument d must be a nonnegative integer value.')
 #    if d == 0:
 #        d = 1
 
@@ -1074,19 +1082,19 @@ def from_mlab_linkage(Z):
     """
 
     if type(Z) is not _array_type:
-        raise AttributeError('First argument Z must be a two-dimensional array.')
+        raise TypeError('First argument Z must be a two-dimensional array.')
     if Z.dtype != 'double':
-        raise AttributeError('First argument Z must contain doubles.')
+        raise TypeError('First argument Z must contain doubles.')
     if Z.shape[1] != 3:
-        raise AttributeError('First argument Z must have 3 columns.')
+        raise ValueError('First argument Z must have 3 columns.')
     if Z.shape[0] < 1:
-        raise AttributeError('First argument Z must have at least one row.')
+        raise ValueError('First argument Z must have at least one row.')
 
     Zs = Z.shape
     Zpart = Z[:,0:2]
     Zd = Z[:,2].reshape(Zs[0], 1)
     if Zpart.min() != 1.0 and Zpart.max() != 2 * Zs[0]:
-        raise AttributeError('The format of the indices is not 1..N');
+        raise ValueError('The format of the indices is not 1..N');
     CS = scipy.zeros((Zs[0], 1), dtype='double')
     Zpart = Zpart - 1
     _cluster_wrap.calculate_cluster_sizes_wrap(scipy.hstack([Zpart, \
@@ -1103,13 +1111,13 @@ def to_mlab_linkage(Z):
     column removed and the indices converted to 1..N form.
     """
     if type(Z) is not _array_type:
-        raise AttributeError('First argument Z must be a two-dimensional array.')
+        raise TypeError('First argument Z must be a two-dimensional array.')
     if Z.dtype != 'double':
-        raise AttributeError('First argument Z must contain doubles.')
+        raise TypeError('First argument Z must contain doubles.')
     if Z.shape[1] != 4:
-        raise AttributeError('First argument Z must have 4 columns.')
+        raise ValueError('First argument Z must have 4 columns.')
     if Z.shape[0] < 1:
-        raise AttributeError('First argument Z must have at least one row.')
+        raise ValueError('First argument Z must have at least one row.')
     
     return scipy.hstack([Z[:,0:2] + 1, Z[:,2]])
 
@@ -1122,7 +1130,7 @@ def is_monotonic(Z):
       no less than the distance between any previously joined clusters.
     """
     if not is_valid_linkage(Z):
-        raise AttributeError("The variable Z passed is not a valid linkage.")
+        raise ValueError("The variable Z passed is not a valid linkage.")
 
     # We expect the i'th value to be greater than its successor.
     return (Z[:-1,2]>=Z[1:,2]).all()
@@ -1220,7 +1228,7 @@ def numobs_linkage(Z):
     linkage matrix Z.
     """
     if not is_valid_linkage(Z):
-        raise AttributeError('Z is not a valid linkage.')
+        raise ValueError('Z is not a valid linkage.')
     return (Z.shape[0] - 1)
 
 def numobs_dm(D):
@@ -1229,7 +1237,7 @@ def numobs_dm(D):
     square, non-condensed distance matrix D.
     """
     if not is_valid_dm(D, tol=Inf):
-        raise AttributeError('Z is not a valid linkage.')
+        raise ValueError('Z is not a valid linkage.')
     return D.shape[0]
 
 def numobs_y(Y):
@@ -1238,7 +1246,7 @@ def numobs_y(Y):
     condensed distance matrix Y.
     """
     if not is_valid_y(y):
-        raise AttributeError('Z is not a valid condensed distance matrix.')
+        raise ValueError('Z is not a valid condensed distance matrix.')
     d = int(scipy.ceil(scipy.sqrt(y.shape[0] * 2)))
     return d
 
@@ -1310,7 +1318,7 @@ def cluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         
     """
     if not is_valid_linkage(Z):
-        raise AttributeError('Z is not a valid linkage matrix.')
+        raise ValueError('Z is not a valid linkage matrix.')
 
     n = Z.shape[0] + 1
     T = scipy.zeros((n,), dtype='int32')
@@ -1319,14 +1327,14 @@ def cluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
             R = inconsistent(Z, depth)
         else:
             if not is_valid_im(R):
-                raise AttributeError('R passed is not a valid inconsistency matrix.')
+                raise ValueError('R passed is not a valid inconsistency matrix.')
         _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(0))
     elif criterion == 'distance':
         if R is None:
             R = inconsistent(Z, depth)
         else:
             if not is_valid_im(R):
-                raise AttributeError('R passed is not a valid inconsistency matrix.')
+                raise ValueError('R passed is not a valid inconsistency matrix.')
         _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n))
     elif criterion == 'maxclust':
         _cluster.wrap.cluster_maxclust_dist_wrap(Z, T, int(n), int(t))
@@ -1336,7 +1344,7 @@ def cluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         _cluster.wrap.cluster_maxclust_monocrit_wrap(Z, monocrit, T,
                                                      float(t), int(n))
     else:
-        raise AttributeError('Invalid cluster formation criterion: %s' % str(criterion))
+        raise ValueError('Invalid cluster formation criterion: %s' % str(criterion))
     return T
 
 def clusterdata(X, t, criterion='inconsistent', linkage='single', \
@@ -1389,7 +1397,7 @@ def clusterdata(X, t, criterion='inconsistent', linkage='single', \
     """
 
     if type(X) is not _array_type or len(X.shape) != 2:
-        raise AttributeError('X must be an n by m numpy array.')
+        raise TypeError('X must be an n by m numpy array.')
 
     Y = pdist(X, method=dmethod)
     Z = linkage(Y, method=lmethod)
@@ -1404,7 +1412,7 @@ def lvlist(Z):
       from left to right. Z is a linkage matrix.
     """
     if not is_valid_linkage(Z):
-        raise AttributeError('Linkage matrix is not valid.')
+        raise ValueError('Linkage matrix is not valid.')
     n = Z.shape[0] + 1
     ML = scipy.zeros((n,), dtype='int32')
     _cluster_wrap.prelist_wrap(Z, ML, int(n))
@@ -1474,7 +1482,7 @@ try:
 except ImportError:
     _mpl = False
     def _plot_dendrogram(*args, **kwargs):
-        raise AttributeError('matplotlib not available. Plot request denied.')
+        raise ImportError('matplotlib not available. Plot request denied.')
 
 _link_line_colors=['g', 'r', 'c', 'm', 'y', 'k']
 
@@ -1627,13 +1635,13 @@ def dendrogram(Z, p=30, colorthreshold=None, get_leaves=True,
     #         pre-order traversal.
 
     if not is_valid_linkage(Z):
-        raise AttributeError('If the first argument is an array, it must be a valid linkage.')
+        raise TypeError('If the first argument is an array, it must be a valid linkage.')
     Zs = Z.shape
     n = Zs[0] + 1
     if type(p) in (types.IntType, types.FloatType):
         p = int(p)
     else:
-        raise AttributeError('The second argument must be a number')
+        raise TypeError('The second argument must be a number')
     if p > n:
         p = n
 
@@ -1712,10 +1720,10 @@ def _dendrogram_calculate_info(Z, p=30, colorthreshold=scipy.inf, get_leaves=Tru
     
     """
     if n == 0:
-        raise AttributeError("Invalid singleton cluster count n.")
+        raise ValueError("Invalid singleton cluster count n.")
 
     if i == -1:
-        raise AttributeError("Invalid root cluster index i.")
+        raise ValueError("Invalid root cluster index i.")
 
     # If the node is a leaf node but corresponds to a non-single cluster,
     # it's label is either the empty string or the number of original
@@ -1897,19 +1905,19 @@ def is_isomorphic(T1, T2):
       equivalent. T1 and T2 must be arrays of the same size.
     """
     if type(T1) is not _array_type:
-        raise AttributeError('T1 must be a numpy array.')
+        raise TypeError('T1 must be a numpy array.')
     if type(T2) is not _array_type:
-        raise AttributeError('T2 must be a numpy array.')
+        raise TypeError('T2 must be a numpy array.')
 
     T1S = T1.shape
     T2S = T2.shape
 
     if len(T1S) != 1:
-        raise AttributeError('T1 must be one-dimensional.')
+        raise ValueError('T1 must be one-dimensional.')
     if len(T2S) != 1:
-        raise AttributeError('T2 must be one-dimensional.')
+        raise ValueError('T2 must be one-dimensional.')
     if T1S[0] != T2S[0]:
-        raise AttributeError('T1 and T2 must have the same number of elements.')
+        raise ValueError('T1 and T2 must have the same number of elements.')
     n = T1S[0]
     d = {}
     for i in xrange(0,n):
@@ -1933,7 +1941,7 @@ def maxdists(Z):
       See linkage for more information on this issue.
     """
     if not is_valid_linkage(Z):
-        raise AttributeError('The first argument Z is not a valid linkage.')
+        raise ValueError('The first argument Z is not a valid linkage.')
     
     n = Z.shape[0] + 1
     MD = scipy.zeros((n-1,))
@@ -1949,7 +1957,7 @@ def maxinconsts(Z, R):
     matrix. MI is a (n-1)-sized numpy array of doubles.
     """
     if not is_valid_linkage(Z):
-        raise AttributeError('The first argument Z is not a valid linkage.')
+        raise ValueError('The first argument Z is not a valid linkage.')
 
     n = Z.shape[0] + 1
     MI = scipy.zeros((n-1,))
@@ -1965,7 +1973,7 @@ def maxRmean(Z, R):
     matrix. MI is a (n-1)-sized numpy array of doubles.
     """
     if not is_valid_linkage(Z):
-        raise AttributeError('The first argument Z is not a valid linkage.')
+        raise ValueError('The first argument Z is not a valid linkage.')
 
     n = Z.shape[0] + 1
     MR = scipy.zeros((n-1,))
