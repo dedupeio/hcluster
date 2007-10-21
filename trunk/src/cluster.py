@@ -22,7 +22,6 @@ Divisive cluster formation
 Distance matrix computation from raw vectors.
 
  pdist              computes the distance between each point given a metric.
- randdm             computes a random distance matrix.
  squareform         converts a sq. D.M. to a condensed one and vice versa.
 
 Statistic computations on hierarchies
@@ -137,7 +136,7 @@ def copying():
     print _copyingtxt
     return None
 
-def randdm(pnts):
+def _randdm(pnts):
     """ Generates a random distance matrix stored in condensed form. A
         pnts * (pnts - 1) / 2 sized vector is returned.
     """
@@ -646,7 +645,7 @@ def seuclidean(u, v, V):
     n-dimensional. V is a m-dimensional vector of component variances.
     It is usually computed among a larger collection vectors.
     """
-    if type(V) is not _array_type or len(V.shape) != 1 or V.shape[0] != u.shape[0] or u.shape[0] != v.shape[0]
+    if type(V) is not _array_type or len(V.shape) != 1 or V.shape[0] != u.shape[0] or u.shape[0] != v.shape[0]:
         raise TypeError('V must be a 1-D numpy array of doubles of the same dimension as u and v.')
     return scipy.sqrt(((u-v)**2 / V).sum())
 
