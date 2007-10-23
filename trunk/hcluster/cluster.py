@@ -13,6 +13,7 @@ Flat cluster formation
 
  cluster            forms flat clusters from hierarchical clusters.
  clusterdata        forms flat clusters directly from data.
+ leaders            tree node ancestors of singletons in each flat cluster.
 
 Agglomorative cluster formation
 
@@ -29,7 +30,7 @@ Divisive cluster formation
 
  (not available yet)
 
-Distance matrix computation from raw vectors.
+Distance matrix computation from a collection of raw observation vectors
 
  pdist              computes the distance between each point given a metric.
  squareform         converts a sq. D.M. to a condensed one and vice versa.
@@ -42,7 +43,7 @@ Statistic computations on hierarchies
  maxinconsts        the maximum inconsistency coefficient for each cluster.
  maxdists           the maximum distance for each cluster.
  maxRmean           the maximum mean distance for each cluster.
- maxRstat           the maximum statistic for each cluster.
+ maxRstat           the maximum specific statistic for each cluster.
  to_mlab_linkage    converts a linkage to one MATLAB(TM) can understand.
 
 Visualization
@@ -164,7 +165,7 @@ def _randdm(pnts):
 
 def single(y):
     """
-    Z=single(y)
+    Z = single(y)
 
     Performs single/min/nearest linkage on the condensed distance
     matrix Z. See linkage for more information on the return structure
@@ -176,7 +177,7 @@ def single(y):
 
 def complete(y):
     """
-    Z=complete(y)
+    Z = complete(y)
 
     Performs complete complete/max/farthest point linkage on the
     condensed distance matrix Z. See linkage for more information
@@ -188,7 +189,7 @@ def complete(y):
 
 def average(y):
     """
-    Z=average(y)
+    Z = average(y)
 
     Performs average/UPGMA linkage on the condensed distance matrix Z. See
     linkage for more information on the return structure and algorithm.
@@ -199,7 +200,7 @@ def average(y):
 
 def weighted(y):
     """
-    Z=weighted(y)
+    Z = weighted(y)
 
     Performs weighted/WPGMA linkage on the condensed distance matrix Z.
     See linkage for more information on the return structure and
@@ -211,7 +212,7 @@ def weighted(y):
 
 def centroid(y):
     """
-    Z=centroid(y)
+    Z = centroid(y)
     
     Performs centroid/UPGMC linkage on the condensed distance matrix Z.
     See linkage for more information on the return structure and
@@ -219,7 +220,7 @@ def centroid(y):
 
       (a condensed alias for linkage)
 
-    Z=centroid(X)
+    Z = centroid(X)
 
     Performs centroid/UPGMC linkage on the observation matrix X using
     Euclidean distance as the distance metric. See linkage for more
@@ -230,13 +231,13 @@ def centroid(y):
 
 def median(y):
     """
-    Z=median(y)
+    Z = median(y)
 
     Performs median/WPGMC linkage on the condensed distance matrix Z.
     See linkage for more information on the return structure and
     algorithm.
 
-    Z=median(X)
+    Z = median(X)
 
     Performs median/WPGMC linkage on the observation matrix X using
     Euclidean distance as the distance metric. See linkage for more
@@ -248,12 +249,12 @@ def median(y):
 
 def ward(y):
     """
-    Z=ward(y)
+    Z = ward(y)
     
     Performs Ward's linkage on the condensed distance matrix Z. See
     linkage for more information on the return structure and algorithm.
 
-    Z=ward(X)
+    Z = ward(X)
 
     Performs Ward's linkage on the observation matrix X using Euclidean
     distance as the distance metric. See linkage for more information
@@ -265,7 +266,7 @@ def ward(y):
 
       
 def linkage(y, method='single', metric='euclidean'):
-    """ Z=linkage(y, method)
+    """ Z = linkage(y, method)
 
           Performs hierarchical/agglomorative clustering on the
           condensed distance matrix y. y must be a n * (n - 1) sized
@@ -333,7 +334,7 @@ def linkage(y, method='single', metric='euclidean'):
              where cluster u was formed with cluster s and t and v
              is a remaining cluster in the forest. (also called WPGMA)
 
-        Z=linkage(X, method, metric='euclidean')
+        Z = linkage(X, method, metric='euclidean')
 
          Performs hierarchical clustering on the objects defined by the
          n by m observation matrix X.
@@ -540,8 +541,8 @@ def totree(Z, rd=False):
     r = totree(Z)
     
       Converts a hierarchical clustering encoded in the matrix Z
-      (by linkage) into a tree. The reference r to the root cnode
-      object is returned.
+      (by linkage) into a tree object. The reference r to the
+      root cnode object is returned.
     
       Each cnode object has a left, right, dist, id, and count
       attribute. The left and right attributes point to cnode
@@ -557,6 +558,10 @@ def totree(Z, rd=False):
       dictionary mapping cluster ids to cnodes. If a cluster id
       is less than n, then it corresponds to a singleton cluster
       (leaf node).
+
+    Note: This function is provided for the convenience of the
+    library user. cnodes are not used as input to any of the
+    functions in this libray.
     """
 
     if type(Z) is not _array_type:
@@ -731,19 +736,18 @@ def cosine(u, v):
       (1-uv^T)/(||u||_2 * ||v||_2).
     """
     return (1.0 - (scipy.dot(u, v.T) / \
-                   (math.sqrt(scipy.dot(u, u.T)) * \
-                    math.sqrt(scipy.dot(v, v.T)))))
+                   (math.sqrt(scipy.dot(u, u.T)) * math.sqrt(scipy.dot(v, v.T)))))
 
 def correlation(u, v):
     """
     Computes the correlation distance between two vectors u and v.
     """
-    return 1.0 - \
-           (scipy.dot(u - u.mean(), (v - v.mean()).T) / \
-            (math.sqrt(scipy.dot(u - u.mean(), \
-                                 (u - u.mean()).T)) \
-             * math.sqrt(scipy.dot(v - v.mean(), \
-                                   (v - v.mean()).T))))
+    vmu = v.mean()
+    umu = u.mean()
+    um = u - umu
+    vm = v - vmu
+    return 1.0 - (scipy.dot(um, vm.T) / (math.sqrt(scipy.dot(um, vm).T)) \
+            * math.sqrt(scipy.dot(vm, vm.T)))
 
 def hamming(u, v):
     """
@@ -825,7 +829,7 @@ def yule(u, v):
     """
     Computes the Yule dissimilarity between two boolean vectors u and v.
     """
-    (nff, nft, ntf, ntt) = _nbool_correspond(u, v)
+    (nff, nft, ntf, ntt) = _nbool_correspond_all(u, v)
     return float(2.0 * ntf * nft) / float(ntt * nff + ntf * nft)
 
 def matching(u, v):
@@ -848,7 +852,7 @@ def rogerstanimoto(u, v):
     Computes the Rogers-Tanimoto dissimilarity between two boolean
     vectors u and v.
     """
-    (nff, nft, ntf, ntt) = _nbool_correspond(u, v)
+    (nff, nft, ntf, ntt) = _nbool_correspond_all(u, v)
     return float(2.0 * (ntf + nft)) / float(ntt + nff + (2.0 * (ntf + nft)))
 
 def russellrao(u, v):
@@ -868,6 +872,27 @@ def sokalsneath(u, v):
     ntt = scipy.bitwise_and(u, v).sum()
     (nft, ntf) = _nbool_correspond_ft_tf(u, v)
     return float(2.0 * (ntf + nft))/float(ntt + 2.0 * (ntf + nft))
+
+# V means pass covariance
+_pdist_metric_info = {'euclidean': ['double'],
+                      'seuclidean': ['double'],
+                      'sqeuclidean': ['double'],
+                      'minkowski': ['double'],
+                      'cityblock': ['double'],
+                      'cosine': ['double'],
+                      'correlation': ['double'],
+                      'hamming': ['double','bool'],
+                      'jaccard': ['double', 'bool'],
+                      'chebyshev': ['double'],
+                      'canberra': ['double'],
+                      'braycurtis': ['double'],
+                      'mahalanobis': ['bool'],
+                      'yule': ['bool'],
+                      'matching': ['bool'],
+                      'dice': ['bool'],
+                      'rogerstanimoto': ['bool'],
+                      'russellrao': ['bool'],
+                      'sokalsneath': ['bool']}
 
 def pdist(X, metric='euclidean', p=2, V=None, VI=None):
     """ Y=pdist(X, method='euclidean', p=2)
@@ -963,8 +988,8 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
 
         12. Y=pdist(X, 'braycurtis')
 
-          Computes the Canberra distance between the points. The
-          Canberra distance between two points u and v is
+          Computes the Bray-Curtis distance between the points. The
+          Bray-Curtis distance between two points u and v is
 
                      |u_1-v_1| + |u_2-v_2| + ... + |u_n-v_n|
             d(u,v) = ---------------------------------------
@@ -978,7 +1003,37 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
           where (1/V) is the inverse covariance. If VI is not None,
           VI will be used as the inverse covariance matrix.
 
-        13. Y=pdist(X, f)
+        14. Y=pdist(X, 'yule')
+
+          Computes the Yule distance between each pair of boolean
+          vectors.
+
+        15. Y=pdist(X, 'matching')
+
+          Computes the matching distance between each pair of boolean
+          vectors.
+
+        16. Y=pdist(X, 'dice')
+
+          Computes the Dice distance between each pair of boolean
+          vectors.
+
+        17. Y=pdist(X, 'rogerstanimoto')
+
+          Computes the Rogers-Tanimoto distance between each pair of
+          boolean vectors.
+
+        18. Y=pdist(X, 'russellrao')
+
+          Computes the Russell-Rao distance between each pair of
+          boolean vectors.
+
+        19. Y=pdist(X, 'sokalsneath')
+
+          Computes the Sokal-Sneath distance between each pair of
+          boolean vectors.
+
+        20. Y=pdist(X, f)
         
           Computes the distance between all pairs of vectors in X
           using the user supplied 2-arity function f. For example,
@@ -987,15 +1042,12 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
 
             dm = pdist(X, (lambda u, v: scipy.sqrt(((u-v)*(u-v).T).sum())))
        """
-#         11. Y=pdist(X, 'test_Y')
+#         21. Y=pdist(X, 'test_Y')
 #
 #           Computes the distance between all pairs of vectors in X
 #           using the distance metric Y but with a more succint,
 #           verifiable, but less efficient implementation.
 
-
-    # TODO: canberra, bray-curtis, matching, dice, rogers-tanimoto,
-    #       russell-rao, sokal-sneath, yule
     
     if type(X) is not _array_type:
         raise TypeError('The parameter passed must be an array.')
@@ -1018,6 +1070,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
                 k = k + 1
     elif mtype is types.StringType:
         mstr = metric.lower()
+
         if X.dtype != 'double' and (mstr != 'hamming' and mstr != 'jaccard'):
             TypeError('A double array must be passed.')
         if mstr in set(['euclidean', 'euclid', 'eu', 'e']):
@@ -1100,6 +1153,18 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             _cluster_wrap.pdist_canberra_wrap(X, dm)
         elif mstr == 'braycurtis':
             _cluster_wrap.pdist_bray_curtis_wrap(X, dm)
+        elif mstr == 'yule':
+            _cluster_wrap.pdist_yule_bool_wrap(X, dm)
+        elif mstr == 'matching':
+            _cluster_wrap.pdist_matching_bool_wrap(X, dm)
+        elif mstr == 'dice':
+            _cluster_wrap.pdist_dice_bool_wrap(X, dm)
+        elif mstr == 'rogerstanimoto':
+            _cluster_wrap.pdist_rogerstanimoto_bool_wrap(X, dm)
+        elif mstr == 'russellrao':
+            _cluster_wrap.pdist_russellrao_bool_wrap(X, dm)
+        elif mstr == 'sokalsneath':
+            _cluster_wrap.pdist_sokalsneath_bool_wrap(X, dm)
         elif metric == 'test_euclidean':
             dm = pdist(X, euclidean)
         elif metric == 'test_seuclidean':
@@ -1128,6 +1193,18 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             dm = pdist(X, jaccard)
         elif metric == 'test_chebyshev':
             dm = pdist(X, chebyshev)
+        elif metric == 'test_yule':
+            dm = pdist(X, yule)
+        elif metric == 'test_matching':
+            dm = pdist(X, matching)
+        elif metric == 'test_dice':
+            dm = pdist(X, dice)
+        elif metric == 'test_rogerstanimoto':
+            dm = pdist(X, rogerstanimoto)
+        elif metric == 'test_russellrao':
+            dm = pdist(X, russellrao)
+        elif metric == 'test_sokalsneath':
+            dm = pdist(X, sokalsneath)
         else:
             raise ValueError('Unknown Distance Metric: %s' % mstr)
     else:
@@ -2051,9 +2128,14 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
     (if orientation='top', this would be the left-most x value where the
     plotting of this root node i and its descendents should begin).
     
-    ivl is a list to store the labels of the leaf nodes. Nodes with an index
-    below 2*n-p-1 are condensed into a leaf node. p is the maximum number
-    of non-leaf nodes to plot.
+    ivl is a list to store the labels of the leaf nodes. The leaf_label_func
+    is called whenever ivl != None, labels == None, and
+    leaf_label_func != None. When ivl != None and labels != None, the
+    labels list is used only for labeling the the leaf nodes. When
+    ivl == None, no labels are generated for leaf nodes.
+
+    When get_leaves==True, a list of leaves is built as they are visited
+    in the dendrogram.
 
     Returns a tuple with l being the independent variable coordinate that
     corresponds to the midpoint of cluster to the left of cluster i if
@@ -2070,7 +2152,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
 
       * h is the height of the subtree in dependent variable units
 
-      * is the max(Z[*,2] for all nodes * below and including
+      * is the max(Z[*,2]) for all nodes * below and including
         the target node.
     
     """
@@ -2304,9 +2386,10 @@ def maxinconsts(Z, R):
     """
     MI = maxinconsts(Z, R)
 
-    Calculates the maximum inconsistency coefficient for each node and its
-    descendents. Z is a valid linkage matrix and R is a valid inconsistency
-    matrix. MI is a monotonic (n-1)-sized numpy array of doubles.
+      Calculates the maximum inconsistency coefficient for each node
+      and its descendents. Z is a valid linkage matrix and R is a valid
+      inconsistency matrix. MI is a monotonic (n-1)-sized numpy array of
+      doubles.
     """
     if not is_valid_linkage(Z):
         raise ValueError('The first argument Z is not a valid linkage.')
@@ -2323,8 +2406,9 @@ def maxRmean(Z, R):
     MR = maxRmean(Z, R)
 
     Calculates the maximum mean coefficient for each node and its
-    descendents. Z is a valid linkage matrix and R is a valid inconsistency
-    matrix. MI is a monotonic (n-1)-sized numpy array of doubles.
+    descendents. Z is a valid linkage matrix and R is a valid
+    inconsistency matrix. MI is a monotonic (n-1)-sized numpy array of
+    doubles.
     """
     if not is_valid_linkage(Z):
         raise ValueError('The first argument Z is not a valid linkage.')
@@ -2356,3 +2440,42 @@ def maxRstat(Z, R, i):
     MR = scipy.zeros((n-1,))
     _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MR, int(n), i)
     return MR
+
+def leaders(Z, T):
+    """
+    (L, M) = leaders(Z, T):
+
+    For each flat cluster j of the k flat clusters represented in the
+    n-sized flat cluster assignment vector T, this function finds the
+    lowest cluster node i in the linkage tree Z such that:
+
+      * leaf descendents belong only to flat cluster k (i.e. T[p]==j
+        for all p in S(i) where S(i) is the set of leaf ids of leaf
+        nodes descendent with cluster node i)
+
+      * there does not exist a leaf that is not descendent with i
+        that also belongs to cluster j (i.e. T[q]!=j for all q not in S(i)).
+        If this condition is violated, T is not a valid cluster assignment
+        vector, and an exception will be thrown.
+
+    Two k-sized numpy vectors are returned, L and M. L[j]=i is the linkage
+    cluster node id that is the leader of flat cluster with id M[j]. If
+    i < n, i corresponds to an original observation, otherwise it
+    corresponds to an original observation.
+    """
+    if type(T) != _array_type or T.dtype != 'int':
+        raise TypeError('T must be a one-dimensional numpy array of integers.')
+    if not is_valid_linkage(Z):
+        raise TypeError('Z is not a valid linkage matrix.')
+    if len(T) != Z.shape[0] + 1:
+        raise ValueError('Mismatch: len(T)!=Z.shape[0] + 1.')
+    
+    Cl = scipy.unique(T)
+    k = len(Cl)
+    L = scipy.zeros((k,), dtype='int32')
+    M = scipy.zeros((k,), dtype='int32')
+    n = Z.shape[0]
+    s = _cluster_wrap.leaders_wrap(Z, T, L, M, int(n))
+    if s >= 0:
+        raise ValueError('T is not a valid assignment vector. Error found when examining linkage node %d (< 2n-1).' % i)
+    return (L, M)

@@ -180,6 +180,74 @@ double hamming_distance_bool(const char *u, const char *v, int n) {
   return s / (double)n;
 }
 
+double yule_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  int ntt = 0, nff = 0, nft = 0, ntf = 0;
+  for (i = 0; i < n; i++) {
+    ntt += (u[i] && v[i]);
+    ntf += (u[i] && !v[i]);
+    nft += (!u[i] && v[i]);
+    nff += (!u[i] && !v[i]);
+  }
+  return (2.0 * ntf * nft) / (double)(ntt * nff + ntf * nft);  
+}
+
+double matching_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  int nft = 0, ntf = 0;
+  for (i = 0; i < n; i++) {
+    ntf += (u[i] && !v[i]);
+    nft += (!u[i] && v[i]);
+  }
+  return (double)(ntf + nft) / (double)(n);
+}
+
+double dice_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  int ntt = 0, nft = 0, ntf = 0;
+  for (i = 0; i < n; i++) {
+    ntt += (u[i] && v[i]);
+    ntf += (u[i] && !v[i]);
+    nft += (!u[i] && v[i]);
+  }
+  return (double)(nft + ntf) / (double)(2.0 * ntt + ntf + nft);
+}
+
+
+double rogerstanimoto_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  int ntt = 0, nff = 0, nft = 0, ntf = 0;
+  for (i = 0; i < n; i++) {
+    ntt += (u[i] && v[i]);
+    ntf += (u[i] && !v[i]);
+    nft += (!u[i] && v[i]);
+    nff += (!u[i] && !v[i]);
+  }
+  return (2.0 * (ntf + nft)) / ((double)ntt + nff + (2.0 * (ntf + nft)));
+}
+
+double russellrao_distance_bool(const char *u, const char *v, int n) {
+  int i = 0;
+  int nff = 0, nft = 0, ntf = 0;
+  for (i = 0; i < n; i++) {
+    nff += (!u[i] && !v[i]);
+    ntf += (u[i] && !v[i]);
+    nft += (!u[i] && v[i]);
+  }
+  return (double)(ntf + nft + nff) / (double)n;
+}
+
+static inline double sokalsneath_distance_bool(const char *u, const char *v, int n) {
+  int _i = 0;
+  int ntt = 0, nft = 0, ntf = 0;
+  for (_i = 0; _i < n; _i++) {
+    ntt += (u[_i] && v[_i]);
+    ntf += (u[_i] && !v[_i]);
+    nft += (!u[_i] && v[_i]);
+  }
+  return (2.0 * (ntf + nft))/(2.0 * (ntf + nft) + ntt);
+}
+
 double jaccard_distance(const double *u, const double *v, int n) {
   int i = 0;
   double denom = 0.0, num = 0.0;
@@ -469,6 +537,83 @@ void pdist_minkowski(const double *X, double *dm, int m, int n, double p) {
   }
 }
 
+void pdist_yule_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = yule_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_matching_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = matching_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_dice_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = dice_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_rogerstanimoto_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = rogerstanimoto_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_russellrao_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = russellrao_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_sokalsneath_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = sokalsneath_distance_bool(u, v, n);
+    }
+  }
+}
 
 void chopmins(int *ind, int mini, int minj, int np) {
   int i;
@@ -1876,4 +2021,96 @@ void get_max_Rfield_for_each_cluster(const double *Z, const double *R,
   free(curNode);
   free(lvisited);
   free(rvisited);
+}
+
+/** find the leaders. report an error if found. */
+int leaders(const double *Z, const int *T, int *L, int *M, int kk, int n) {
+  int *curNode;
+  int ndid, lid, rid, k, nc;
+  unsigned char *lvisited, *rvisited;
+  const double *Zrow;
+  const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
+  int *fid; /** done vector, flat cluster ids **/
+  int lfid, rfid, errid = -1;
+
+  k = 0;
+  curNode = (int*)malloc(n * sizeof(int));
+  lvisited = (unsigned char*)malloc(bff);
+  rvisited = (unsigned char*)malloc(bff);
+  fid = (int*)malloc((2 * n - 1) * sizeof(int));
+  curNode[k] = (n * 2) - 2;
+  /** number of clusters formed so far. */
+  nc = 0;
+  /** are we in part of a tree below the cutoff? .*/
+  k = 0;
+  bzero(lvisited, bff);
+  bzero(rvisited, bff);
+  while (k >= 0) {
+    ndid = curNode[k];
+    Zrow = Z + ((ndid-n) * CPY_LIS);
+    lid = (int)Zrow[CPY_LIN_LEFT];
+    rid = (int)Zrow[CPY_LIN_RIGHT];
+    if (lid >= n && !CPY_GET_BIT(lvisited, ndid-n)) {
+      CPY_SET_BIT(lvisited, ndid-n);
+      curNode[k+1] = lid;
+      k++;
+      continue;
+    }
+    if (rid >= n && !CPY_GET_BIT(rvisited, ndid-n)) {
+      CPY_SET_BIT(rvisited, ndid-n);
+      curNode[k+1] = rid;
+      k++;
+      continue;
+    }
+    if (lid < n) {
+      lfid = T[lid];
+    }
+    else {
+      lfid = fid[lid];
+    }
+    if (rid < n) {
+      rfid = T[rid];
+    }
+    else {
+      rfid = fid[rid];
+    }
+
+    /** If the left and right have the same id, neither can be a leader,
+        and their parent takes on their flat cluster id. **/
+    if (lfid == rfid) {
+      fid[ndid] = lfid;
+    }
+    /** Otherwise, they are both leaders. */
+    else {
+      /** If there isn't more room in the result vectors,
+	  something is wrong. Condition (2) in help(hcluster.leader)
+          is violated. */
+      if (nc + 2 > kk) {
+	errid = ndid;
+	break;
+      }
+      L[nc] = lid;
+      M[nc++] = lfid;
+      L[nc] = rid;
+      M[nc++] = rfid;
+      /** Want to make sure this guy doesn't become a leader since
+	  it's children are both leaders. **/
+      fid[ndid] = -1;
+    }
+    k--;
+  }
+  /** For the root node, if its too children have the same flat cluster id
+      the root becomes the leader. */
+  if (lfid == rfid && nc + 1 > kk) {
+    L[nc] = ndid;
+    M[nc++] = lfid;
+  }
+  else if (nc - 1 <= kk) {
+    errid = ndid;
+  }
+  free(curNode);
+  free(lvisited);
+  free(rvisited);
+  free(fid);
+  return errid;
 }

@@ -105,6 +105,12 @@ void pdist_chebyshev(const double *X, double *dm, int m, int n);
 void pdist_jaccard(const double *X, double *dm, int m, int n);
 void pdist_jaccard_bool(const char *X, double *dm, int m, int n);
 void pdist_minkowski(const double *X, double *dm, int m, int n, double p);
+void pdist_yule_bool(const char *X, double *dm, int m, int n);
+void pdist_matching_bool(const char *X, double *dm, int m, int n);
+void pdist_dice_bool(const char *X, double *dm, int m, int n);
+void pdist_rogerstanimoto_bool(const char *X, double *dm, int m, int n);
+void pdist_russellrao_bool(const char *X, double *dm, int m, int n);
+void pdist_sokalsneath_bool(const char *X, double *dm, int m, int n);
 
 void inconsistency_calculation(const double *Z, double *R, int n, int d);
 void inconsistency_calculation_alt(const double *Z, double *R, int n, int d);
@@ -121,6 +127,8 @@ void dist_complete(cinfo *info, int mini, int minj, int np, int n);
 void dist_centroid(cinfo *info, int mini, int minj, int np, int n);
 void dist_ward(cinfo *info, int mini, int minj, int np, int n);
 void dist_weighted(cinfo *info, int mini, int minj, int np, int n);
+
+int leaders(const double *Z, const int *T, int *L, int *M, int kk, int n);
 
 void linkage(double *dm, double *Z, double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);
 void linkage_alt(double *dm, double *Z, double *X, int m, int n, int ml, int kc, distfunc dfunc, int method);

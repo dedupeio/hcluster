@@ -672,6 +672,150 @@ extern PyObject *pdist_minkowski_wrap(PyObject *self, PyObject *args) {
 }
 
 
+extern PyObject *pdist_yule_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_yule_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *pdist_matching_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_matching_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *pdist_dice_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_dice_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *pdist_rogerstanimoto_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_rogerstanimoto_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *pdist_russellrao_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_russellrao_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *pdist_sokalsneath_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_sokalsneath_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *leaders_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_Z, *_T, *_L, *_M;
+  int kk, n, res;
+  if (!PyArg_ParseTuple(args, "O!O!O!ii",
+			&PyArray_Type, &_Z,
+			&PyArray_Type, &_T,
+			&PyArray_Type, &_L,
+			&PyArray_Type, &_M,
+			&kk, &n)) {
+    return 0;
+  }
+  else {
+    res = leaders((double*)_Z->data, (int*)_T->data,
+		  (int*)_L->data, (int*)_M->data, kk, n);
+  }
+  return Py_BuildValue("i", res);
+}
+
 static PyMethodDef _clusterWrapMethods[] = {
   {"calculate_cluster_sizes_wrap", calculate_cluster_sizes_wrap, METH_VARARGS},
   {"chopmins", chopmins_wrap, METH_VARARGS},
@@ -688,6 +832,7 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"get_max_Rfield_for_each_cluster_wrap",
    get_max_Rfield_for_each_cluster_wrap, METH_VARARGS},
   {"inconsistent_wrap", inconsistent_wrap, METH_VARARGS},
+  {"leaders_wrap", leaders_wrap, METH_VARARGS},
   {"linkage_euclid_wrap", linkage_euclid_wrap, METH_VARARGS},
   {"linkage_wrap", linkage_wrap, METH_VARARGS},
   {"pdist_bray_curtis_wrap", pdist_bray_curtis_wrap, METH_VARARGS},
@@ -695,14 +840,20 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"pdist_chebyshev_wrap", pdist_chebyshev_wrap, METH_VARARGS},
   {"pdist_city_block_wrap", pdist_city_block_wrap, METH_VARARGS},
   {"pdist_cosine_wrap", pdist_cosine_wrap, METH_VARARGS},
+  {"pdist_dice_bool_wrap", pdist_dice_bool_wrap, METH_VARARGS},
   {"pdist_euclidean_wrap", pdist_euclidean_wrap, METH_VARARGS},
   {"pdist_hamming_wrap", pdist_hamming_wrap, METH_VARARGS},
   {"pdist_hamming_bool_wrap", pdist_hamming_bool_wrap, METH_VARARGS},
   {"pdist_jaccard_wrap", pdist_jaccard_wrap, METH_VARARGS},
   {"pdist_jaccard_bool_wrap", pdist_jaccard_bool_wrap, METH_VARARGS},
   {"pdist_mahalanobis_wrap", pdist_mahalanobis_wrap, METH_VARARGS},
+  {"pdist_matching_bool_wrap", pdist_matching_bool_wrap, METH_VARARGS},
   {"pdist_minkowski_wrap", pdist_minkowski_wrap, METH_VARARGS},
+  {"pdist_rogerstanimoto_bool_wrap", pdist_rogerstanimoto_bool_wrap, METH_VARARGS},
+  {"pdist_russellrao_bool_wrap", pdist_russellrao_bool_wrap, METH_VARARGS},
   {"pdist_seuclidean_wrap", pdist_seuclidean_wrap, METH_VARARGS},
+  {"pdist_sokalsneath_bool_wrap", pdist_sokalsneath_bool_wrap, METH_VARARGS},
+  {"pdist_yule_bool_wrap", pdist_yule_bool_wrap, METH_VARARGS},
   {"prelist_wrap", prelist_wrap, METH_VARARGS},
   {"to_squareform_from_vector_wrap",
    to_squareform_from_vector_wrap, METH_VARARGS},
