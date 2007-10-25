@@ -1473,7 +1473,7 @@ inline void set_dist_entry(double *d, double val, int i, int j, int n) {
 
 void cophenetic_distances(const double *Z, double *d, int n) {
   int *curNode, *left;
-  int ndid, lid, rid, i, j, k, t, ln, rn, ii, jj, nc2;
+  int ndid, lid, rid, i, j, k, t = 0, ln, rn, ii, jj, nc2;
   unsigned char *lvisited, *rvisited;
   const double *Zrow;
   int *members = (int*)malloc(n * sizeof(int));
@@ -2031,7 +2031,7 @@ int leaders(const double *Z, const int *T, int *L, int *M, int kk, int n) {
   const double *Zrow;
   const int bff = CPY_FLAG_ARRAY_SIZE_BYTES(n);
   int *fid; /** done vector, flat cluster ids **/
-  int lfid, rfid, errid = -1;
+  int lfid = 0, rfid = 0, errid = -1;
 
   k = 0;
   curNode = (int*)malloc(n * sizeof(int));
