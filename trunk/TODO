@@ -1,0 +1,12 @@
+Things I need to do:
+
+1. Look into inlining functions.
+
+2. Build complete regression test suite. (have to wait until DSL is hooked up)
+
+3. Work on striding numpy arrays properly to handle the case where the
+   base array refers to part of another array.
+
+4. Work on more data types (float32)
+
+5. Write functions for handling string distances
