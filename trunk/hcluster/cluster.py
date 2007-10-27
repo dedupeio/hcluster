@@ -2497,7 +2497,7 @@ def leaders(Z, T):
     Two k-sized numpy vectors are returned, L and M. L[j]=i is the linkage
     cluster node id that is the leader of flat cluster with id M[j]. If
     i < n, i corresponds to an original observation, otherwise it
-    corresponds to an original observation.
+    corresponds to a non-singleton cluster.
     """
     if type(T) != _array_type or T.dtype != 'int':
         raise TypeError('T must be a one-dimensional numpy array of integers.')
