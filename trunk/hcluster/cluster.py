@@ -2022,18 +2022,27 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
           # a rotation of 90 degrees.
           dendrogram(Z, leaf_label_func=llf, leaf_rotation=90)
 
-        As another example, suppose the leafs correspond to flower types,
-        as they do in Fisher's data set. The leaf labels are too long
-        to display side-by-side. Let's not truncate the tree.
+        Next, let's cluster Sir Ronald Fisher's flower data set,
+        originally published in his 1936 paper on discriminant analysis.
+        We will use some defaults: single linkage and Euclidean distance.
+        In this example, the leaves correspond to one of two different
+        flower types, I. setosa or I. virginica. The leaf labels are
+        too long to be displayed horizontally, side-by-side due to the
+        length of the label strings and the number of flowers being
+        clustered. Therefore, we rotate the labels 90 degrees, and use
+        a leaf label function to label the leaves according to flower
+        type and number.
 
-          iris_labels = ['virg', 'clowa']
+          iris_labels = ('I. virginica', 'I. setosa')
           iris_Y=load('irisY.txt')
           iris_X=load('irisX.txt')
           Y = pdist(iris_X)
           Z = linkage(Y)
           llf = lambda id:
                    if id < n:
-                      return iris_labels[Y[id]]
+                      return "%s (%d)" % (iris_labels[Y[id]], id)
+                   else:
+                      return ""
           dendrogram(Z, p=0, leaf_label_func=llf, leaf_rotation=90)
     """
 
