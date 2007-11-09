@@ -777,6 +777,48 @@ extern PyObject *pdist_russellrao_bool_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("");
 }
 
+extern PyObject *pdist_kulsinski_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_kulsinski_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
+extern PyObject *pdist_sokalmichener_bool_wrap(PyObject *self, PyObject *args) {
+  PyArrayObject *_X, *_dm;
+  int m, n;
+  double *dm;
+  const char *X;
+  if (!PyArg_ParseTuple(args, "O!O!",
+			&PyArray_Type, &_X,
+			&PyArray_Type, &_dm)) {
+    return 0;
+  }
+  else {
+    X = (const char*)_X->data;
+    dm = (double*)_dm->data;
+    m = _X->dimensions[0];
+    n = _X->dimensions[1];
+    
+    pdist_sokalmichener_bool(X, dm, m, n);
+  }
+  return Py_BuildValue("");
+}
+
 extern PyObject *pdist_sokalsneath_bool_wrap(PyObject *self, PyObject *args) {
   PyArrayObject *_X, *_dm;
   int m, n;
@@ -846,12 +888,14 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"pdist_hamming_bool_wrap", pdist_hamming_bool_wrap, METH_VARARGS},
   {"pdist_jaccard_wrap", pdist_jaccard_wrap, METH_VARARGS},
   {"pdist_jaccard_bool_wrap", pdist_jaccard_bool_wrap, METH_VARARGS},
+  {"pdist_kulsinski_bool_wrap", pdist_kulsinski_bool_wrap, METH_VARARGS},
   {"pdist_mahalanobis_wrap", pdist_mahalanobis_wrap, METH_VARARGS},
   {"pdist_matching_bool_wrap", pdist_matching_bool_wrap, METH_VARARGS},
   {"pdist_minkowski_wrap", pdist_minkowski_wrap, METH_VARARGS},
   {"pdist_rogerstanimoto_bool_wrap", pdist_rogerstanimoto_bool_wrap, METH_VARARGS},
   {"pdist_russellrao_bool_wrap", pdist_russellrao_bool_wrap, METH_VARARGS},
   {"pdist_seuclidean_wrap", pdist_seuclidean_wrap, METH_VARARGS},
+  {"pdist_sokalmichener_bool_wrap", pdist_sokalmichener_bool_wrap, METH_VARARGS},
   {"pdist_sokalsneath_bool_wrap", pdist_sokalsneath_bool_wrap, METH_VARARGS},
   {"pdist_yule_bool_wrap", pdist_yule_bool_wrap, METH_VARARGS},
   {"prelist_wrap", prelist_wrap, METH_VARARGS},

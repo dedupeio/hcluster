@@ -228,13 +228,28 @@ double rogerstanimoto_distance_bool(const char *u, const char *v, int n) {
 
 double russellrao_distance_bool(const char *u, const char *v, int n) {
   int i = 0;
-  int nff = 0, nft = 0, ntf = 0;
+  /**  int nff = 0, nft = 0, ntf = 0;**/
+  int ntt = 0;
   for (i = 0; i < n; i++) {
-    nff += (!u[i] && !v[i]);
+    /**    nff += (!u[i] && !v[i]);
     ntf += (u[i] && !v[i]);
-    nft += (!u[i] && v[i]);
+    nft += (!u[i] && v[i]);**/
+    ntt += (u[i] && v[i]);
   }
-  return (double)(ntf + nft + nff) / (double)n;
+  /**  return (double)(ntf + nft + nff) / (double)n;**/
+  return (double) (n - ntt) / (double) n;
+}
+
+static inline double kulsinski_distance_bool(const char *u, const char *v, int n) {
+  int _i = 0;
+  int ntt = 0, nft = 0, ntf = 0, nff = 0;
+  for (_i = 0; _i < n; _i++) {
+    ntt += (u[_i] && v[_i]);
+    ntf += (u[_i] && !v[_i]);
+    nft += (!u[_i] && v[_i]);
+    nff += (!u[_i] && !v[_i]);
+  }
+  return ((double)(ntf + nft - ntt + n)) / ((double)(ntf + nft + n));
 }
 
 static inline double sokalsneath_distance_bool(const char *u, const char *v, int n) {
@@ -246,6 +261,18 @@ static inline double sokalsneath_distance_bool(const char *u, const char *v, int
     nft += (!u[_i] && v[_i]);
   }
   return (2.0 * (ntf + nft))/(2.0 * (ntf + nft) + ntt);
+}
+
+static inline double sokalmichener_distance_bool(const char *u, const char *v, int n) {
+  int _i = 0;
+  int ntt = 0, nft = 0, ntf = 0, nff = 0;
+  for (_i = 0; _i < n; _i++) {
+    ntt += (u[_i] && v[_i]);
+    nff += (!u[_i] && !v[_i]);
+    ntf += (u[_i] && !v[_i]);
+    nft += (!u[_i] && v[_i]);
+  }
+  return (2.0 * (ntf + nft))/(2.0 * (ntf + nft) + ntt + nff);
 }
 
 double jaccard_distance(const double *u, const double *v, int n) {
@@ -602,6 +629,19 @@ void pdist_russellrao_bool(const char *X, double *dm, int m, int n) {
   }
 }
 
+void pdist_kulsinski_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = kulsinski_distance_bool(u, v, n);
+    }
+  }
+}
+
 void pdist_sokalsneath_bool(const char *X, double *dm, int m, int n) {
   int i, j;
   const char *u, *v;
@@ -611,6 +651,19 @@ void pdist_sokalsneath_bool(const char *X, double *dm, int m, int n) {
       u = X + (n * i);
       v = X + (n * j);
       *it = sokalsneath_distance_bool(u, v, n);
+    }
+  }
+}
+
+void pdist_sokalmichener_bool(const char *X, double *dm, int m, int n) {
+  int i, j;
+  const char *u, *v;
+  double *it = dm;
+  for (i = 0; i < m; i++) {
+    for (j = i + 1; j < m; j++, it++) {
+      u = X + (n * i);
+      v = X + (n * j);
+      *it = sokalmichener_distance_bool(u, v, n);
     }
   }
 }

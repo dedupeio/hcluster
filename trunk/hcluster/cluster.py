@@ -10,7 +10,7 @@ Flat cluster formation
 
  fcluster           forms flat clusters from hierarchical clusters.
  fclusterdata       forms flat clusters directly from data.
- leaders            tree node ancestors of singletons in each flat cluster.
+ leaders            singleton root nodes for flat cluster.
 
 Agglomorative cluster formation
 
@@ -22,10 +22,6 @@ Agglomorative cluster formation
  centroid           the centroid/UPGMC algorithm. (alias)
  median             the median/WPGMC algorithm. (alias)
  ward               the Ward/incremental algorithm. (alias)
-
-Divisive cluster formation
-
- (not available yet)
 
 Distance matrix computation from a collection of raw observation vectors
 
@@ -39,13 +35,12 @@ Statistic computations on hierarchies
  inconsistent       the inconsistency coefficients for cluster.
  maxinconsts        the maximum inconsistency coefficient for each cluster.
  maxdists           the maximum distance for each cluster.
- maxRmean           the maximum mean distance for each cluster.
  maxRstat           the maximum specific statistic for each cluster.
  to_mlab_linkage    converts a linkage to one MATLAB(TM) can understand.
 
 Visualization
 
- dendrogram         for visualizing a hierarchical clustering.
+ dendrogram         visualizes linkages (requires matplotlib).
 
 Tree representations of hierarchies
 
@@ -65,12 +60,14 @@ Distance functions between two vectors u and v
  euclidean          the Euclidean distance.
  hamming            the Hamming distance (boolean).
  jaccard            the Jaccard distance (boolean).
+ kulsinski          the Kulsinski distance (boolean).
  mahalanobis        the Mahalanobis distance.
  matching           the matching dissimilarity (boolean).
  minkowski          the Minkowski distance.
  rogerstanimoto     the Rogers-Tanimoto dissimilarity (boolean).
  russellrao         the Russell-Rao dissimilarity (boolean).
  seuclidean         the normalized Euclidean distance.
+ sokalmichener      the Sokal-Michener dissimilarity (boolean).
  sokalsneath        the Sokal-Sneath dissimilarity (boolean).
  sqeuclidean        the squared Euclidean distance.
  yule               the Yule dissimilarity (boolean).
@@ -83,6 +80,7 @@ Predicates
  is_valid_y         checks for a valid condensed distance matrix.
  is_isomorphic      checks if two flat clusterings are isomorphic.
  is_monotonic       checks if a linkage is monotonic.
+ Z_y_correspond     checks for validity of distance matrix given a linkage.
 
 Utility Functions
 
@@ -96,6 +94,7 @@ Legal stuff
 
 MATLAB and MathWorks are registered trademarks of The MathWorks, Inc.
 Mathematica is a registered trademark of The Wolfram Research, Inc.
+
 """
 
 _copyingtxt="""
@@ -266,7 +265,7 @@ def linkage(y, method='single', metric='euclidean'):
     """ Z = linkage(y, method)
 
           Performs hierarchical/agglomorative clustering on the
-          condensed distance matrix y. y must be a n * (n - 1) sized
+          condensed distance matrix y. y must be a {n \choose 2} sized
           vector where n is the number of original observations paired
           in the distance matrix. The behavior of this function is very
           similar to the MATLAB(TM) linkage function.
@@ -277,17 +276,16 @@ def linkage(y, method='single', metric='euclidean'):
           corresponds to one of the n original observations. The
           distance between clusters Z[i, 0] and Z[i, 1] is given by
           Z[i, 2]. The fourth value Z[i, 3] represents the number of
-          original observations in the cluster n + i.
+          original observations in the newly formed cluster.
 
           The following linkage methods are used to compute the
           distance dist(s, t) between two clusters s and t. The
           algorithm begins with a forest of clusters that have yet
-          to be used in the master hierarchy. When two clusters
-          s and t from this forest are combined into a single
-          cluster u, s and t are removed from the forest, and u
-          appears in the forest. When only one cluster remains in the
-          forest, the algorithm stops, and this cluster becomes
-          the root.
+          to be used in the hierarchy being formed. When two clusters
+          s and t from this forest are combined into a single cluster u,
+          s and t are removed from the forest, and u is added to
+          the forest. When only one cluster remains in the forest,
+          the algorithm stops, and this cluster becomes the root.
 
           A distance matrix is maintained at each iteration. The
           d[i,j] entry corresponds to the distance between cluster
@@ -318,7 +316,7 @@ def linkage(y, method='single', metric='euclidean'):
                       or the Voor Hees Algorithm)
 
            * method='average' assigns dist(u,v) =
-                sum_{ij} { dist(u[i], v[j]) } / (|u|*|v|)
+                \sum_{ij} { dist(u[i], v[j]) } / (|u|*|v|)
              for all points i and j where |u| and |v| are the
              cardinalities of clusters u and v, respectively.
 
@@ -416,7 +414,7 @@ class cnode:
     non-singleton clusters.
 
     The totree function converts a matrix returned by the linkage
-    function into a tree representation.
+    function into an easy-to-use tree representation.
     """
 
     def __init__(self, id, left=None, right=None, dist=0, count=1):
@@ -487,7 +485,7 @@ class cnode:
     
           Performs preorder traversal without recursive function calls.
           When a leaf node is first encountered, func is called with the
-          leaf node as the argument, and its result is appended to the
+          leaf node as its argument, and its result is appended to the
           list vlst.
     
           For example, the statement
@@ -538,8 +536,8 @@ def totree(Z, rd=False):
     r = totree(Z)
     
       Converts a hierarchical clustering encoded in the matrix Z
-      (by linkage) into a tree object. The reference r to the
-      root cnode object is returned.
+      (by linkage) into an easy-to-use tree object. The reference r
+      to the root cnode object is returned.
     
       Each cnode object has a left, right, dist, id, and count
       attribute. The left and right attributes point to cnode
@@ -558,7 +556,7 @@ def totree(Z, rd=False):
 
     Note: This function is provided for the convenience of the
     library user. cnodes are not used as input to any of the
-    functions in this libray.
+    functions in this library.
     """
 
     if type(Z) is not _array_type:
@@ -628,9 +626,9 @@ def squareform(X, force="no", checks=True):
     v = squareform(X)
 
       Given a square d by d symmetric distance matrix X, v=squareform(X)
-      returns a d*(d-1)/2 (n \choose 2) sized vector v.
+      returns a d*(d-1)/2 (or {n \choose 2}) sized vector v.
 
-      v[(n \choose 2)-(n-i \choose 2) + (j-i-1)] is the distance
+      v[{n \choose 2}-{n-i \choose 2} + (j-i-1)] is the distance
       between points i and j. If X is non-square or asymmetric, an error
       is returned.
 
@@ -639,7 +637,7 @@ def squareform(X, force="no", checks=True):
       Given a d*d(-1)/2 sized v for some integer d>=2 encoding distances
       as described, X=squareform(v) returns a dxd distance matrix X. The
       X[i, j] and X[j, i] values are set to
-      v[(n \choose 2)-(n-i \choose 2) + (j-u-1)] and all
+      v[{n \choose 2}-{n-i \choose 2} + (j-u-1)] and all
       diagonal elements are zero.
 
     As with MATLAB(TM), if force is equal to 'tovector' or 'tomatrix',
@@ -750,7 +748,14 @@ def correlation(u, v):
     """
     d = correlation(u, v)
     
-      Computes the correlation distance between two vectors u and v.
+      Computes the correlation distance between two vectors u and v,
+
+            1 - (u - n|u|_1)(v - n|v|_1)^T
+            --------------------------------- ,
+            |(u - n|u|_1)|_2 |(v - n|v|_1)|^T
+
+      where |*|_1 is the Manhattan norm and n is the common dimensionality
+      of the vectors.
     """
     vmu = v.mean()
     umu = u.mean()
@@ -763,25 +768,67 @@ def hamming(u, v):
     """
     d = hamming(u, v)
     
-      Computes the hamming distance between two vector u and v.
+      Computes the Hamming distance between two n-vectors u and v,
+      which is simply the proportion of disagreeing components in u
+      and v. If u and v are boolean vectors, the hamming distance is
+
+         (c_{01} + c_{10}) / n
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n.
     """
     return (u != v).mean()
 
 def jaccard(u, v):
     """
     d = jaccard(u, v)
-    
-      Computes the Jaccard distance between two vectors u and v.
+
+      Computes the Jaccard-Needham dissimilarity between two boolean
+      n-vectors u and v, which is
+
+              c_{TF} + c_{FT}
+         ------------------------
+         c_{TT} + c_{FT} + c_{TF}
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n.
     """
     return ((scipy.bitwise_and((u != v), scipy.bitwise_or(u != 0, v != 0))).sum()) / scipy.bitwise_or(u != 0, v != 0).sum()
+
+def kulsinski(u, v):
+    """
+    d = kulsinski(u, v)
+
+      Computes the Kulsinski dissimilarity between two boolean n-vectors
+      u and v, which is
+
+         c_{TF} + c_{FT} - c_{TT} + n
+         ----------------------------
+              c_{FT} + c_{TF} + n
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n.
+    """
+    (nff, nft, ntf, ntt) = _nbool_correspond_all(u, v)
+
+    return (ntf + nft - ntt + n) / (ntf + nft + n)
 
 def seuclidean(u, v, V):
     """
     d = seuclidean(u, v, V)
     
       Returns the standardized Euclidean distance between two
-      n-dimensional. V is a m-dimensional vector of component variances.
-      It is usually computed among a larger collection vectors.
+      n-vectors u and v. V is a m-dimensional vector of component
+      variances. It is usually computed among a larger collection vectors.
     """
     if type(V) is not _array_type or len(V.shape) != 1 or V.shape[0] != u.shape[0] or u.shape[0] != v.shape[0]:
         raise TypeError('V must be a 1-D numpy array of doubles of the same dimension as u and v.')
@@ -813,7 +860,7 @@ def chebyshev(u, v):
     d = chebyshev(u, v)
     
       Computes the Chebyshev distance between two vectors u and v,
-        max {|u_i-v_i|}.
+        \max {|u_i-v_i|}.
     """
     return max(abs(u-v))
 
@@ -854,7 +901,19 @@ def _nbool_correspond_ft_tf(u, v):
 def yule(u, v):
     """
     d = yule(u, v)
-      Computes the Yule dissimilarity between two boolean vectors u and v.
+      Computes the Yule dissimilarity between two boolean n-vectors u and v,
+
+                  R
+         ---------------------
+         c_{TT} + c_{FF} + R/2
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n, and
+
+         R = 2.0 * (c_{TF} + c_{FT}).
     """
     (nff, nft, ntf, ntt) = _nbool_correspond_all(u, v)
     return float(2.0 * ntf * nft) / float(ntt * nff + ntf * nft)
@@ -862,8 +921,17 @@ def yule(u, v):
 def matching(u, v):
     """
     d = matching(u, v)
-    
-      Computes the Matching dissimilarity between two boolean vectors u and v.
+
+      Computes the Matching dissimilarity between two boolean n-vectors
+      u and v, which is
+
+         (c_{TF} + c_{FT}) / n
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n.
     """
     (nft, ntf) = _nbool_correspond_ft_tf(u, v)
     return float(nft + ntf) / float(len(u))
@@ -872,7 +940,18 @@ def dice(u, v):
     """
     d = dice(u, v)
     
-      Computes the Dice dissimilarity between two boolean vectors u and v.
+      Computes the Dice dissimilarity between two boolean n-vectors
+      u and v, which is
+
+                c_{TF} + c_{FT}
+         ----------------------------
+         2 * c_{TT} + c_{FT} + c_{TF}
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n.
     """
     ntt = scipy.bitwise_and(u, v).sum()
     (nft, ntf) = _nbool_correspond_ft_tf(u, v)
@@ -883,7 +962,20 @@ def rogerstanimoto(u, v):
     d = rogerstanimoto(u, v)
     
       Computes the Rogers-Tanimoto dissimilarity between two boolean
-      vectors u and v.
+      n-vectors u and v,
+
+                  R
+         -------------------
+         c_{TT} + c_{FF} + R
+
+      where c_{ij} is the number of occurrences of
+
+         u[k] == i and v[k] == j
+
+      for k < n, and
+
+         R = 2.0 * (c_{TF} + c_{FT}).
+
     """
     (nff, nft, ntf, ntt) = _nbool_correspond_all(u, v)
     return float(2.0 * (ntf + nft)) / float(ntt + nff + (2.0 * (ntf + nft)))
@@ -892,19 +984,34 @@ def russellrao(u, v):
     """
     d = russellrao(u, v)
     
-      Computes the Russell-Rao dissimilarity between two boolean vectors
-      u and v.
+      Computes the Russell-Rao dissimilarity between two boolean n-vectors
+      u and v, (n - c_{TT}) / n where c_{ij} is the number of occurrences
+      of u[k] == i and v[k] == j for k < n.
     """
+    ntt = scipy.bitwise_and(u, v).sum()
+    return float(len(u) - ntt) / float(len(u))
+
+def sokalmichener(u, v):
+    """
+    d = sokalmichener(u, v)
+
+      Computes the Sokal-Michener dissimilarity between two boolean vectors
+      u and v, 2R / (S + 2R) where c_{ij} is the number of occurrences of
+      u[k] == i and v[k] == j for k < n andR = 2 * (c_{TF} + c{FT}) and
+      S = c_{FF} + c_{TT}.
+    """
+    ntt = scipy.bitwise_and(u, v).sum()
     nff = scipy.bitwise_and(scipy.bitwise_not(u), scipy.bitwise_not(v)).sum()
     (nft, ntf) = _nbool_correspond_ft_tf(u, v)
-    return float(ntf + nft + nff) / float(len(u))
+    return float(2.0 * (ntf + nft))/float(ntt + nff + 2.0 * (ntf + nft))
 
 def sokalsneath(u, v):
     """
     d = sokalsneath(u, v)
 
       Computes the Sokal-Sneath dissimilarity between two boolean vectors
-      u and v.
+      u and v, 2R / (c_{TT} + 2R) where c_{ij} is the number of occurrences
+      of u[k] == i and v[k] == j for k < n and R = 2 * (c_{TF} + c{FT}).
     """
     ntt = scipy.bitwise_and(u, v).sum()
     (nft, ntf) = _nbool_correspond_ft_tf(u, v)
@@ -927,8 +1034,10 @@ _pdist_metric_info = {'euclidean': ['double'],
                       'yule': ['bool'],
                       'matching': ['bool'],
                       'dice': ['bool'],
+                      'kulsinski': ['bool'],
                       'rogerstanimoto': ['bool'],
                       'russellrao': ['bool'],
+                      'sokalmichener': ['bool'],
                       'sokalsneath': ['bool']}
 
 def pdist(X, metric='euclidean', p=2, V=None, VI=None):
@@ -959,7 +1068,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         4. Y = pdist(X, 'seuclidean', V=None)
 
           Computes the standardized Euclidean distance. The standardized
-          Euclidean distance between two points u and v is
+          Euclidean distance between two vectors u and v is
 
             sqrt(\sum {(u_i-v_i)^2 / V[x_i]}).
 
@@ -969,11 +1078,12 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
 
         5. Y = pdist(X, 'sqeuclidean')
 
-          Computes the squared Euclidean distance (||u-v||_2)^2.
+          Computes the squared Euclidean distance ||u-v||_2^2 between
+          the vectors.
 
         6. Y = pdist(X, 'cosine')
 
-          Computes the cosine distance between vectors u and v. This is
+          Computes the cosine distance between vectors u and v,
         
                1 - uv^T
              -----------
@@ -1043,34 +1153,44 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         14. Y = pdist(X, 'yule')
 
           Computes the Yule distance between each pair of boolean
-          vectors.
+          vectors. (see yule function documentation)
 
         15. Y = pdist(X, 'matching')
 
           Computes the matching distance between each pair of boolean
-          vectors.
+          vectors. (see matching function documentation)
 
         16. Y = pdist(X, 'dice')
 
           Computes the Dice distance between each pair of boolean
-          vectors.
+          vectors. (see dice function documentation)
+
+        17. Y = pdist(X, 'kulsinski')
+
+          Computes the Kulsinski distance between each pair of
+          boolean vectors. (see kulsinski function documentation)
 
         17. Y = pdist(X, 'rogerstanimoto')
 
           Computes the Rogers-Tanimoto distance between each pair of
-          boolean vectors.
+          boolean vectors. (see rogerstanimoto function documentation)
 
         18. Y = pdist(X, 'russellrao')
 
           Computes the Russell-Rao distance between each pair of
-          boolean vectors.
+          boolean vectors. (see russellrao function documentation)
 
-        19. Y = pdist(X, 'sokalsneath')
+        19. Y = pdist(X, 'sokalmichener')
+
+          Computes the Sokal-Michener distance between each pair of
+          boolean vectors. (see sokalmichener function documentation)
+
+        20. Y = pdist(X, 'sokalsneath')
 
           Computes the Sokal-Sneath distance between each pair of
-          boolean vectors.
+          boolean vectors. (see sokalsneath function documentation)
 
-        20. Y = pdist(X, f)
+        21. Y = pdist(X, f)
         
           Computes the distance between all pairs of vectors in X
           using the user supplied 2-arity function f. For example,
@@ -1078,6 +1198,19 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
           as follows,
 
             dm = pdist(X, (lambda u, v: numpy.sqrt(((u-v)*(u-v).T).sum())))
+
+          Note that you should avoid passing a reference to one of
+          the distance functions defined in this library. For example,
+
+            dm = pdist(X, sokalsneath)
+
+          would calculate the pair-wise distances between the vectors
+          in X using the Python function sokalsneath. This would result
+          in sokalsneath being called {n \choose 2} times, which is
+          inefficient. Instead, the optimized C version is more
+          efficient, and we call it using the following syntax.
+
+            dm = pdist(X, 'sokalsneath')
        """
 #         21. Y = pdist(X, 'test_Y')
 #
@@ -1194,12 +1327,16 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             _cluster_wrap.pdist_yule_bool_wrap(X, dm)
         elif mstr == 'matching':
             _cluster_wrap.pdist_matching_bool_wrap(X, dm)
+        elif mstr == 'kulsinski':
+            _cluster_wrap.pdist_kulsinski_bool_wrap(X, dm)
         elif mstr == 'dice':
             _cluster_wrap.pdist_dice_bool_wrap(X, dm)
         elif mstr == 'rogerstanimoto':
             _cluster_wrap.pdist_rogerstanimoto_bool_wrap(X, dm)
         elif mstr == 'russellrao':
             _cluster_wrap.pdist_russellrao_bool_wrap(X, dm)
+        elif mstr == 'sokalmichener':
+            _cluster_wrap.pdist_sokalmichener_bool_wrap(X, dm)
         elif mstr == 'sokalsneath':
             _cluster_wrap.pdist_sokalsneath_bool_wrap(X, dm)
         elif metric == 'test_euclidean':
@@ -1266,15 +1403,13 @@ def cophenet(*args, **kwargs):
 
     c = cophenet(Z, Y)
 
-      Calculates the cophenetic correlation coefficient of a hierarchical
-      clustering of a set of n observations in m dimensions. Returns the
-      distance as a scalar. Y is the condensed distance matrix generated
-      by pdist.
+      Calculates the cophenetic correlation coefficient c of a hierarchical
+      clustering Z of a set of n observations in m dimensions. Y is the
+      condensed distance matrix from which Z was generated.
 
     (c, d) = cophenet(Z, Y, [])
 
-      Same as cophenet(Z, Y) except the distance matrix is returned as
-      the second element of a tuple.
+      Also returns the cophenetic distance matrix in condensed form.
       
     """
     nargs = len(args)
@@ -1343,8 +1478,8 @@ def inconsistent(Z, d=2):
       included in the calculation; and R[i,3] is the inconsistency
       coefficient, (Z[i, 2]-R[i,0])/R[i,2].
 
-      The behavior of this function is very similar to the MATLAB(TM)
-      inconsistent function.
+      This function behaves similarly to the MATLAB(TM) inconsistent
+      function.
     """
 
     Zs = Z.shape
@@ -1402,8 +1537,9 @@ def to_mlab_linkage(Z):
     Z2 = to_mlab_linkage(Z)
 
     Converts a linkage matrix Z generated by the linkage function of this
-    module to one compatible with matlab. Z2 is the same as Z with the last
-    column removed and the indices converted to 1..N form.
+    module to one compatible with MATLAB(TM). Z2 is the same as Z with the
+    last column removed and the cluster indices converted to use
+    1..N indexing.
     """
     if type(Z) is not _array_type:
         raise TypeError('First argument Z must be a two-dimensional array.')
@@ -1476,7 +1612,7 @@ def is_valid_y(y):
       Returns True if the variable y passed is a valid condensed
       distance matrix. Condensed distance matrices must be
       1-dimensional numpy arrays containing doubles. Their length
-      must be a binomial coefficient (n choose 2) for some positive
+      must be a binomial coefficient {n \choose 2} for some positive
       integer n.
     """
     valid = type(y) is _array_type
@@ -1556,7 +1692,8 @@ def Z_y_correspond(Z, Y):
       Returns True if a linkage matrix Z and condensed distance matrix
       Y could possibly correspond to one another. They must have the same
       number of original observations. This function is useful as a sanity
-      check in algorithms that make use of many linkage and distance matrices.
+      check in algorithms that make extensive use of linkage and distance
+      matrices that must correspond to the same set of original observations.
     """
     return numobs_y(Y) == numobs_Z(Z)
 
@@ -1568,7 +1705,7 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
       Forms flat clusters from the hierarchical clustering defined by
       the linkage matrix Z. The threshold t is a required parameter.
 
-      T is a vector of length n; T[i] is the cluster number to which
+      T is a vector of length n; T[i] is the flat cluster number to which
       original observation i belongs.
 
       The criterion parameter can be any of the following values,
@@ -1593,21 +1730,22 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         * 'monocrit': Forms a flat cluster from a cluster node c with
         index i when monocrit[j] <= t. monocrit must be monotonic.
 
-        monocrit is a (n-1) numpy vector of doubles representing the
-        criterion values to threshold. monocrit must be monotonic, i.e.
-        given a node c with index i, for all node indices j corresponding
-        to nodes below c, monocrit[i] >= monocrit[j].
+        monocrit is a (n-1) numpy vector of doubles; monocrit[i] is
+        the crtierion upion which non-singleton i is thresholded. The
+        monocrit vector must be monotonic, i.e. given a node c with
+        index i, for all node indices j corresponding to nodes below c,
+        monocrit[i] >= monocrit[j].
 
         For example, to threshold on the maximum mean distance as computed
         in the inconsistency matrix R with a threshold of 0.8 do
 
-          MR = maxRmean(Z, R)
+          MR = maxRstat(Z, R, 3)
           cluster(Z, t=0.8, criterion='monocrit', monocrit=MR)
 
-        * 'maxclust_monocrit': Forms a flat cluster from a cluster node c
-        when monocrit[i] <= r for all cluster indices i below and including
-        c. r is minimized such that no more than t flat clusters are formed.
-        monocrit must be monotonic.
+        * 'maxclust_monocrit': Forms a flat cluster from a non-singleton
+        cluster node c when monocrit[i] <= r for all cluster indices i below
+        and including c. r is minimized such that no more than t flat clusters
+        are formed. monocrit must be monotonic.
         
         For example, to minimize the threshold t on maximum inconsistency
         values so that no more than 3 flat clusters are formed, do:
@@ -1652,7 +1790,7 @@ def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
     T = fclusterdata(X, t)
 
       Clusters the original observations in the n by m data matrix X
-      (n observations in m dimensions) using the euclidean distance
+      (n observations in m dimensions), using the euclidean distance
       metric to calculate distances between original observations,
       performs hierarchical clustering using the single linkage
       algorithm, and forms flat clusters using the inconsistency
@@ -1664,6 +1802,10 @@ def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
 
     T = fclusterdata(X, t, criterion='inconsistent', linkage='single',
                     dist='euclid', depth=2, R=None)
+
+      Clusters the original observations in the n by m data matrix X using
+      the thresholding criterion, linkage method, and distance metric
+      specified.
 
       Named parameters are described below.
       
@@ -1685,9 +1827,10 @@ def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
         depth:      the maximum depth for the inconsistency calculation.
                     See inconsistent for more information.
 
-        R:          the inconsistency matrix.
+        R:          the inconsistency matrix. It will be computed if
+                    necessary if it is not passed.
 
-    This function is similar to MATLAB's clusterdata function.
+    This function is similar to MATLAB(TM) clusterdata function.
     """
 
     if type(X) is not _array_type or len(X.shape) != 2:
@@ -1702,8 +1845,8 @@ def lvlist(Z):
     """
     L = lvlist(Z):
 
-      Returns a list of leaf node indices as they appear in the tree
-      from left to right. Z is a linkage matrix.
+      Returns a list of leaf node ids as they appear in the tree from
+      left to right. Z is a linkage matrix.
     """
     if not is_valid_linkage(Z):
         raise ValueError('Linkage matrix is not valid.')
@@ -1845,17 +1988,20 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                get_leaves=True, orientation='top', labels=None,
                count_sort=False, distance_sort=False, show_leaf_counts=True,
                no_plot=False, no_labels=False, color_list=None,
-               leaf_font_size=None, leaf_rotation=None, leaf_label_func=None):
+               leaf_font_size=None, leaf_rotation=None, leaf_label_func=None,
+               no_leaves=False):
     """
     R = dendrogram(Z)
 
       Plots the hiearchical clustering defined by the linkage Z as a
       dendrogram. The dendrogram illustrates how each cluster is
       composed by drawing a U-shaped link between a non-singleton
-      cluster and its descendents. The height of the top of a node
-      is the distance between its descendents. It is also the cophenetic
-      distance between original observations in the two descendent
-      clusters.
+      cluster and its children. The height of the top of the U-link
+      is the distance between its children clusters. It is also the
+      cophenetic distance between original observations in the
+      two children clusters. It is expected that the distances in
+      Z[:,2] be monotonic, otherwise crossings appear in the
+      dendrogram.
 
       R is a dictionary of the data structures computed to render the
       dendrogram. Its keys are:
@@ -1873,35 +2019,35 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
     R = dendrogram(..., truncate_mode, p)
 
       The dendrogram can be hard to read when the original observation
-      matrix from which the linkage is derived is large. truncation
+      matrix from which the linkage is derived is large. Truncation
       is used to condense the dendrogram. There are several modes:
 
        * None/'none': no truncation is performed
 
        * 'lastp': the last p non-singleton formed in the linkage are
        the only non-leaf nodes in the linkage; they correspond to
-       to rows Z[n-p-2:end] in Z. Non-singleton clusters that appear
-       as leaf nodes
+       to rows Z[n-p-2:end] in Z. All other non-singleton clusters
+       are contracted into leaf nodes.
 
-       * 'mlab': This corresponds to MATLAB(TM) behavior.
+       * 'mlab': This corresponds to MATLAB(TM) behavior. (not implemented)
 
        * 'level'/'mtica': no more than p levels of the dendrogram tree
        are displayed. This corresponds to Mathematica(TM) behavior.
 
     R = dendrogram(..., colorthreshold=t)
 
-      Colors all the links below a cluster node a unique color if it is
-      the first node among its ancestors to have a distance below the
-      threshold t. All nodes greater than or equal to the threshold are
+      Colors all the descendent links below a cluster node k the same color
+      if k is the first node below the cut threshold t. All links connecting
+      nodes with distances greater than or equal to the threshold are
       colored blue. If t is less than or equal to zero, all nodes
       are colored blue. If t is None or 'default', corresponding with
       MATLAB(TM) behavior, the threshold is set to 0.7*max(Z[:,2]).
 
     R = dendrogram(..., get_leaves=True)
 
-      Includes a list R['leaves'] in the result dictionary. The i'th
-      value is the leaf node index in which original observation with
-      index i appears. This vector has duplicates iff m > p.
+      Includes a list R['leaves']=H in the result dictionary. For each i,
+      H[i] == j, cluster node j appears in the i'th position in the
+      left-to-right traversal of the leaves, where j < 2n-1 and i < n.
 
     R = dendrogram(..., get_node_stats=True)
 
@@ -1945,10 +2091,10 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
 
           * False: nothing is done.
           
-          * 'ascending'/True: the descendent with the minimum number of
+          * 'ascending'/True: the child with the minimum number of
           original objects in its cluster is plotted first.
 
-          * 'descendent': the descendent with the maximum number of
+          * 'descendent': the child with the maximum number of
           original objects in its cluster is plotted first.
 
     R = dendrogram(..., distance_sort)
@@ -1960,10 +2106,10 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
 
           * False: nothing is done.
 
-          * 'ascending'/True: the descendent with the minimum distance
+          * 'ascending'/True: the child with the minimum distance
           between its direct descendents is plotted first.
 
-          * 'descending': the descendent with the maximum distance
+          * 'descending': the child with the maximum distance
           between its direct descendents is plotted first.
 
         Note that either count_sort or distance_sort must be False.
@@ -1972,13 +2118,13 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
 
         When show_leaf_counts=True, leaf nodes representing k>1
         original observation are labeled with the number of observations
-        they contain in parenthesis.
+        they contain in parentheses.
 
     R = dendrogram(..., no_plot)
 
         When no_plot=True, the final rendering is not performed. This is
         useful if only the data structures computed for the rendering
-        are needed.
+        are needed or if matplotlib is not available.
 
     R = dendrogram(..., no_labels)
 
@@ -1988,13 +2134,13 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
     R = dendrogram(..., leaf_label_rotation):
 
         Specifies the angle to which the leaf labels are rotated. When
-        not specified, the rotation based on the number of nodes in the
+        unspecified, the rotation based on the number of nodes in the
         dendrogram.
 
     R = dendrogram(..., leaf_font_size):
 
         Specifies the font size in points of the leaf labels. When
-        not specified, the size  based on the number of nodes
+        unspecified, the size  based on the number of nodes
         in the dendrogram.
 
 
@@ -2044,6 +2190,12 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                    else:
                       return ""
           dendrogram(Z, p=0, leaf_label_func=llf, leaf_rotation=90)
+
+    R = dendrogram(..., show_contracted=False)
+
+        The heights of non-singleton nodes contracted into a leaf node
+        are plotted as crosses along the link connecting that leaf node.
+        This feature is only useful when truncation is used.
     """
 
     # Features under consideration.
@@ -2124,7 +2276,7 @@ def _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i):
         lvs.append(int(i))
 
     # If leaf node labels are to be displayed...
-    if ivl:
+    if ivl is not None:
         # If a leaf_label_func has been provided, the label comes from the
         # string returned from the leaf_label_func, which is a function
         # passed to dendrogram.
@@ -2146,7 +2298,7 @@ def _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
 
     if lvs is not None:
         lvs.append(int(i))
-    if ivl:
+    if ivl is not None:
         if leaf_label_func:
             ivl.append(leaf_label_func(i))
         else:
@@ -2411,10 +2563,11 @@ def maxdists(Z):
     """
     MD = maxdists(Z)
 
-      Calculates the maximum distance between any cluster in the linkage Z.
       MD is a (n-1)-sized numpy array of doubles; MD[i] represents the
       maximum distance between any cluster (including singletons) below
-      and including the node with index i.
+      and including the node with index i. More specifically,
+      MD[i] = Z[Q(i)-n, 2].max() where Q(i) is the set of all node indices
+      below and including node i.
       
       Note that when Z[:,2] is monotonic, Z[:,2] and MD should not differ.
       See linkage for more information on this issue.
@@ -2446,31 +2599,14 @@ def maxinconsts(Z, R):
     _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MI, int(n), 3)
     return MI
 
-def maxRmean(Z, R):
-    """
-    MR = maxRmean(Z, R)
-
-    Calculates the maximum mean coefficient for each node and its
-    descendents. Z is a valid linkage matrix and R is a valid
-    inconsistency matrix. MI is a monotonic (n-1)-sized numpy array of
-    doubles.
-    """
-    if not is_valid_linkage(Z):
-        raise ValueError('The first argument Z is not a valid linkage.')
-    if not is_valid_im(R):
-        raise ValueError('The second argument R is not a valid inconsistency matrix.')
-    n = Z.shape[0] + 1
-    MR = numpy.zeros((n-1,))
-    _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MR, int(n), 3)
-    return MR
-
 def maxRstat(Z, R, i):
     """
     MR = maxRstat(Z, R, i)
 
     Calculates the maximum statistic for the i'th column of the
-    inconsistency matrix R. MI is a monotonic (n-1)-sized numpy array
-    of doubles.
+    inconsistency matrix R for each non-singleton cluster node. MR[j]
+    is the maximum over R[Q(j)-n, i] where Q(j) the set of all node ids
+    corresponding to nodes below and including j.
     """
     if not is_valid_linkage(Z):
         raise ValueError('The first argument Z is not a valid linkage.')
