@@ -157,7 +157,6 @@ extern PyObject *get_max_Rfield_for_each_cluster_wrap(PyObject *self,
   return Py_BuildValue("");
 }
 
-
 extern PyObject *prelist_wrap(PyObject *self, PyObject *args) {
   int n;
   PyArrayObject *Z, *ML;
@@ -171,17 +170,16 @@ extern PyObject *prelist_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
-
 extern PyObject *cluster_in_wrap(PyObject *self, PyObject *args) {
-  int n, method;
+  int n;
   double cutoff;
   PyArrayObject *Z, *R, *T;
-  if (!PyArg_ParseTuple(args, "O!O!O!dii",
+  if (!PyArg_ParseTuple(args, "O!O!O!di",
 			&PyArray_Type, &Z,
 			&PyArray_Type, &R,
 			&PyArray_Type, &T,
 			&cutoff,
-			&n, &method)) {
+			&n)) {
     return 0;
   }
   form_flat_clusters_from_in((const double *)Z->data, (const double *)R->data,

@@ -182,6 +182,26 @@ _cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
 _cpy_linkage_methods = set(_cpy_non_euclid_methods.keys()).union(set(_cpy_euclid_methods.keys()))
 _array_type = type(numpy.array([]))
 
+
+def _copy_array_if_base_present(a):
+    """
+    Copies the array if its base points to a parent array.
+    """
+    if a.base is not None:
+        return a.copy()
+    else:
+        return a
+    
+def _copy_arrays_if_base_present(T):
+    """
+    Accepts a tuple of arrays T. Copies the array T[i] if its base array
+    points to an actual array. Otherwise, the reference is just copied.
+    This is useful if the arrays are being passed to a C function that
+    does not do proper striding.
+    """
+    return (_copy_array_if_base_present(a) for a in T)
+            
+
 def copying():
     """ Displays the license for this package."""
     print _copyingtxt
@@ -761,7 +781,8 @@ def euclidean(u, v):
     
       Computes the Euclidean distance between two vectors u and v, ||u-v||_2
     """
-    return numpy.sqrt(((u-v)*(u-v).T).sum())
+    q=numpy.matrix(u-v)
+    return numpy.sqrt((q*q.T).sum())
 
 def sqeuclidean(u, v):
     """
@@ -1259,7 +1280,10 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
     
     if type(X) is not _array_type:
         raise TypeError('The parameter passed must be an array.')
-    
+
+    # The C code doesn't do striding.
+    (X) = _copy_arrays_if_base_present((X,))
+
     s = X.shape
 
     if len(s) != 2:
@@ -1316,10 +1340,8 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
                     raise ValueError('V must be one-dimensional.')
                 if V.shape[0] != n:
                     raise ValueError('V must be a vector of the same dimension as the points.')
-                if V.base is not None:
-                    VV = V.copy()
-                else:
-                    VV = V
+                # The C code doesn't do striding.
+                (VV) = _copy_arrays_if_base_present((V,))
             else:
                 VV = scipy.stats.var(X, axis=0)
             _cluster_wrap.pdist_seuclidean_wrap(X, VV, dm)
@@ -1350,8 +1372,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
                     raise TypeError('VI must be a numpy array.')
                 if VI.dtype != 'double':
                     raise TypeError('The array must contain doubles.')
-                if VI.base is not None:
-                    VI = VI.copy()
+                (VI) = _copy_arrays_if_base_present((VI,))
             else:
                 V = numpy.cov(X.T)
                 VI = numpy.linalg.inv(V).T.copy()
@@ -1379,7 +1400,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             _cluster_wrap.pdist_sokalsneath_bool_wrap(X, dm)
         elif metric == 'test_euclidean':
             dm = pdist(X, euclidean)
-        elif metric == 'test_seuclidean':
+        elif metric == 'test_sqeuclidean':
             if V is None:
                 V = scipy.stats.var(X, axis=0)
             dm = pdist(X, lambda u, v: seuclidean(u, v, V))
@@ -1389,6 +1410,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             if VI is None:
                 V = numpy.cov(X.T)
                 VI = numpy.linalg.inv(V)
+            (VI) = _copy_arrays_if_base_present((VI,))
             # (u-v)V^(-1)(u-v)^T
             dm = pdist(X, (lambda u, v: mahalanobis(u, v, VI)))
         elif metric == 'test_cityblock':
@@ -1810,13 +1832,13 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         else:
             if not is_valid_im(R):
                 raise ValueError('R passed is not a valid inconsistency matrix.')
-        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n))
+        _cluster_wrap.cluster_dist_wrap(Z, T, float(t), int(n))
     elif criterion == 'maxclust':
-        _cluster.wrap.cluster_maxclust_dist_wrap(Z, T, int(n), int(t))
+        _cluster_wrap.cluster_maxclust_dist_wrap(Z, T, int(n), int(t))
     elif criterion == 'monocrit':
-        _cluster.wrap.cluster_monocrit_wrap(Z, monocrit, T, int(n), int(t))
+        _cluster_wrap.cluster_monocrit_wrap(Z, monocrit, T, int(n), int(t))
     elif criterion == 'maxclust_monocrit':
-        _cluster.wrap.cluster_maxclust_monocrit_wrap(Z, monocrit, T,
+        _cluster_wrap.cluster_maxclust_monocrit_wrap(Z, monocrit, T,
                                                      float(t), int(n))
     else:
         raise ValueError('Invalid cluster formation criterion: %s' % str(criterion))
@@ -1955,6 +1977,9 @@ try:
                 matplotlib.pylab.setp(lbls, 'size', float(_get_tick_text_size(len(ivl))))
 #            txt.set_fontsize()
 #            txt.set_rotation(45)
+            # Make the tick marks invisible because they cover up the links
+            for line in axis.get_xticklines():
+                line.set_visible(False)
         elif orientation == 'bottom':
             axis.set_ylim([dvw, 0])
             axis.set_xlim([0, ivw])
@@ -1976,6 +2001,9 @@ try:
             else:
                 matplotlib.pylab.setp(lbls, 'size', float(_get_tick_text_size(p)))    
             axis.xaxis.set_ticks_position('top')
+            # Make the tick marks invisible because they cover up the links
+            for line in axis.get_xticklines():
+                line.set_visible(False)
         elif orientation == 'left':
             axis.set_xlim([0, dvw])
             axis.set_ylim([0, ivw])
@@ -1994,6 +2022,10 @@ try:
             if leaf_font_size:
                 matplotlib.pylab.setp(lbls, 'size', leaf_font_size)
             axis.yaxis.set_ticks_position('left')
+            # Make the tick marks invisible because they cover up the
+            # links
+            for line in axis.get_yticklines():
+                line.set_visible(False)
         elif orientation == 'right':
             axis.set_xlim([dvw, 0])
             axis.set_ylim([0, ivw])
@@ -2011,6 +2043,9 @@ try:
             if leaf_font_size:
                 matplotlib.pylab.setp(lbls, 'size', leaf_font_size)
             axis.yaxis.set_ticks_position('right')
+            # Make the tick marks invisible because they cover up the links
+            for line in axis.get_yticklines():
+                line.set_visible(False)
         for (xline,yline,color) in zip(xlines, ylines, color_list):
             line = matplotlib.lines.Line2D(xline, yline, color=color)
             axis.add_line(line)
@@ -2305,7 +2340,7 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
 
     return R
 
-def _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i):
+def _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels):
     # If the leaf id structure is not None and is a list then the caller
     # to dendrogram has indicated that cluster id's corresponding to the
     # leaf nodes should be recorded.
@@ -2404,29 +2439,32 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
         # observations belonging to cluster i.
         if i < 2*n-p and i >= n:
             d = Z[i-n, 2]
-            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
+            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
             return (iv + 5.0, 10.0, 0.0, d)
         elif i < n:
-            _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
+            _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
             return (iv + 5.0, 10.0, 0.0, 0.0)
     elif truncate_mode in ('mtica', 'level'):
         if i > n and level > p:
             d = Z[i-n, 2]
-            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
+            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
             return (iv + 5.0, 10.0, 0.0, d)
         elif i < n:
-            _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
+            _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
             return (iv + 5.0, 10.0, 0.0, 0.0)
-    elif truncate_mode in ('mlab') or truncate_mode is None or truncate_mode == 'none':
-        # Otherwise, don't truncate.
-        #
-        # If the truncate_mode is mlab, the linkage has been modified
-        # with the truncated tree.
-        #
-        # Only place leaves if they correspond to original observations.
-        if i < n:
-            _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
-            return (iv + 5.0, 10.0, 0.0, 0.0)    
+    elif truncate_mode in ('mlab'):
+        pass
+
+    
+    # Otherwise, only truncate if we have a leaf node.
+    #
+    # If the truncate_mode is mlab, the linkage has been modified
+    # with the truncated tree.
+    #
+    # Only place leaves if they correspond to original observations.
+    if i < n:
+        _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
+        return (iv + 5.0, 10.0, 0.0, 0.0)
 
     # !!! Otherwise, we don't have a leaf node, so work on plotting a
     # non-leaf node.
