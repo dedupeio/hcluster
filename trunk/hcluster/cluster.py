@@ -678,7 +678,7 @@ def squareform(X, force="no", checks=True):
     """
     ... = squareform(...)
 
-    Converts a vectorform distance vector to a squareform distance
+    Converts a vector-form distance vector to a square-form distance
     matrix, and vice-versa. 
 
     v = squareform(X)
@@ -693,7 +693,7 @@ def squareform(X, force="no", checks=True):
     X = squareform(v)
 
       Given a d*d(-1)/2 sized v for some integer d>=2 encoding distances
-      as described, X=squareform(v) returns a dxd distance matrix X. The
+      as described, X=squareform(v) returns a d by d distance matrix X. The
       X[i, j] and X[j, i] values are set to
       v[{n \choose 2}-{n-i \choose 2} + (j-u-1)] and all
       diagonal elements are zero.
@@ -779,7 +779,7 @@ def euclidean(u, v):
     """
     d = euclidean(u, v)
     
-      Computes the Euclidean distance between two vectors u and v, ||u-v||_2
+      Computes the Euclidean distance between two n-vectors u and v, ||u-v||_2
     """
     q=numpy.matrix(u-v)
     return numpy.sqrt((q*q.T).sum())
@@ -788,7 +788,7 @@ def sqeuclidean(u, v):
     """
     d = sqeuclidean(u, v)
 
-      Computes the squared Euclidean distance between two vector u and v,
+      Computes the squared Euclidean distance between two n-vectors u and v,
         (||u-v||_2)^2.
     """
     return ((u-v)*(u-v).T).sum()
@@ -797,7 +797,7 @@ def cosine(u, v):
     """
     d = cosine(u, v)
 
-      Computes the Cosine distance between two vectors u and v,
+      Computes the Cosine distance between two n-vectors u and v,
         (1-uv^T)/(||u||_2 * ||v||_2).
     """
     return (1.0 - (scipy.dot(u, v.T) / \
@@ -807,7 +807,7 @@ def correlation(u, v):
     """
     d = correlation(u, v)
     
-      Computes the correlation distance between two vectors u and v,
+      Computes the correlation distance between two n-vectors u and v,
 
             1 - (u - n|u|_1)(v - n|v|_1)^T
             --------------------------------- ,
@@ -897,7 +897,7 @@ def cityblock(u, v):
     """
     d = cityblock(u, v)
 
-      Computes the Manhattan distance between two vectors u and v,
+      Computes the Manhattan distance between two n-vectors u and v,
          \sum {u_i-v_i}.
     """
     return abs(u-v).sum()
@@ -906,7 +906,7 @@ def mahalanobis(u, v, VI):
     """
     d = mahalanobis(u, v, VI)
     
-      Computes the Mahalanobis distance between two vectors u and v,
+      Computes the Mahalanobis distance between two n-vectors u and v,
         (u-v)VI(u-v)^T
       where VI is the inverse covariance matrix.
     """
@@ -918,7 +918,7 @@ def chebyshev(u, v):
     """
     d = chebyshev(u, v)
     
-      Computes the Chebyshev distance between two vectors u and v,
+      Computes the Chebyshev distance between two n-vectors u and v,
         \max {|u_i-v_i|}.
     """
     return max(abs(u-v))
@@ -927,7 +927,7 @@ def braycurtis(u, v):
     """
     d = braycurtis(u, v)
     
-      Computes the Bray-Curtis distance between two vectors u and v,
+      Computes the Bray-Curtis distance between two n-vectors u and v,
         \sum{|u_i-v_i|} / \sum{|u_i+v_i|}.
     """
     return abs(u-v).sum() / abs(u+v).sum()
@@ -936,7 +936,7 @@ def canberra(u, v):
     """
     d = canberra(u, v)
 
-      Computes the Canberra distance between two vectors u and v,
+      Computes the Canberra distance between two n-vectors u and v,
         \sum{|u_i-v_i|} / \sum{|u_i|+|v_i}.
     """
     return abs(u-v).sum() / (abs(u).sum() + abs(v).sum())
@@ -1056,7 +1056,7 @@ def sokalmichener(u, v):
 
       Computes the Sokal-Michener dissimilarity between two boolean vectors
       u and v, 2R / (S + 2R) where c_{ij} is the number of occurrences of
-      u[k] == i and v[k] == j for k < n andR = 2 * (c_{TF} + c{FT}) and
+      u[k] == i and v[k] == j for k < n and R = 2 * (c_{TF} + c{FT}) and
       S = c_{FF} + c_{TT}.
     """
     ntt = scipy.bitwise_and(u, v).sum()
@@ -1127,7 +1127,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         4. Y = pdist(X, 'seuclidean', V=None)
 
           Computes the standardized Euclidean distance. The standardized
-          Euclidean distance between two vectors u and v is
+          Euclidean distance between two n-vectors u and v is
 
             sqrt(\sum {(u_i-v_i)^2 / V[x_i]}).
 
@@ -1164,20 +1164,20 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         8. Y = pdist(X, 'hamming')
 
           Computes the normalized Hamming distance, or the proportion
-          of those vector elements between two vectors u and v which
+          of those vector elements between two n-vectors u and v which
           disagree. To save memory, the matrix X can be of type boolean.
 
         9. Y = pdist(X, 'jaccard')
 
           Computes the Jaccard distance between the points. Given two
-          vectors, u and v, the Jaccard disaance is the proportion of
+          vectors, u and v, the Jaccard distance is the proportion of
           those elements u_i and v_i that disagree where at least one
           of them is non-zero.
 
         10. Y = pdist(X, 'chebyshev')
 
           Computes the Chebyshev distance between the points. The
-          Chebyshev distance between two vectors u and v is the maximum
+          Chebyshev distance between two n-vectors u and v is the maximum
           norm-1 distance between their respective elements. More
           precisely, the distance is given by
 
@@ -1691,7 +1691,7 @@ def is_valid_dm(D, t=0.0):
     
       Returns True if the variable D passed is a valid distance matrix.
       Distance matrices must be 2-dimensional numpy arrays containing
-      doubles. They must have a zero-diagnoal, and they must be symmetric.
+      doubles. They must have a zero-diagonal, and they must be symmetric.
 
     is_valid_dm(D, t)
 
@@ -1791,7 +1791,7 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         index i when monocrit[j] <= t. monocrit must be monotonic.
 
         monocrit is a (n-1) numpy vector of doubles; monocrit[i] is
-        the crtierion upion which non-singleton i is thresholded. The
+        the criterion upon which non-singleton i is thresholded. The
         monocrit vector must be monotonic, i.e. given a node c with
         index i, for all node indices j corresponding to nodes below c,
         monocrit[i] >= monocrit[j].
