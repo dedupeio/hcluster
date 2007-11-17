@@ -172,16 +172,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import _cluster_wrap
-import scipy, scipy.stats, numpy
-import types
-import math
+import _cluster_wrap, scipy, scipy.stats, numpy, types, math, sys
 
 _cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2, 'weighted': 6}
 _cpy_euclid_methods = {'centroid': 3, 'median': 4, 'ward': 5}
 _cpy_linkage_methods = set(_cpy_non_euclid_methods.keys()).union(set(_cpy_euclid_methods.keys()))
 _array_type = type(numpy.array([]))
 
+try:
+    import warnings
+    def _warning(s):
+        warnings.warn('scipy-cluster: %s' % s, stacklevel=3)
+except:
+    def _warning(s):
+        print ('[WARNING] scipy-cluster: %s' % s)
 
 def _copy_array_if_base_present(a):
     """
@@ -1559,8 +1563,7 @@ def inconsistent(Z, d=2):
     """
 
     Zs = Z.shape
-    if not is_valid_linkage(Z):
-        raise ValueError('The first argument Z is not a valid linkage.')
+    is_valid_linkage(Z, throw=True, name='Z')
     if (not d == numpy.floor(d)) or d < 0:
         raise ValueError('The second argument d must be a nonnegative integer value.')
 #    if d == 0:
@@ -1640,8 +1643,7 @@ def is_monotonic(Z):
       if for every cluster s and t joined, the distance between them is
       no less than the distance between any previously joined clusters.
     """
-    if not is_valid_linkage(Z):
-        raise ValueError("The variable Z passed is not a valid linkage.")
+    is_valid_linkage(Z, throw=True, name='Z')
 
     # We expect the i'th value to be greater than its successor.
     return (Z[:-1,2]>=Z[1:,2]).all()
@@ -1662,7 +1664,7 @@ def is_valid_im(R):
     valid = valid and R.shape[1] == 4
     return True
 
-def is_valid_linkage(Z, warning=False, throw=False):
+def is_valid_linkage(Z, warning=False, throw=False, name=None):
     """
     is_valid_linkage(Z, t)
 
@@ -1673,16 +1675,41 @@ def is_valid_linkage(Z, warning=False, throw=False):
       a cluster cannot join another cluster unless the cluster being joined
       has been generated.)
     """
-    valid = type(Z) is _array_type
-    valid = valid and Z.dtype == 'double'
-    if valid:
-        s = Z.shape
-    valid = valid and len(s) == 2
-    valid = valid and s[1] == 4
-    if valid:
-        n = s[0]
-        valid = valid and (Z[:,0]-xrange(n-1, n*2-1) <= 0).any()
-        valid = valid and (Z[:,1]-xrange(n-1, n*2-1) <= 0).any()
+    valid = True
+    try:
+        if type(Z) is not _array_type:
+            if name:
+                raise TypeError('Variable \'%s\' passed as a linkage is not a valid array.' % name)
+            else:
+                raise TypeError('Variable passed as a linkage is not a valid array.')
+        if Z.dtype != 'double':
+            if name:
+                raise TypeError('Numpy array \'%s\' passed as a linkage must contain doubles (float64).' % name)
+            else:
+                raise TypeError('Numpy array passed as a linkage must contain doubles (float64).')
+        if len(Z.shape) != 2:
+            if name:
+                raise ValueError('Numpy array \'%s\' passed as a linkage must have shape=2 (i.e. be two-dimensional).' % name)
+            else:
+                raise ValueError('Numpy array passed as a linkage must have shape=2 (i.e. be two-dimensional).')
+        if Z.shape[1] != 4:
+            if name:
+                raise ValueError('Numpy array \'%s\' passed as a linkage must have 4 columns.' % name)
+            else:
+                raise ValueError('Numpy array passed as a linkage must have 4 columns.')
+        n = Z.shape[0]
+        if not ((Z[:,0]-xrange(n-1, n*2-1) <= 0).any()) or \
+           (Z[:,1]-xrange(n-1, n*2-1) <= 0).any():
+            if name:
+                raise ValueError('Linkage \'%s\' contains negative indices.' % name)
+            else:
+                raise ValueError('Linkage contains negative indices.')
+    except Exception, e:
+        if throw:
+            raise
+        if warning:
+            _warning(str(e))
+        valid = False
     return valid
 
 def is_valid_y(y):
@@ -1738,8 +1765,7 @@ def numobs_linkage(Z):
     Returns the number of original observations that correspond to a
     linkage matrix Z.
     """
-    if not is_valid_linkage(Z):
-        raise ValueError('Z is not a valid linkage.')
+    is_valid_linkage(Z, throw=True, name='Z')
     return (Z.shape[0] - 1)
 
 def numobs_dm(D):
@@ -1834,8 +1860,7 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
           cluster(Z, t=3, criterion='maxclust_monocrit', monocrit=MI)
         
     """
-    if not is_valid_linkage(Z):
-        raise ValueError('Z is not a valid linkage matrix.')
+    is_valid_linkage(Z, throw=True, name='Z')
 
     n = Z.shape[0] + 1
     T = numpy.zeros((n,), dtype='int32')
@@ -1937,8 +1962,7 @@ def lvlist(Z):
       Returns a list of leaf node ids as they appear in the tree from
       left to right. Z is a linkage matrix.
     """
-    if not is_valid_linkage(Z):
-        raise ValueError('Linkage matrix is not valid.')
+    is_valid_linkage(Z, throw=True, name='Z')
     n = Z.shape[0] + 1
     ML = numpy.zeros((n,), dtype='int32')
     [Z] = _copy_arrays_if_base_present([Z])
@@ -2678,8 +2702,7 @@ def maxdists(Z):
       Note that when Z[:,2] is monotonic, Z[:,2] and MD should not differ.
       See linkage for more information on this issue.
     """
-    if not is_valid_linkage(Z):
-        raise ValueError('The first argument Z is not a valid linkage.')
+    is_valid_linkage(Z, throw=True, name='Z')
     
     n = Z.shape[0] + 1
     MD = numpy.zeros((n-1,))
@@ -2696,8 +2719,7 @@ def maxinconsts(Z, R):
       inconsistency matrix. MI is a monotonic (n-1)-sized numpy array of
       doubles.
     """
-    if not is_valid_linkage(Z):
-        raise ValueError('The first argument Z is not a valid linkage.')
+    is_valid_linkage(Z, throw=True, name='Z')
     if not is_valid_im(R):
         raise ValueError('The second argument R is not a valid inconsistency matrix.')
     
@@ -2716,8 +2738,7 @@ def maxRstat(Z, R, i):
     is the maximum over R[Q(j)-n, i] where Q(j) the set of all node ids
     corresponding to nodes below and including j.
     """
-    if not is_valid_linkage(Z):
-        raise ValueError('The first argument Z is not a valid linkage.')
+    is_valid_linkage(Z, throw=True, name='Z')
     if not is_valid_im(R):
         raise ValueError('The second argument R is not a valid inconsistency matrix.')
     if type(i) is not type.IntType:
@@ -2755,8 +2776,7 @@ def leaders(Z, T):
     """
     if type(T) != _array_type or T.dtype != 'int':
         raise TypeError('T must be a one-dimensional numpy array of integers.')
-    if not is_valid_linkage(Z):
-        raise TypeError('Z is not a valid linkage matrix.')
+    is_valid_linkage(Z, throw=True, name='Z')
     if len(T) != Z.shape[0] + 1:
         raise ValueError('Mismatch: len(T)!=Z.shape[0] + 1.')
     
