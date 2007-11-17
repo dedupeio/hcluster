@@ -199,7 +199,8 @@ def _copy_arrays_if_base_present(T):
     This is useful if the arrays are being passed to a C function that
     does not do proper striding.
     """
-    return (_copy_array_if_base_present(a) for a in T)
+    l = [_copy_array_if_base_present(a) for a in T]
+    return l
             
 
 def copying():
@@ -435,6 +436,9 @@ def linkage(y, method='single', metric='euclidean'):
         raise TypeError("Argument 'method' must be a string.")
     if y.dtype != 'double':
         raise TypeError('Incompatible data type. y must be a matrix of doubles.')
+
+    # Since the C code does not support striding using strides.
+    [y] = _copy_arrays_if_base_present([y])
 
     if len(s) == 1:
         d = numpy.ceil(numpy.sqrt(s[0] * 2))
@@ -732,6 +736,10 @@ def squareform(X, force="no", checks=True):
         # Allocate memory for the distance matrix.
         M = numpy.zeros((d, d), 'double')
 
+        # Since the C code does not support striding using strides.
+        # The dimensions are used instead.
+        [X] = _copy_arrays_if_base_present([X])
+
         # Fill in the values of the distance matrix.
         _cluster_wrap.to_squareform_from_vector_wrap(M, X)
 
@@ -754,6 +762,10 @@ def squareform(X, force="no", checks=True):
         
         # Create a vector.
         v = numpy.zeros(((d * (d - 1) / 2),), 'double')
+
+        # Since the C code does not support striding using strides.
+        # The dimensions are used instead.
+        [X] = _copy_arrays_if_base_present([X])
 
         # Convert the vector to squareform.
         _cluster_wrap.to_vector_from_squareform_wrap(X, v)
@@ -1282,7 +1294,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         raise TypeError('The parameter passed must be an array.')
 
     # The C code doesn't do striding.
-    (X) = _copy_arrays_if_base_present((X,))
+    [X] = _copy_arrays_if_base_present([X])
 
     s = X.shape
 
@@ -1341,7 +1353,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
                 if V.shape[0] != n:
                     raise ValueError('V must be a vector of the same dimension as the points.')
                 # The C code doesn't do striding.
-                (VV) = _copy_arrays_if_base_present((V,))
+                [VV] = _copy_arrays_if_base_present([V])
             else:
                 VV = scipy.stats.var(X, axis=0)
             _cluster_wrap.pdist_seuclidean_wrap(X, VV, dm)
@@ -1372,7 +1384,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
                     raise TypeError('VI must be a numpy array.')
                 if VI.dtype != 'double':
                     raise TypeError('The array must contain doubles.')
-                (VI) = _copy_arrays_if_base_present((VI,))
+                [VI] = _copy_arrays_if_base_present([VI])
             else:
                 V = numpy.cov(X.T)
                 VI = numpy.linalg.inv(V).T.copy()
@@ -1410,7 +1422,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             if VI is None:
                 V = numpy.cov(X.T)
                 VI = numpy.linalg.inv(V)
-            (VI) = _copy_arrays_if_base_present((VI,))
+            [VI] = _copy_arrays_if_base_present([VI])
             # (u-v)V^(-1)(u-v)^T
             dm = pdist(X, (lambda u, v: mahalanobis(u, v, VI)))
         elif metric == 'test_cityblock':
@@ -1491,6 +1503,10 @@ def cophenet(*args, **kwargs):
     n = Zs[0] + 1
 
     zz = numpy.zeros((n*(n-1)/2,), dtype='double')
+    # Since the C code does not support striding using strides.
+    # The dimensions are used instead.
+    [Z] = _copy_arrays_if_base_present([Z])
+
     _cluster_wrap.cophenetic_distances_wrap(Z, zz, int(n))
     if nargs == 1:
         return zz
@@ -1549,6 +1565,10 @@ def inconsistent(Z, d=2):
         raise ValueError('The second argument d must be a nonnegative integer value.')
 #    if d == 0:
 #        d = 1
+
+    # Since the C code does not support striding using strides.
+    # The dimensions are used instead.
+    [Z] = _copy_arrays_if_base_present([Z])
 
     n = Zs[0] + 1
     R = numpy.zeros((n - 1, 4), dtype='double')
@@ -1819,25 +1839,34 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
 
     n = Z.shape[0] + 1
     T = numpy.zeros((n,), dtype='int32')
+    
+    # Since the C code does not support striding using strides.
+    # The dimensions are used instead.
+    [Z] = _copy_arrays_if_base_present([Z])
+
     if criterion == 'inconsistent':
+        # Since the C code does not support striding using strides.
+        # The dimensions are used instead.
+        [R] = _copy_arrays_if_base_present([R])
+
         if R is None:
             R = inconsistent(Z, depth)
         else:
             if not is_valid_im(R):
                 raise ValueError('R passed is not a valid inconsistency matrix.')
+            # Since the C code does not support striding using strides.
+            # The dimensions are used instead.
+            [R] = _copy_arrays_if_base_present([R])
         _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(0))
     elif criterion == 'distance':
-        if R is None:
-            R = inconsistent(Z, depth)
-        else:
-            if not is_valid_im(R):
-                raise ValueError('R passed is not a valid inconsistency matrix.')
         _cluster_wrap.cluster_dist_wrap(Z, T, float(t), int(n))
     elif criterion == 'maxclust':
         _cluster_wrap.cluster_maxclust_dist_wrap(Z, T, int(n), int(t))
     elif criterion == 'monocrit':
+        [monocrit] = _copy_arrays_if_base_present([monocrit])
         _cluster_wrap.cluster_monocrit_wrap(Z, monocrit, T, int(n), int(t))
     elif criterion == 'maxclust_monocrit':
+        [monocrit] = _copy_arrays_if_base_present([monocrit])
         _cluster_wrap.cluster_maxclust_monocrit_wrap(Z, monocrit, T,
                                                      float(t), int(n))
     else:
@@ -1912,6 +1941,7 @@ def lvlist(Z):
         raise ValueError('Linkage matrix is not valid.')
     n = Z.shape[0] + 1
     ML = numpy.zeros((n,), dtype='int32')
+    [Z] = _copy_arrays_if_base_present([Z])
     _cluster_wrap.prelist_wrap(Z, ML, int(n))
     return ML
 
@@ -2653,6 +2683,7 @@ def maxdists(Z):
     
     n = Z.shape[0] + 1
     MD = numpy.zeros((n-1,))
+    [Z] = _copy_arrays_if_base_present([Z])
     _cluster_wrap.get_max_dist_for_each_cluster_wrap(Z, MD, int(n))
     return MD
 
@@ -2672,6 +2703,7 @@ def maxinconsts(Z, R):
     
     n = Z.shape[0] + 1
     MI = numpy.zeros((n-1,))
+    [Z, R] = _copy_arrays_if_base_present([Z, R])
     _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MI, int(n), 3)
     return MI
 
@@ -2695,6 +2727,7 @@ def maxRstat(Z, R, i):
 
     n = Z.shape[0] + 1
     MR = numpy.zeros((n-1,))
+    [Z, R] = _copy_arrays_if_base_present([Z, R])
     _cluster_wrap.get_max_Rfield_for_each_cluster_wrap(Z, R, MR, int(n), i)
     return MR
 
@@ -2732,6 +2765,7 @@ def leaders(Z, T):
     L = numpy.zeros((k,), dtype='int32')
     M = numpy.zeros((k,), dtype='int32')
     n = Z.shape[0]
+    [Z, T] = _copy_arrays_if_base_present([Z, T])
     s = _cluster_wrap.leaders_wrap(Z, T, L, M, int(n))
     if s >= 0:
         raise ValueError('T is not a valid assignment vector. Error found when examining linkage node %d (< 2n-1).' % i)
