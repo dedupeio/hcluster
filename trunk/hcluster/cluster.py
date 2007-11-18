@@ -1615,7 +1615,7 @@ def is_monotonic(Z):
     # We expect the i'th value to be greater than its successor.
     return (Z[:-1,2]>=Z[1:,2]).all()
 
-def is_valid_im(R):
+def is_valid_im(R, warning=False, throw=False, name=None):
     """
     is_valid_im(R)
     
@@ -1624,12 +1624,40 @@ def is_valid_im(R):
       must be nonnegative. The link counts R[:,2] must be positive and
       no greater than n-1.
     """
-    valid = type(R) is _array_type
-    valid = valid and R.dtype == 'double'
-    valid = valid and len(R.shape) == 2
-    valid = valid and R.shape[0] > 0
-    valid = valid and R.shape[1] == 4
-    return True
+    valid = True
+    try:
+        if type(R) is not _array_type:
+            if name:
+                raise TypeError('Variable \'%s\' passed as inconsistency matrix is not a numpy array.' % name)
+            else:
+                raise TypeError('Variable passed as inconsistency matrix is not a numpy array.')
+        if R.dtype != 'double':
+            if name:
+                raise TypeError('Inconsistency matrix \'%s\' must contain doubles (float64).' % name)
+            else:
+                raise TypeError('Inconsistency matrix must contain doubles (float64).')
+        if len(R.shape) != 2:
+            if name:
+                raise ValueError('Inconsistency matrix \'%s\' must have shape=2 (i.e. be two-dimensional).' % name)
+            else:
+                raise ValueError('Inconsistency matrix must have shape=2 (i.e. be two-dimensional).')
+        if R.shape[1] != 4:
+            if name:
+                raise ValueError('Inconsistency matrix \'%s\' must have 4 columns.' % name)
+            else:
+                raise ValueError('Inconsistency matrix must have 4 columns.')
+        if R.shape[0] < 1:
+            if name:
+                raise ValueError('Inconsistency matrix \'%s\' must have at least one row.' % name)
+            else:
+                raise ValueError('Inconsistency matrix must have at least one row.')
+    except Exception, e:
+        if throw:
+            raise
+        if warning:
+            _warning(str(e))
+        valid = False
+    return valid
 
 def is_valid_linkage(Z, warning=False, throw=False, name=None):
     """
@@ -1646,24 +1674,24 @@ def is_valid_linkage(Z, warning=False, throw=False, name=None):
     try:
         if type(Z) is not _array_type:
             if name:
-                raise TypeError('Variable \'%s\' passed as a linkage is not a valid array.' % name)
+                raise TypeError('\'%s\' passed as a linkage is not a valid array.' % name)
             else:
-                raise TypeError('Variable passed as a linkage is not a valid array.')
+                raise TypeError('Variable is not a valid array.')
         if Z.dtype != 'double':
             if name:
-                raise TypeError('Numpy array \'%s\' passed as a linkage must contain doubles (float64).' % name)
+                raise TypeError('Linkage matrix \'%s\' must contain doubles (float64).' % name)
             else:
-                raise TypeError('Numpy array passed as a linkage must contain doubles (float64).')
+                raise TypeError('Linkage matrix must contain doubles (float64).')
         if len(Z.shape) != 2:
             if name:
-                raise ValueError('Numpy array \'%s\' passed as a linkage must have shape=2 (i.e. be two-dimensional).' % name)
+                raise ValueError('Linkage matrix \'%s\' must have shape=2 (i.e. be two-dimensional).' % name)
             else:
-                raise ValueError('Numpy array passed as a linkage must have shape=2 (i.e. be two-dimensional).')
+                raise ValueError('Linkage matrix must have shape=2 (i.e. be two-dimensional).')
         if Z.shape[1] != 4:
             if name:
-                raise ValueError('Numpy array \'%s\' passed as a linkage must have 4 columns.' % name)
+                raise ValueError('Linkage matrix \'%s\' must have 4 columns.' % name)
             else:
-                raise ValueError('Numpy array passed as a linkage must have 4 columns.')
+                raise ValueError('Linkage matrix must have 4 columns.')
         n = Z.shape[0]
         if not ((Z[:,0]-xrange(n-1, n*2-1) <= 0).any()) or \
            (Z[:,1]-xrange(n-1, n*2-1) <= 0).any():
@@ -1844,8 +1872,7 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         if R is None:
             R = inconsistent(Z, depth)
         else:
-            if not is_valid_im(R):
-                raise ValueError('R passed is not a valid inconsistency matrix.')
+            is_valid_im(R, throw=True, name='R')
             # Since the C code does not support striding using strides.
             # The dimensions are used instead.
             [R] = _copy_arrays_if_base_present([R])
@@ -2687,8 +2714,7 @@ def maxinconsts(Z, R):
       doubles.
     """
     is_valid_linkage(Z, throw=True, name='Z')
-    if not is_valid_im(R):
-        raise ValueError('The second argument R is not a valid inconsistency matrix.')
+    is_valid_im(R, throw=True, name='R')
     
     n = Z.shape[0] + 1
     MI = numpy.zeros((n-1,))
@@ -2706,8 +2732,7 @@ def maxRstat(Z, R, i):
     corresponding to nodes below and including j.
     """
     is_valid_linkage(Z, throw=True, name='Z')
-    if not is_valid_im(R):
-        raise ValueError('The second argument R is not a valid inconsistency matrix.')
+    is_valid_im(R, throw=True, name='R')
     if type(i) is not type.IntType:
         raise TypeError('The third argument must be an integer.')
     if i < 0 or i > 3:
