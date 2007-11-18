@@ -625,17 +625,8 @@ def totree(Z, rd=False):
     functions in this library.
     """
 
-    if type(Z) is not _array_type:
-        raise TypeError('Z must be a numpy.ndarray')
-
-    if Z.dtype != 'double':
-        raise TypeError('Z must have double elements, not %s', str(Z.dtype))
-    if len(Z.shape) != 2:
-        raise TypeError('Z must be a matrix')
-
-    if Z.shape[1] != 4:
-        raise ValueError('Z must be a (n-1) by 4 matrix')
-
+    is_valid_linkage(Z, throw=True, name='Z')
+    
     # The number of original objects is equal to the number of rows minus
     # 1.
     n = Z.shape[0] + 1
@@ -1492,18 +1483,10 @@ def cophenet(*args, **kwargs):
 
     if nargs < 1:
         raise ValueError('At least one argument must be passed to cophenet.')
+
     Z = args[0]
-
-    if (type(Z) is not _array_type) or Z.dtype != 'double':
-        raise TypeError('First argument Z must be an array of doubles.')
+    is_valid_linkage(Z, throw=True, name='Z')
     Zs = Z.shape
-
-    if len(Zs) != 2:
-        raise ValueError('First argument Z must be a 2-dimensional array.')
-
-    if Zs[1] != 4:
-        raise ValueError('First argument Z must have exactly 4 columns.')
-    
     n = Zs[0] + 1
 
     zz = numpy.zeros((n*(n-1)/2,), dtype='double')
@@ -1593,16 +1576,7 @@ def from_mlab_linkage(Z):
        the number of original observations (leaves) in the non-singleton
        cluster i.
     """
-
-    if type(Z) is not _array_type:
-        raise TypeError('First argument Z must be a two-dimensional array.')
-    if Z.dtype != 'double':
-        raise TypeError('First argument Z must contain doubles.')
-    if Z.shape[1] != 3:
-        raise ValueError('First argument Z must have 3 columns.')
-    if Z.shape[0] < 1:
-        raise ValueError('First argument Z must have at least one row.')
-
+    is_valid_linkage(Z, throw=True, name='Z')
     Zs = Z.shape
     Zpart = Z[:,0:2]
     Zd = Z[:,2].reshape(Zs[0], 1)
@@ -1624,14 +1598,7 @@ def to_mlab_linkage(Z):
     last column removed and the cluster indices converted to use
     1..N indexing.
     """
-    if type(Z) is not _array_type:
-        raise TypeError('First argument Z must be a two-dimensional array.')
-    if Z.dtype != 'double':
-        raise TypeError('First argument Z must contain doubles.')
-    if Z.shape[1] != 4:
-        raise ValueError('First argument Z must have 4 columns.')
-    if Z.shape[0] < 1:
-        raise ValueError('First argument Z must have at least one row.')
+    is_valid_linkage(Z, throw=True, name='Z')
     
     return numpy.hstack([Z[:,0:2] + 1, Z[:,2]])
 
