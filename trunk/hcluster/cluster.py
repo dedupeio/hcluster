@@ -1656,6 +1656,19 @@ def is_valid_linkage(Z, warning=False, throw=False, name=None):
       given row i, 0 <= Z[i,0] <= i+n-1 and 0 <= Z[i,1] <= i+n-1 (i.e.
       a cluster cannot join another cluster unless the cluster being joined
       has been generated.)
+
+    is_valid_linkage(..., warning=True, name='V')
+
+      Invokes a warning if the variable passed is not a valid linkage. The message
+      explains why the distance matrix is not valid. 'name' is used when referencing
+      the offending variable.
+
+    is_valid_linkage(..., throw=True, name='V')
+
+      Throws an exception if the variable passed is not a valid linkage. The message
+      explains why variable is not valid. 'name' is used when referencing the offending
+      variable.
+
     """
     valid = True
     try:
@@ -1703,12 +1716,25 @@ def is_valid_y(y, warning=False, throw=False):
       1-dimensional numpy arrays containing doubles. Their length
       must be a binomial coefficient {n \choose 2} for some positive
       integer n.
+
+    is_valid_y(..., warning=True, name='V')
+
+      Invokes a warning if the variable passed is not a valid condensed distance
+      matrix. The warning message explains why the distance matrix is not valid.
+      'name' is used when referencing the offending variable.
+
+    is_valid_y(..., throw=True, name='V')
+
+      Throws an exception if the variable passed is not a valid condensed distance
+      matrix. The message explains why variable is not valid. 'name' is used when
+      referencing the offending variable.
+
     """
     valid = True
     try:
         if type(y) is not _array_type:
             if name:
-                raise TypeError('\'%s\' passed as a condensed linkage matrix is not a numpy array.' % name)
+                raise TypeError('\'%s\' passed as a condensed distance matrix is not a numpy array.' % name)
             else:
                 raise TypeError('Variable is not a numpy array.')
         if y.dtype != 'double':
@@ -1751,18 +1777,66 @@ def is_valid_dm(D, t=0.0):
       Small numerical differences in D and D.T and non-zeroness of the
       diagonal are ignored if they are within the tolerance specified
       by t.
+
+    is_valid_dm(..., warning=True, name='V')
+
+      Invokes a warning if the variable passed is not a valid distance matrix.
+      The warning message explains why the distance matrix is not valid. 'name'
+      is used when referencing the offending variable.
+
+    is_valid_dm(..., throw=True, name='V')
+
+      Throws an exception if the varible passed is not valid. The message
+      explains why the variable is not valid. 'name' is used when referencing
+      the offending variable.
+
     """
-    valid = type(D) is _array_type
-    if valid:
-        s = D.shape
-    valid = valid and len(s) == 2
-    valid = valid and s[0] == s[1]
-    if t == 0.0:
-        valid = valid and (D == D.T).all()
-        valid = valid and (D[xrange(0, s[0]), xrange(0, s[0])] == 0).all()
-    else:
-        valid = valid and (D - D.T <= t).all()
-        valid = valid and (D[xrange(0, s[0]), xrange(0, s[0])] <= t).all()
+
+    valid = True
+    try:
+        if type(D) is not _array_type:
+            if name:
+                raise TypeError('\'%s\' passed as a distance matrix is not a numpy array.' % name)
+            else:
+                raise TypeError('Variable is not a numpy array.')
+        if D.dtype != 'double':
+            if name:
+                raise TypeError('Distance matrix \'%s\' must contain doubles (float64).' % name)
+            else:
+                raise TypeError('Distance matrix must contain doubles (float64).')
+        if len(D.shape) != 2:
+            if name:
+                raise ValueError('Distance matrix \'%s\' must have shape=2 (i.e. be two-dimensional).' % name)
+            else:
+                raise ValueError('Distance matrix must have shape=2 (i.e. be two-dimensional).')
+        if t == 0.0:
+            if not (D == D.T).all():
+                if name:
+                    raise ValueError('Distance matrix \'%s\' must be symmetric.' % name)
+                else:
+                    raise ValueError('Distance matrix must be symmetric.')
+            if not (D[xrange(0, s[0]), xrange(0, s[0])] == 0).all():
+                if name:
+                    raise ValueError('Distance matrix \'%s\' diagonal must be zero.' % name)
+                else:
+                    raise ValueError('Distance matrix diagonal must be zero.')
+        else:
+            if not (D - D.T <= t).all():
+                if name:
+                    raise ValueError('Distance matrix \'%s\' must be symmetric within tolerance %d.' % (name, t))
+                else:
+                    raise ValueError('Distance matrix must be symmetric within tolerance %d.' % t)
+            if not (D[xrange(0, s[0]), xrange(0, s[0])] <= t).all():
+                if name:
+                    raise ValueError('Distance matrix \'%s\' diagonal must be close to zero within tolerance %d.' % (name, t))
+                else:
+                    raise ValueError('Distance matrix \'%s\' diagonal must be close to zero within tolerance %d.' % t)
+    except Exception, e:
+        if throw:
+            raise
+        if warning:
+            _warning(str(e))
+        valid = False
     return valid
 
 def numobs_linkage(Z):
@@ -1780,8 +1854,7 @@ def numobs_dm(D):
       Returns the number of original observations that correspond to a
       square, non-condensed distance matrix D.
     """
-    if not is_valid_dm(D, tol=Inf):
-        raise ValueError('D is not a valid distance matrix.')
+    is_valid_dm(D, tol=Inf, throw=True, name='D')
     return D.shape[0]
 
 def numobs_y(Y):
