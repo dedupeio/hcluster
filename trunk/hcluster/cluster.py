@@ -433,23 +433,18 @@ def linkage(y, method='single', metric='euclidean'):
            same minimum distance. This implementation may chose a
            different minimum than the MATLAB(TM) version.
         """
-    if type(y) != _array_type:
-        raise TypeError('Incompatible data type. y must be an array.')
-    s = y.shape
     if type(method) != types.StringType:
         raise TypeError("Argument 'method' must be a string.")
-    if y.dtype != 'double':
-        raise TypeError('Incompatible data type. y must be a matrix of doubles.')
-
-    # Since the C code does not support striding using strides.
-    [y] = _copy_arrays_if_base_present([y])
 
     if len(s) == 1:
+        is_valid_y(y, throw=True, name='y')
+        s = y.shape
         d = numpy.ceil(numpy.sqrt(s[0] * 2))
-        if d * (d - 1)/2 != s[0]:
-            raise ValueError('Incompatible vector size. It must be a binomial coefficient.')
         if method not in _cpy_non_euclid_methods.keys():
             raise ValueError("Valid methods when the raw observations are omitted are 'single', 'complete', 'weighted', and 'average'.")
+        # Since the C code does not support striding using strides.
+        [y] = _copy_arrays_if_base_present([y])
+
         Z = numpy.zeros((d - 1, 4))
         _cluster_wrap.linkage_wrap(y, Z, int(d), \
                                    int(_cpy_non_euclid_methods[method]))
@@ -1499,16 +1494,8 @@ def cophenet(*args, **kwargs):
         return zz
 
     Y = args[1]
-    if (type(Y) is not _array_type) and Y.dtype != 'double':
-        raise TypeError('Second argument Y must be an array of doubles.')
-
     Ys = Y.shape
-
-    if len(Ys) != 1:
-        raise ValueError('Second argument Y must be a 1-D array.')
-
-    if Ys[0] != n*(n-1)/2:
-        raise ValueError('Incorrect size of Y. It must be a distance vector containing n*(n-1) elements.')
+    is_valid_y(Y, throw=True, name='Y')
     
     z = zz.mean()
     y = Y.mean()
@@ -1707,7 +1694,7 @@ def is_valid_linkage(Z, warning=False, throw=False, name=None):
         valid = False
     return valid
 
-def is_valid_y(y):
+def is_valid_y(y, warning=False, throw=False):
     """
     is_valid_y(y)
 
@@ -1717,15 +1704,38 @@ def is_valid_y(y):
       must be a binomial coefficient {n \choose 2} for some positive
       integer n.
     """
-    valid = type(y) is _array_type
-    valid = valid and y.dtype == 'double'
-    if valid:
-        s = y.shape
-    valid = valid and len(s) == 1
-    if valid:
-        d = int(numpy.ceil(numpy.sqrt(s[0] * 2)))
-        valid = valid and (d*(d-1)/2) == s[0]
+    valid = True
+    try:
+        if type(y) is not _array_type:
+            if name:
+                raise TypeError('\'%s\' passed as a condensed linkage matrix is not a numpy array.' % name)
+            else:
+                raise TypeError('Variable is not a numpy array.')
+        if y.dtype != 'double':
+            if name:
+                raise TypeError('Condensed distance matrix \'%s\' must contain doubles (float64).' % name)
+            else:
+                raise TypeError('Condensed distance matrix must contain doubles (float64).')
+        if len(y.shape) != 1:
+            if name:
+                raise ValueError('Condensed distance matrix \'%s\' must have shape=1 (i.e. be one-dimensional).' % name)
+            else:
+                raise ValueError('Condensed distance matrix must have shape=1 (i.e. be one-dimensional).')
+        n = y.shape[0]
+        d = int(numpy.ceil(numpy.sqrt(n * 2)))
+        if (d*(d-1)/2) != n:
+            if name:
+                raise ValueError('Length n of condensed distance matrix \'%s\' must be a binomial coefficient, i.e. there must be a k such that (k \choose 2)=n)!' % name)
+            else:
+                raise ValueError('Length n of condensed distance matrix must be a binomial coefficient, i.e. there must be a k such that (k \choose 2)=n)!')
+    except Exception, e:
+        if throw:
+            raise
+        if warning:
+            _warning(str(e))
+        valid = False
     return valid
+
 
 def is_valid_dm(D, t=0.0):
     """
@@ -1771,7 +1781,7 @@ def numobs_dm(D):
       square, non-condensed distance matrix D.
     """
     if not is_valid_dm(D, tol=Inf):
-        raise ValueError('Z is not a valid linkage.')
+        raise ValueError('D is not a valid distance matrix.')
     return D.shape[0]
 
 def numobs_y(Y):
@@ -1781,8 +1791,7 @@ def numobs_y(Y):
       Returns the number of original observations that correspond to a
       condensed distance matrix Y.
     """
-    if not is_valid_y(y):
-        raise ValueError('Z is not a valid condensed distance matrix.')
+    is_valid_y(y, throw=True, name='Y')
     d = int(numpy.ceil(numpy.sqrt(y.shape[0] * 2)))
     return d
 
