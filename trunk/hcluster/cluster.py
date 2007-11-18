@@ -2425,10 +2425,8 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
             p = n
 
     if truncate_mode == 'mtica' or truncate_mode == 'level':
-        if p < 0:
+        if p <= 0:
             p = scipy.inf
-
-
     if get_leaves:
         lvs = []
     else:
