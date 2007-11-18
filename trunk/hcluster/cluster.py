@@ -1335,13 +1335,13 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
         elif mstr in set(['seuclidean', 'se', 's']):
             if V:
                 if type(V) is not _array_type:
-                    raise TypeError('V must be a numpy array')
+                    raise TypeError('Variance vector V must be a numpy array')
                 if V.dtype != 'double':
-                    raise TypeError('V must contain doubles.')
+                    raise TypeError('Variance vector V must contain doubles.')
                 if len(V.shape) != 1:
-                    raise ValueError('V must be one-dimensional.')
+                    raise ValueError('Variance vector V must be one-dimensional.')
                 if V.shape[0] != n:
-                    raise ValueError('V must be a vector of the same dimension as the points.')
+                    raise ValueError('Variance vector V must be of the same dimension as the vectors on which the distances are computed.')
                 # The C code doesn't do striding.
                 [VV] = _copy_arrays_if_base_present([V])
             else:
