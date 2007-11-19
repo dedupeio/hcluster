@@ -2052,6 +2052,7 @@ try:
     
     import matplotlib
     import matplotlib.pylab
+    import matplotlib.patches
     #import matplotlib.collections
     _mpl = True
     
@@ -2093,7 +2094,7 @@ try:
                 return _drotation[k]
 
 
-    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation, no_labels, color_list, leaf_font_size=None, leaf_rotation=None):
+    def _plot_dendrogram(icoords, dcoords, ivl, p, n, mh, orientation, no_labels, color_list, leaf_font_size=None, leaf_rotation=None, contraction_marks=None):
         axis = matplotlib.pylab.gca()
         # Independent variable plot width
         ivw = len(ivl) * 10
@@ -2221,6 +2222,28 @@ try:
         # it should go last.
         if colors_to_collections.has_key('b'):
             axis.add_collection(colors_to_collections['b'])
+
+        if contraction_marks is not None:
+            #xs=[x for (x, y) in contraction_marks]
+            #ys=[y for (x, y) in contraction_marks]
+            if orientation in ('left', 'right'):
+                for (x,y) in contraction_marks:
+                    e=matplotlib.patches.Ellipse((y, x), width=dvw/100, height=1.0)
+                    axis.add_artist(e)
+                    e.set_clip_box(axis.bbox)
+                    e.set_alpha(0.5)
+                    e.set_facecolor('k')
+            if orientation in ('top', 'bottom'):
+                for (x,y) in contraction_marks:
+                    e=matplotlib.patches.Ellipse((x, y), width=1.0, height=dvw/100)
+                    axis.add_artist(e)
+                    e.set_clip_box(axis.bbox)
+                    e.set_alpha(0.5)
+                    e.set_facecolor('k')
+                    
+                #matplotlib.pylab.plot(xs, ys, 'go', markeredgecolor='k', markersize=3)
+
+                #matplotlib.pylab.plot(ys, xs, 'go', markeredgecolor='k', markersize=3)
         matplotlib.pylab.draw_if_interactive()
 except ImportError:
     _mpl = False
@@ -2234,7 +2257,7 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                count_sort=False, distance_sort=False, show_leaf_counts=True,
                no_plot=False, no_labels=False, color_list=None,
                leaf_font_size=None, leaf_rotation=None, leaf_label_func=None,
-               no_leaves=False):
+               no_leaves=False, show_contracted=False):
     """
     R = dendrogram(Z)
 
@@ -2274,7 +2297,7 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
        to rows Z[n-p-2:end] in Z. All other non-singleton clusters
        are contracted into leaf nodes.
 
-       * 'mlab': This corresponds to MATLAB(TM) behavior. (not implemented)
+       * 'mlab': This corresponds to MATLAB(TM) behavior. (not implemented yet)
 
        * 'level'/'mtica': no more than p levels of the dendrogram tree
        are displayed. This corresponds to Mathematica(TM) behavior.
@@ -2293,12 +2316,6 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
       Includes a list R['leaves']=H in the result dictionary. For each i,
       H[i] == j, cluster node j appears in the i'th position in the
       left-to-right traversal of the leaves, where j < 2n-1 and i < n.
-
-    R = dendrogram(..., get_node_stats=True)
-
-      Includes a list R['node_ids'] in the result dictionary. The i'th
-      value is the node index k (where k > n) to which linkage line i
-      corresponds.
 
     R = dendrogram(..., orientation)
 
@@ -2413,7 +2430,7 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
           # a rotation of 90 degrees.
           dendrogram(Z, leaf_label_func=llf, leaf_rotation=90)
 
-    R = dendrogram(..., show_contracted=False)
+    R = dendrogram(..., show_contracted=True)
 
         The heights of non-singleton nodes contracted into a leaf node
         are plotted as crosses along the link connecting that leaf node.
@@ -2437,6 +2454,9 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
         p = int(p)
     else:
         raise TypeError('The second argument must be a number')
+
+    if truncate_mode not in ('lastp', 'mlab', 'mtica', 'level', 'none', None):
+        raise ValueError('Invalid truncation mode.')
 
     if truncate_mode == 'lastp' or truncate_mode == 'mlab':
         if p > n or p == 0:
@@ -2464,8 +2484,12 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
     R={'icoord':icoord_list, 'dcoord':dcoord_list, 'ivl':ivl, 'leaves':lvs,
        'color_list':color_list}
     props = {'cbt': False, 'cc':0}
+    if show_contracted:
+        contraction_marks = []
+    else:
+        contraction_marks = None
     _dendrogram_calculate_info(Z=Z, p=p,
-                               truncate_mode='none', \
+                               truncate_mode=truncate_mode, \
                                colorthreshold=colorthreshold, \
                                get_leaves=get_leaves, \
                                orientation=orientation, \
@@ -2479,10 +2503,11 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                                current_color=current_color, \
                                color_list=color_list, \
                                currently_below_threshold=currently_below_threshold, \
-                               leaf_label_func=leaf_label_func)
+                               leaf_label_func=leaf_label_func,
+                               contraction_marks=contraction_marks)
     if not no_plot:
         mh = max(Z[:,2])
-        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation, no_labels, color_list, leaf_font_size=leaf_font_size, leaf_rotation=leaf_rotation)
+        _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation, no_labels, color_list, leaf_font_size=leaf_font_size, leaf_rotation=leaf_rotation, contraction_marks=contraction_marks)
 
     return R
 
@@ -2510,7 +2535,7 @@ def _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, la
                 # Otherwise, use the id as the label for the leaf.x
                 ivl.append(str(int(i)))
 
-def _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i):
+def _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels, show_leaf_counts):
     # If the leaf id structure is not None and is a list then the caller
     # to dendrogram has indicated that cluster id's corresponding to the
     # leaf nodes should be recorded.
@@ -2526,6 +2551,16 @@ def _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i)
             else:
                 ivl.append("")   
 
+def _append_contraction_marks(Z, iv, i, n, contraction_marks):
+    _append_contraction_marks_sub(Z, iv, Z[i-n, 0], n, contraction_marks)
+    _append_contraction_marks_sub(Z, iv, Z[i-n, 1], n, contraction_marks)
+
+def _append_contraction_marks_sub(Z, iv, i, n, contraction_marks):
+    if (i >= n):
+        contraction_marks.append((iv, Z[i-n, 2]))
+        _append_contraction_marks_sub(Z, iv, Z[i-n, 0], n, contraction_marks)
+        _append_contraction_marks_sub(Z, iv, Z[i-n, 1], n, contraction_marks)
+        
 
 def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                colorthreshold=scipy.inf, get_leaves=True, \
@@ -2536,7 +2571,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                lvs=None, mhr=False, \
                                current_color=[], color_list=[], \
                                currently_below_threshold=[], \
-                               leaf_label_func=None, level=0):
+                               leaf_label_func=None, level=0, contraction_marks=None):
     """
     Calculates the endpoints of the links as well as the labels for the
     the dendrogram rooted at the node with index i. iv is the independent
@@ -2568,7 +2603,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
 
       * h is the height of the subtree in dependent variable units
 
-      * is the max(Z[*,2]) for all nodes * below and including
+      * md is the max(Z[*,2]) for all nodes * below and including
         the target node.
     
     """
@@ -2578,14 +2613,16 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
     if i == -1:
         raise ValueError("Invalid root cluster index i.")
 
-
     if truncate_mode == 'lastp':
         # If the node is a leaf node but corresponds to a non-single cluster,
         # it's label is either the empty string or the number of original
         # observations belonging to cluster i.
         if i < 2*n-p and i >= n:
             d = Z[i-n, 2]
-            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
+            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func,
+                                           i, labels, show_leaf_counts)
+            if contraction_marks is not None:
+                _append_contraction_marks(Z, iv + 5.0, i, n, contraction_marks)
             return (iv + 5.0, 10.0, 0.0, d)
         elif i < n:
             _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
@@ -2593,7 +2630,10 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
     elif truncate_mode in ('mtica', 'level'):
         if i > n and level > p:
             d = Z[i-n, 2]
-            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
+            _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func,
+                                           i, labels, show_leaf_counts)
+            if contraction_marks is not None:
+                _append_contraction_marks(Z, iv + 5.0, i, n, contraction_marks)
             return (iv + 5.0, 10.0, 0.0, d)
         elif i < n:
             _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
@@ -2710,7 +2750,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                      color_list=color_list, \
                                      currently_below_threshold=currently_below_threshold, \
                                      leaf_label_func=leaf_label_func, \
-                                     level=level+1)
+                                     level=level+1, contraction_marks=contraction_marks)
 
     h = Z[i-n, 2]
     if h >= colorthreshold or colorthreshold <= 0:
@@ -2740,7 +2780,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                      color_list=color_list, \
                                      currently_below_threshold=currently_below_threshold,
                                      leaf_label_func=leaf_label_func, \
-                                     level=level+1)
+                                     level=level+1, contraction_marks=contraction_marks)
     # The height of clusters a and b
     ah = uad
     bh = ubd
