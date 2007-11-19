@@ -133,6 +133,9 @@ References:
 
 [10] Jain, A., and Dubes, R., "Algorithms for Clustering Data."
      Prentice-Hall. Englewood Cliffs, NJ. 1988.
+
+[11] Fisher, RA "The use of multiple measurements in taxonomic
+     problems." Annals of Eugenics, 7(2): 179-188. 1936
 """
 
 _copyingtxt="""
@@ -436,9 +439,12 @@ def linkage(y, method='single', metric='euclidean'):
     if type(method) != types.StringType:
         raise TypeError("Argument 'method' must be a string.")
 
+    if type(y) != _array_type:
+        raise TypeError("Argument 'y' must be a numpy array.")
+    
+    s = y.shape
     if len(s) == 1:
         is_valid_y(y, throw=True, name='y')
-        s = y.shape
         d = numpy.ceil(numpy.sqrt(s[0] * 2))
         if method not in _cpy_non_euclid_methods.keys():
             raise ValueError("Valid methods when the raw observations are omitted are 'single', 'complete', 'weighted', and 'average'.")
@@ -1694,7 +1700,7 @@ def is_valid_linkage(Z, warning=False, throw=False, name=None):
                 raise ValueError('Linkage matrix must have 4 columns.')
         n = Z.shape[0]
         if not ((Z[:,0]-xrange(n-1, n*2-1) <= 0).any()) or \
-           (Z[:,1]-xrange(n-1, n*2-1) <= 0).any():
+           not (Z[:,1]-xrange(n-1, n*2-1) <= 0).any():
             if name:
                 raise ValueError('Linkage \'%s\' contains negative indices.' % name)
             else:
@@ -1707,7 +1713,7 @@ def is_valid_linkage(Z, warning=False, throw=False, name=None):
         valid = False
     return valid
 
-def is_valid_y(y, warning=False, throw=False):
+def is_valid_y(y, warning=False, throw=False, name=None):
     """
     is_valid_y(y)
 
@@ -1947,10 +1953,6 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
     [Z] = _copy_arrays_if_base_present([Z])
 
     if criterion == 'inconsistent':
-        # Since the C code does not support striding using strides.
-        # The dimensions are used instead.
-        [R] = _copy_arrays_if_base_present([R])
-
         if R is None:
             R = inconsistent(Z, depth)
         else:
@@ -1958,18 +1960,18 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
             # Since the C code does not support striding using strides.
             # The dimensions are used instead.
             [R] = _copy_arrays_if_base_present([R])
-        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n), int(0))
+        _cluster_wrap.cluster_in_wrap(Z, R, T, float(t), int(n))
     elif criterion == 'distance':
         _cluster_wrap.cluster_dist_wrap(Z, T, float(t), int(n))
     elif criterion == 'maxclust':
         _cluster_wrap.cluster_maxclust_dist_wrap(Z, T, int(n), int(t))
     elif criterion == 'monocrit':
         [monocrit] = _copy_arrays_if_base_present([monocrit])
-        _cluster_wrap.cluster_monocrit_wrap(Z, monocrit, T, int(n), int(t))
+        _cluster_wrap.cluster_monocrit_wrap(Z, monocrit, T, float(t), int(n))
     elif criterion == 'maxclust_monocrit':
         [monocrit] = _copy_arrays_if_base_present([monocrit])
         _cluster_wrap.cluster_maxclust_monocrit_wrap(Z, monocrit, T,
-                                                     float(t), int(n))
+                                                     int(n), int(t))
     else:
         raise ValueError('Invalid cluster formation criterion: %s' % str(criterion))
     return T
@@ -2050,6 +2052,7 @@ try:
     
     import matplotlib
     import matplotlib.pylab
+    #import matplotlib.collections
     _mpl = True
     
     # Maps number of leaves to text size.
@@ -2065,6 +2068,19 @@ try:
     _dtextsortedkeys.sort()
     _drotationsortedkeys = list(_drotation.keys())
     _drotationsortedkeys.sort()
+
+    def _remove_dups(L):
+        """
+        Removes duplicates AND preserves the original order of the elements. The
+        set class is not guaranteed to do this.
+        """
+        seen_before = set([])
+        L2 = []
+        for i in L:
+            if i not in seen_before:
+                seen_before.add(i)
+                L2.append(i)
+        return L2
 
     def _get_tick_text_size(p):
         for k in _dtextsortedkeys:
@@ -2176,9 +2192,35 @@ try:
             # Make the tick marks invisible because they cover up the links
             for line in axis.get_yticklines():
                 line.set_visible(False)
+        
+            #             for (xline,yline,color) in zip(xlines, ylines, color_list):
+            #                 line = matplotlib.lines.Line2D(xline, yline, color=color)
+            #                 axis.add_line(line)
+
+        # Let's use collections instead. This way there is a separate legend item for each
+        # tree grouping, rather than stupidly one for each line segment.
+        colors_used = _remove_dups(color_list)
+        color_to_lines = {}
+        for color in colors_used:
+            color_to_lines[color] = []
         for (xline,yline,color) in zip(xlines, ylines, color_list):
-            line = matplotlib.lines.Line2D(xline, yline, color=color)
-            axis.add_line(line)
+            color_to_lines[color].append(zip(xline, yline))
+
+        colors_to_collections = {}
+        # Construct the collections.
+        for color in colors_used:
+            coll = matplotlib.collections.LineCollection(color_to_lines[color], colors=(color,))
+            colors_to_collections[color] = coll
+
+        # Add all the non-blue link groupings, i.e. those groupings below the color threshold.
+
+        for color in colors_used:
+            if color != 'b':
+                axis.add_collection(colors_to_collections[color])
+        # If there is a blue grouping (i.e., links above the color threshold),
+        # it should go last.
+        if colors_to_collections.has_key('b'):
+            axis.add_collection(colors_to_collections['b'])
         matplotlib.pylab.draw_if_interactive()
 except ImportError:
     _mpl = False
@@ -2371,29 +2413,6 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
           # a rotation of 90 degrees.
           dendrogram(Z, leaf_label_func=llf, leaf_rotation=90)
 
-        Next, let's cluster Sir Ronald Fisher's flower data set,
-        originally published in his 1936 paper on discriminant analysis.
-        We will use some defaults: single linkage and Euclidean distance.
-        In this example, the leaves correspond to one of two different
-        flower types, I. setosa or I. virginica. The leaf labels are
-        too long to be displayed horizontally, side-by-side due to the
-        length of the label strings and the number of flowers being
-        clustered. Therefore, we rotate the labels 90 degrees, and use
-        a leaf label function to label the leaves according to flower
-        type and number.
-
-          iris_labels = ('I. virginica', 'I. setosa')
-          iris_Y=load('irisY.txt')
-          iris_X=load('irisX.txt')
-          Y = pdist(iris_X)
-          Z = linkage(Y)
-          llf = lambda id:
-                   if id < n:
-                      return "%s (%d)" % (iris_labels[Y[id]], id)
-                   else:
-                      return ""
-          dendrogram(Z, p=0, leaf_label_func=llf, leaf_rotation=90)
-
     R = dendrogram(..., show_contracted=False)
 
         The heights of non-singleton nodes contracted into a leaf node
@@ -2411,8 +2430,7 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
     #         None orders leaf nodes based on the order they appear in the
     #         pre-order traversal.
 
-    if not is_valid_linkage(Z):
-        raise TypeError('If the first argument is an array, it must be a valid linkage.')
+    is_valid_linkage(Z, throw=True, name='Z')
     Zs = Z.shape
     n = Zs[0] + 1
     if type(p) in (types.IntType, types.FloatType):
@@ -2813,7 +2831,7 @@ def maxRstat(Z, R, i):
     """
     is_valid_linkage(Z, throw=True, name='Z')
     is_valid_im(R, throw=True, name='R')
-    if type(i) is not type.IntType:
+    if type(i) is not types.IntType:
         raise TypeError('The third argument must be an integer.')
     if i < 0 or i > 3:
         return ValueError('i must be an integer between 0 and 3 inclusive.')
@@ -2853,12 +2871,46 @@ def leaders(Z, T):
         raise ValueError('Mismatch: len(T)!=Z.shape[0] + 1.')
     
     Cl = numpy.unique(T)
-    k = len(Cl)
-    L = numpy.zeros((k,), dtype='int32')
-    M = numpy.zeros((k,), dtype='int32')
-    n = Z.shape[0]
+    kk = len(Cl)
+    L = numpy.zeros((kk,), dtype='int32')
+    M = numpy.zeros((kk,), dtype='int32')
+    n = Z.shape[0] + 1
     [Z, T] = _copy_arrays_if_base_present([Z, T])
-    s = _cluster_wrap.leaders_wrap(Z, T, L, M, int(n))
+    s = _cluster_wrap.leaders_wrap(Z, T, L, M, int(kk), int(n))
     if s >= 0:
-        raise ValueError('T is not a valid assignment vector. Error found when examining linkage node %d (< 2n-1).' % i)
+        raise ValueError('T is not a valid assignment vector. Error found when examining linkage node %d (< 2n-1).' % s)
     return (L, M)
+
+# These are test functions to help me test the leaders function.
+
+def _leaders_test(Z, T):
+    tr = totree(Z)
+    _leaders_test_recurs_mark(tr, T)
+    return tr
+
+def _leader_identify(tr, T):
+    if tr.isLeaf():
+        return T[tr.id]
+    else:
+        left = tr.getLeft()
+        right = tr.getRight()
+        lfid = _leader_identify(left, T)
+        rfid = _leader_identify(right, T)
+        print 'ndid: %d lid: %d lfid: %d rid: %d rfid: %d' % (tr.getId(),
+                                                              left.getId(), lfid, right.getId(), rfid)
+        if lfid != rfid:
+            if lfid != -1:
+                print 'leader: %d with tag %d' % (left.id, lfid)
+            if rfid != -1:
+                print 'leader: %d with tag %d' % (right.id, rfid)
+            return -1
+        else:
+            return lfid
+
+def _leaders_test_recurs_mark(tr, T):
+    if tr.isLeaf():
+        tr.asgn = T[tr.id]
+    else:
+        tr.asgn = -1
+        _leaders_test_recurs_mark(tr.left, T)
+        _leaders_test_recurs_mark(tr.right, T)

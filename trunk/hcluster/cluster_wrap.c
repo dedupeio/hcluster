@@ -205,11 +205,11 @@ extern PyObject *cluster_dist_wrap(PyObject *self, PyObject *args) {
   return Py_BuildValue("d", 0.0);
 }
 
-extern PyObject *cluster_monocrit(PyObject *self, PyObject *args) {
+extern PyObject *cluster_monocrit_wrap(PyObject *self, PyObject *args) {
   int n;
   double cutoff;
   PyArrayObject *Z, *MV, *T;
-  if (!PyArg_ParseTuple(args, "O!O!di",
+  if (!PyArg_ParseTuple(args, "O!O!O!di",
 			&PyArray_Type, &Z,
 			&PyArray_Type, &MV,
 			&PyArray_Type, &T,
@@ -255,7 +255,6 @@ extern PyObject *cluster_maxclust_monocrit_wrap(PyObject *self, PyObject *args) 
 			&PyArray_Type, &Z,
 			&PyArray_Type, &MC,
 			&PyArray_Type, &T,
-			&cutoff,
 			&n, &mc)) {
     return 0;
   }
@@ -841,7 +840,7 @@ extern PyObject *pdist_sokalsneath_bool_wrap(PyObject *self, PyObject *args) {
 extern PyObject *leaders_wrap(PyObject *self, PyObject *args) {
   PyArrayObject *_Z, *_T, *_L, *_M;
   int kk, n, res;
-  if (!PyArg_ParseTuple(args, "O!O!O!ii",
+  if (!PyArg_ParseTuple(args, "O!O!O!O!ii",
 			&PyArray_Type, &_Z,
 			&PyArray_Type, &_T,
 			&PyArray_Type, &_L,
@@ -865,6 +864,7 @@ static PyMethodDef _clusterWrapMethods[] = {
   {"cluster_dist_wrap", cluster_dist_wrap, METH_VARARGS},
   {"cluster_maxclust_dist_wrap", cluster_maxclust_dist_wrap, METH_VARARGS},
   {"cluster_maxclust_monocrit_wrap", cluster_maxclust_monocrit_wrap, METH_VARARGS},
+  {"cluster_monocrit_wrap", cluster_monocrit_wrap, METH_VARARGS},
   {"cophenetic_distances_wrap", cophenetic_distances_wrap, METH_VARARGS},
   {"dot_product_wrap", dot_product_wrap, METH_VARARGS},
   {"get_max_dist_for_each_cluster_wrap",
