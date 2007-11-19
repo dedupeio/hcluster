@@ -12,9 +12,9 @@ Flat cluster formation
  fclusterdata       forms flat clusters directly from data.
  leaders            singleton root nodes for flat cluster.
 
-Agglomorative cluster formation
+Agglomerative cluster formation
 
- linkage            agglomoratively clusters original observations.
+ linkage            agglomeratively clusters original observations.
  single             the single/min/nearest algorithm. (alias)
  complete           the complete/max/farthest algorithm. (alias)
  average            the average/UPGMA algorithm. (alias)
@@ -330,7 +330,7 @@ def ward(y):
 def linkage(y, method='single', metric='euclidean'):
     """ Z = linkage(y, method)
 
-          Performs hierarchical/agglomorative clustering on the
+          Performs hierarchical/agglomerative clustering on the
           condensed distance matrix y. y must be a {n \choose 2} sized
           vector where n is the number of original observations paired
           in the distance matrix. The behavior of this function is very
