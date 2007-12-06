@@ -1,0 +1,6 @@
+setup.py
+hcluster/__init__.py
+hcluster/cluster.c
+hcluster/cluster.py
+hcluster/cluster_wrap.c
+hcluster/cluster.h

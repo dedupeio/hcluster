@@ -47,12 +47,13 @@ extra_link_args = []
 
 
 setup(name='hcluster', \
-      version='0.1', \
+      version='0.1.1', \
       py_modules=['hcluster.cluster'], \
       description='A hierarchical clustering package written for Scipy.', \
       long_description='A hierarchical clustering package written in C and Python.', \
       ext_modules=[Extension('_cluster_wrap', \
                              ['hcluster/cluster.c', 'hcluster/cluster_wrap.c'], \
+                             headers = ['hcluster/cluster.h'], \
                              extra_link_args = extra_link_args, \
                              include_dirs=['hcluster/', include_numpy_array])], \
       keywords=['dendrogram', 'linkage', 'cluster', 'agglomorative', 'hierarchical', 'hierarchy'], \

@@ -75,7 +75,7 @@ Distance functions between two vectors u and v
 Predicates
 
  is_valid_dm        checks for a valid distance matrix.
- is_valid_im        checks for a valid an inconsistency matrix.
+ is_valid_im        checks for a valid inconsistency matrix.
  is_valid_linkage   checks for a valid hierarchical clustering.
  is_valid_y         checks for a valid condensed distance matrix.
  is_isomorphic      checks if two flat clusterings are isomorphic.
