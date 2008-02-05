@@ -2638,7 +2638,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
         elif i < n:
             _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, labels)
             return (iv + 5.0, 10.0, 0.0, 0.0)
-    elif truncate_mode in ('mlab'):
+    elif truncate_mode in ('mlab',):
         pass
 
     

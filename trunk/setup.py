@@ -28,7 +28,7 @@ include_numpy_array=valid_paths[0]
 
 if len(valid_paths) > 1:
     print "There are several valid include directories containing numpy/arrayobject.h"
-    l=[('%d: %s' % (i, valid_paths[i])) for i in xrange(0, len(valid_paths))]
+    l=[('%d: %s' % (i+1, valid_paths[i])) for i in xrange(0, len(valid_paths))]
     s = -1
     print string.join(l, '\n')
     # Prompt the user with a list of selections.
@@ -47,13 +47,12 @@ extra_link_args = []
 
 
 setup(name='hcluster', \
-      version='0.1.1', \
+      version='0.1.2', \
       py_modules=['hcluster.cluster'], \
       description='A hierarchical clustering package written for Scipy.', \
       long_description='A hierarchical clustering package written in C and Python.', \
       ext_modules=[Extension('_cluster_wrap', \
                              ['hcluster/cluster.c', 'hcluster/cluster_wrap.c'], \
-                             headers = ['hcluster/cluster.h'], \
                              extra_link_args = extra_link_args, \
                              include_dirs=['hcluster/', include_numpy_array])], \
       keywords=['dendrogram', 'linkage', 'cluster', 'agglomorative', 'hierarchical', 'hierarchy'], \
