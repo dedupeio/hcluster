@@ -2458,9 +2458,9 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
     R = dendrogram(..., link_color_func)
 
         When a link is painted, the function link_color_function is
-        called with the non-singleton id, which returns a
-        matplotlib color string representing the color to paint
-        the link.
+        called with the non-singleton id. This function is
+        expected to return a matplotlib color string, which represents
+        the color to paint the link.
 
         For example:
 
