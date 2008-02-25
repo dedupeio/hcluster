@@ -2250,6 +2250,19 @@ except ImportError:
 
 _link_line_colors=['g', 'r', 'c', 'm', 'y', 'k']
 
+
+def set_link_color_palette(palette):
+    """
+    set_link_color_palette(palette):
+
+    Changes the list of matplotlib color codes to use when coloring
+    links with the dendrogram colorthreshold feature.
+    """
+
+    if type(palette) not in (types.ListType, types.TupleType):
+        raise TypeError("palette must be a list or tuple")
+    _link_line_colors = list(palette)
+
 def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                get_leaves=True, orientation='top', labels=None,
                count_sort=False, distance_sort=False, show_leaf_counts=True,
