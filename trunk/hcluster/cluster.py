@@ -2261,7 +2261,14 @@ def set_link_color_palette(palette):
 
     if type(palette) not in (types.ListType, types.TupleType):
         raise TypeError("palette must be a list or tuple")
-    _link_line_colors = list(palette)
+    _ptypes = [type(p) == types.StringType for p in palette]
+
+    if False in _ptypes:
+        raise TypeError("all palette list elements must be color strings")
+
+    for i in list(_link_line_colors):
+        _link_line_colors.remove(i)
+    _link_line_colors.extend(list(palette))
 
 def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                get_leaves=True, orientation='top', labels=None,
