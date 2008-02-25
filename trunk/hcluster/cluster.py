@@ -2559,7 +2559,7 @@ def _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, la
         # string returned from the leaf_label_func, which is a function
         # passed to dendrogram.
         if leaf_label_func:
-            ivl.append(leaf_label_func(i))
+            ivl.append(leaf_label_func(int(i)))
         else:
             # Otherwise, if the dendrogram caller has passed a labels list
             # for the leaf nodes, use it.
@@ -2578,7 +2578,7 @@ def _append_nonsingleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i,
         lvs.append(int(i))
     if ivl is not None:
         if leaf_label_func:
-            ivl.append(leaf_label_func(i))
+            ivl.append(leaf_label_func(int(i)))
         else:
             if show_leaf_counts:
                 ivl.append("(" + str(int(Z[i-n, 3])) + ")")
@@ -2829,7 +2829,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
     icoord_list.append([uiva, uiva, uivb, uivb])
     dcoord_list.append([uah, h, h, ubh])
     if link_color_func is not None:
-        v = link_color_func(i)
+        v = link_color_func(int(i))
         if type(v) != types.StringType:
             raise TypeError("link_color_func must return a matplotlib color string!")
         color_list.append(v)
