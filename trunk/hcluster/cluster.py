@@ -2275,7 +2275,8 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                count_sort=False, distance_sort=False, show_leaf_counts=True,
                no_plot=False, no_labels=False, color_list=None,
                leaf_font_size=None, leaf_rotation=None, leaf_label_func=None,
-               no_leaves=False, show_contracted=False):
+               no_leaves=False, show_contracted=False,
+               nonsingleton_color_func=None):
     """
     R = dendrogram(Z)
 
@@ -2453,6 +2454,20 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
         The heights of non-singleton nodes contracted into a leaf node
         are plotted as crosses along the link connecting that leaf node.
         This feature is only useful when truncation is used.
+
+    R = dendrogram(..., link_color_func)
+
+        When a link is painted, the function link_color_function is
+        called with the non-singleton id, which returns a
+        matplotlib color string representing the color to paint
+        the link.
+
+        For example:
+
+          dendrogram(Z, link_color_func=lambda k: colors[k])
+
+        colors every untruncated non-singleton node k with colors[k].
+
     """
 
     # Features under consideration.
@@ -2521,8 +2536,9 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                                current_color=current_color, \
                                color_list=color_list, \
                                currently_below_threshold=currently_below_threshold, \
-                               leaf_label_func=leaf_label_func,
-                               contraction_marks=contraction_marks)
+                               leaf_label_func=leaf_label_func, \
+                               contraction_marks=contraction_marks, \
+                               link_color_func=link_color_func)
     if not no_plot:
         mh = max(Z[:,2])
         _plot_dendrogram(icoord_list, dcoord_list, ivl, p, n, mh, orientation, no_labels, color_list, leaf_font_size=leaf_font_size, leaf_rotation=leaf_rotation, contraction_marks=contraction_marks)
@@ -2589,7 +2605,9 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                lvs=None, mhr=False, \
                                current_color=[], color_list=[], \
                                currently_below_threshold=[], \
-                               leaf_label_func=None, level=0, contraction_marks=None):
+                               leaf_label_func=None, level=0,
+                               contraction_marks=None,
+                               link_color_func=None):
     """
     Calculates the endpoints of the links as well as the labels for the
     the dendrogram rooted at the node with index i. iv is the independent
@@ -2768,7 +2786,8 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                      color_list=color_list, \
                                      currently_below_threshold=currently_below_threshold, \
                                      leaf_label_func=leaf_label_func, \
-                                     level=level+1, contraction_marks=contraction_marks)
+                                     level=level+1, contraction_marks=contraction_marks, \
+                                     link_color_func=link_color_func)
 
     h = Z[i-n, 2]
     if h >= colorthreshold or colorthreshold <= 0:
@@ -2798,7 +2817,9 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
                                      color_list=color_list, \
                                      currently_below_threshold=currently_below_threshold,
                                      leaf_label_func=leaf_label_func, \
-                                     level=level+1, contraction_marks=contraction_marks)
+                                     level=level+1, contraction_marks=contraction_marks, \
+                                     link_color_func=link_color_func)
+
     # The height of clusters a and b
     ah = uad
     bh = ubd
@@ -2807,7 +2828,13 @@ def _dendrogram_calculate_info(Z, p, truncate_mode, \
 
     icoord_list.append([uiva, uiva, uivb, uivb])
     dcoord_list.append([uah, h, h, ubh])
-    color_list.append(c)
+    if link_color_func is not None:
+        v = link_color_func(i)
+        if type(v) != types.StringType:
+            raise TypeError("link_color_func must return a matplotlib color string!")
+        color_list.append(v)
+    else:
+        color_list.append(c)
     return ( ((uiva + uivb) / 2), uwa+uwb, h, max_dist)
 
 def is_isomorphic(T1, T2):
