@@ -2195,10 +2195,6 @@ try:
             # Make the tick marks invisible because they cover up the links
             for line in axis.get_yticklines():
                 line.set_visible(False)
-        
-            #             for (xline,yline,color) in zip(xlines, ylines, color_list):
-            #                 line = matplotlib.lines.Line2D(xline, yline, color=color)
-            #                 axis.add_line(line)
 
         # Let's use collections instead. This way there is a separate legend item for each
         # tree grouping, rather than stupidly one for each line segment.
