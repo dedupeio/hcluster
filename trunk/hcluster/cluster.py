@@ -2276,7 +2276,7 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
                no_plot=False, no_labels=False, color_list=None,
                leaf_font_size=None, leaf_rotation=None, leaf_label_func=None,
                no_leaves=False, show_contracted=False,
-               nonsingleton_color_func=None):
+               link_color_func=None):
     """
     R = dendrogram(Z)
 
