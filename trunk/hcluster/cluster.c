@@ -4,7 +4,7 @@
  * Author: Damian Eads
  * Date:   September 22, 2007
  *
- * Copyright (c) 2007, Damian Eads
+ * Copyright (c) 2007, 2008, Damian Eads
  *
  * All rights reserved.
  *
