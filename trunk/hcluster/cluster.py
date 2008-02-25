@@ -809,7 +809,7 @@ def cosine(u, v):
         (1-uv^T)/(||u||_2 * ||v||_2).
     """
     return (1.0 - (scipy.dot(u, v.T) / \
-                   (math.sqrt(scipy.dot(u, u.T)) * math.sqrt(scipy.dot(v, v.T)))))
+                   (numpy.sqrt(scipy.dot(u, u.T)) * numpy.sqrt(scipy.dot(v, v.T)))))
 
 def correlation(u, v):
     """
@@ -824,12 +824,13 @@ def correlation(u, v):
       where |*|_1 is the Manhattan norm and n is the common dimensionality
       of the vectors.
     """
-    vmu = v.mean()
     umu = u.mean()
+    vmu = v.mean()
     um = u - umu
     vm = v - vmu
-    return 1.0 - (scipy.dot(um, vm.T) / (math.sqrt(scipy.dot(um, vm).T)) \
-            * math.sqrt(scipy.dot(vm, vm.T)))
+    return 1.0 - (scipy.dot(um, vm) /
+                  (numpy.sqrt(scipy.dot(um, um)) \
+                   * numpy.sqrt(scipy.dot(vm, vm))))
 
 def hamming(u, v):
     """
@@ -1371,7 +1372,8 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             dm[xrange(0,m),xrange(0,m)] = 0
             dm = squareform(dm)
         elif mstr in set(['correlation', 'co']):
-            X2 = X - numpy.repmat(numpy.mean(X, axis=1).reshape(m, 1), 1, n)
+            X2 = X - X.mean(1)[:,numpy.newaxis]
+            #X2 = X - numpy.matlib.repmat(numpy.mean(X, axis=1).reshape(m, 1), 1, n)
             norms = numpy.sqrt(numpy.sum(X2 * X2, axis=1))
             _cluster_wrap.pdist_cosine_wrap(X2, dm, norms)
         elif mstr in set(['mahalanobis', 'mahal', 'mah']):
