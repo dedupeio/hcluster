@@ -1,6 +1,8 @@
 Damian Eads would like to give special thanks to:
 
-* Adam Smith at UCSC for proofreading API documentation. (Dec. 2007)
-* Arnar Flatberg for finding a bug in correlation and
-  optimizing pdist(..., 'correlation'). (Feb. 2008)
+  * Adam Smith at UCSC for proofreading API documentation. (Dec. 2007)
 
+  * Arnar Flatberg for finding a bug in correlation and
+    optimizing pdist(..., 'correlation'). (Feb. 2008)
+
+  * Mattias Hollander for presenting a bug. (Feb. 2008)

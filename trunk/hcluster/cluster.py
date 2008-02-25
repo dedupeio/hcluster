@@ -2532,7 +2532,7 @@ def _append_singleton_leaf_node(Z, p, n, level, lvs, ivl, leaf_label_func, i, la
             # Otherwise, if the dendrogram caller has passed a labels list
             # for the leaf nodes, use it.
             if labels is not None:
-                ivl.append(labels[i-n])
+                ivl.append(labels[int(i-n)])
             else:
                 # Otherwise, use the id as the label for the leaf.x
                 ivl.append(str(int(i)))
