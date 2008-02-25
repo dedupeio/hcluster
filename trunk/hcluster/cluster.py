@@ -2466,7 +2466,8 @@ def dendrogram(Z, p=30, truncate_mode=None, colorthreshold=None,
 
           dendrogram(Z, link_color_func=lambda k: colors[k])
 
-        colors every untruncated non-singleton node k with colors[k].
+        colors the direct links below each untruncated non-singleton node
+        k using colors[k].
 
     """
 
