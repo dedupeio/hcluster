@@ -196,6 +196,8 @@ def _copy_array_if_base_present(a):
     """
     if a.base is not None:
         return a.copy()
+    elif (a.dtype == 'float32'):
+        return numpy.float64(a)
     else:
         return a
     
@@ -1290,6 +1292,9 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
     if type(X) is not _array_type:
         raise TypeError('The parameter passed must be an array.')
 
+    if X.dtype != 'double':
+        raise TypeError('X must be a float64 array')
+
     # The C code doesn't do striding.
     [X] = _copy_arrays_if_base_present([X])
 
@@ -1701,8 +1706,8 @@ def is_valid_linkage(Z, warning=False, throw=False, name=None):
             else:
                 raise ValueError('Linkage matrix must have 4 columns.')
         n = Z.shape[0]
-        if not ((Z[:,0]-xrange(n-1, n*2-1) <= 0).any()) or \
-           not (Z[:,1]-xrange(n-1, n*2-1) <= 0).any():
+        if not ((Z[:,0]-xrange(n-1, n*2-1) < 0).any()) or \
+           not (Z[:,1]-xrange(n-1, n*2-1) < 0).any():
             if name:
                 raise ValueError('Linkage \'%s\' contains negative indices.' % name)
             else:
@@ -1978,8 +1983,8 @@ def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
         raise ValueError('Invalid cluster formation criterion: %s' % str(criterion))
     return T
 
-def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
-                distance='euclid', d=2):
+def fclusterdata(X, t, criterion='inconsistent', \
+                 distance='euclid', depth=2, method='single', R=None):
     """
     T = fclusterdata(X, t)
 
@@ -1994,8 +1999,8 @@ def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
       is the index of the flat cluster to which the original
       observation i belongs.
 
-    T = fclusterdata(X, t, criterion='inconsistent', linkage='single',
-                    dist='euclid', depth=2, R=None)
+    T = fclusterdata(X, t, criterion='inconsistent', method='single',
+                    distance='euclid', depth=2, R=None)
 
       Clusters the original observations in the n by m data matrix X using
       the thresholding criterion, linkage method, and distance metric
@@ -2008,15 +2013,16 @@ def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
                     'maxclust' cluster formation algorithms. See
                     cluster for descriptions.
            
-        lmethod:    the linkage method to use. See linkage for
+        method:     the linkage method to use. See linkage for
                     descriptions.
 
-        dmethod:    the distance metric for calculating pairwise
+        distance:   the distance metric for calculating pairwise
                     distances. See pdist for descriptions and
                     linkage to verify compatibility with the linkage
                     method.
                      
-        t:          the cut-off threshold for the cluster function.
+        t:          the cut-off threshold for the cluster function or
+                    the maximum number of clusters (criterion='maxclust').
 
         depth:      the maximum depth for the inconsistency calculation.
                     See inconsistent for more information.
@@ -2030,8 +2036,10 @@ def fclusterdata(X, t, criterion='inconsistent', linkage='single', \
     if type(X) is not _array_type or len(X.shape) != 2:
         raise TypeError('X must be an n by m numpy array.')
 
-    Y = pdist(X, method=dmethod)
-    Z = linkage(Y, method=lmethod)
+    Y = pdist(X, metric=distance)
+    Z = linkage(Y, method=method)
+    if R is None:
+        R = inconsistent(Z, d=depth)
     T = fcluster(Z, criterion=criterion, depth=depth, R=R, t=t)
     return T
 
