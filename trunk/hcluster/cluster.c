@@ -310,29 +310,6 @@ double dot_product(const double *u, const double *v, int n) {
   return s;
 }
 
-double dot_product_sub(const double *u, double ub,
-		       const double *v, double vb, int n) {
-  int i;
-  double s = 0.0;
-  for (i = 0; i < n; i++) {
-    s = s + ((u[i] - ub) * (v[i] - vb));
-  }
-  return s;
-}
-
-double vector_2norm(const double *u, int n) {
-  return sqrt(dot_product(u, u, n));
-}
-
-double vector_mean(const double *u, int n) {
-  int i;
-  double s = 0.0;
-  for (i = 0; i < n; i++) {
-    s = s + u[i];
-  }
-  return s / (double)n;
-}
-
 double cosine_distance(const double *u, const double *v, int n,
 		       const double nu, const double nv) {
   return 1.0 - (dot_product(u, v, n) / (nu * nv));
@@ -384,13 +361,6 @@ void compute_mean_vector(double *res, const double *X, int m, int n) {
   }
   for (i = 0; i < n; i++) {
     res[i] /= (double)m;
-  }
-}
-
-void vector_subtract(double *result, const double *u, const double *v, int n) {
-  int i;
-  for (i = 0; i < n; i++) {
-    result[i] = u[i] - v[i];
   }
 }
 
