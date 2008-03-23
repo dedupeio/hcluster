@@ -36,7 +36,7 @@
  */
 
 #include <string.h>
-#include <math.h>
+#include <cmath>
 
 #ifndef RISOTTO_HCLUSTER_H
 #define RISOTTO_HCLUSTER_H
@@ -80,7 +80,7 @@ namespace Risotto {
       RT *dm;  
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class BrayCurtisPdist : public Pdist <RT, IT> {
 
     public:
@@ -89,17 +89,17 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i;
-	RT s1 = 0.0, s2 = 0.0;
+	ACCUM s1 = 0.0, s2 = 0.0;
 	for (i = 0; i < this->dim; i++) {
-	  s1 += (RT)fabs(u[i] - v[i]);
-	  s2 += (RT)fabs(u[i] + v[i]);
+	  s1 += (RT)abs(u[i] - v[i]);
+	  s2 += (RT)abs(u[i] + v[i]);
 	}
 	return s1 / s2;
       }  
     };
 
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class CanberraPdist : public Pdist <RT, IT> {
 
     public:
@@ -108,16 +108,16 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i;
-	RT s = 0.0;
+	ACCUM s = 0.0;
 	for (i = 0; i < this->dim; i++) {
-	  s += (fabs((RT)(u[i] - v[i])) / (fabs((RT)u[i]) + fabs((RT)v[i])));
+	  s += (abs((ACCUM)(u[i] - v[i])) / (abs((ACCUM)u[i]) + abs((ACCUM)v[i])));
 	}
 	return s;
       }
   
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class ChebyshevPdist : public Pdist <RT, IT> {
 
     public:
@@ -126,9 +126,10 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i = 0;
-	RT d, maxv = 0.0;
+	IT d;
+	ACCUM maxv = 0.0;
 	for (i = 0; i < this->dim; i++) {
-	  d = fabs((IT)(u[i] - v[i]));
+	  d = abs((IT)(u[i] - v[i]));
 	  if (d > maxv) {
 	    maxv = d;
 	  }
@@ -137,7 +138,7 @@ namespace Risotto {
       }  
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class CityBlockPdist : public Pdist <RT, IT> {
 
     public:
@@ -145,27 +146,28 @@ namespace Risotto {
 	Pdist<RT, IT>(dm, X, _dim, _num_vectors) {}
 
       virtual RT distance(const IT *u, const IT *v) {
-	int i = 0;
-	double s = 0.0, d;
+	size_t i = 0;
+	ACCUM s = 0.0;
+	IT d;
 	for (i = 0; i < this->dim; i++) {
-	  d = fabs(u[i] - v[i]);
+	  d = abs(u[i] - v[i]);
 	  s = s + d;
 	}
 	return s;
       }
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM>
     static RT dot(const IT *u, const IT *v, int n) {
       size_t i;
-      long double s = 0.0;
+      ACCUM s = 0.0;
       for (i = 0; i < n; i++) {
 	s += (long double)(u[i] * v[i]);
       }
       return (RT)s;
     }
 
-    template <typename RT, typename IT, typename NORMT>
+    template <typename RT, typename IT, typename NORMT, typename ACCUM = long double>
     class CosinePdist : public Pdist <RT, IT> {
 
     public:
@@ -173,7 +175,9 @@ namespace Risotto {
 	Pdist<RT, IT>(dm, X, _dim, _num_vectors), norms(_norms) {}
 
       virtual RT distance(const IT *u, const IT *v) {
-	return 1.0 - (dot<RT, IT>(u, v, this->dim) / (norms[this->i] * norms[this->j]));
+	return ((ACCUM)1.0)
+	  - ((ACCUM)dot<RT, IT, ACCUM>(u, v, this->dim)
+	     / (ACCUM)(norms[this->i] * norms[this->j]));
       }
 
     protected:
@@ -182,7 +186,7 @@ namespace Risotto {
     };
 
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class DicePdist: public Pdist <RT, IT> {
 
     public:
@@ -197,11 +201,11 @@ namespace Risotto {
 	  ntf += (u[i] && !v[i]);
 	  nft += (!u[i] && v[i]);
 	}
-	return (RT)((long double)(nft + ntf) / (long double)(2.0 * ntt + ntf + nft));
+	return (RT)((ACCUM)(nft + ntf) / (((ACCUM)2.0) * ntt + ntf + nft));
       }
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class EuclideanPdist : public Pdist <RT, IT> {
 
     public:
@@ -210,16 +214,17 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i = 0;
-	RT s = 0.0, d;
+	ACCUM s = 0.0;
+	IT d;
 	for (i = 0; i < this->dim; i++) {
-	  d = (RT)(u[i] - v[i]);
-	  s = s + d * d;
+	  d = (IT)(u[i] - v[i]);
+	  s = s + ((ACCUM)d) * ((ACCUM)d);
 	}
-	return sqrt(s);
+	return (RT)sqrt(s);
       }  
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class HammingPdist : public Pdist <RT, IT> {
 
     public:
@@ -228,15 +233,15 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i = 0;
-	RT s = 0.0;
+	int s = 0;
 	for (i = 0; i < this->dim; i++) {
 	  s = s + (u[i] != v[i]);
 	}
-	return s / (RT)this->dim;
+	return (RT)(((ACCUM)s) / (ACCUM)this->dim);
       }
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class JaccardPdist: public Pdist <RT, IT> {
 
     public:
@@ -245,7 +250,7 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	int i = 0;
-	double denom = 0.0, num = 0.0;
+	ACCUM denom = 0.0, num = 0.0;
 	for (i = 0; i < this->dim; i++) {
 	  num += (u[i] != v[i]) && ((u[i] != 0) || (v[i] != 0));
 	  denom += (u[i] != 0) || (!v[i] != 0);
@@ -277,7 +282,7 @@ namespace Risotto {
     **/
 
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class KulsinskiPdist : public Pdist <RT, IT> {
 
     public:
@@ -293,11 +298,11 @@ namespace Risotto {
 	  nft += (!u[_i] && v[_i]);
 	  nff += (!u[_i] && !v[_i]);
 	}
-	return (RT)((long double)(ntf + nft - ntt + this->dim)) / ((long double)(ntf + nft + this->dim));
+	return (RT)((ACCUM)(ntf + nft - ntt + this->dim)) / ((ACCUM)(ntf + nft + this->dim));
       }
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class MatchingPdist: public Pdist <RT, IT> {
 
     public:
@@ -313,12 +318,12 @@ namespace Risotto {
 	  nft += (!u[i] && v[i]);
 	  nff += (!u[i] && !v[i]);
 	}
-	return (RT)((long double)(2.0 * ntf * nft) / (long double)(ntt * nff + ntf * nft)); 
+	return (RT)((ACCUM)(2.0 * ntf * nft) / (ACCUM)(ntt * nff + ntf * nft)); 
       }
     };
 
 
-    template <typename RT, typename IT, typename COVT>
+    template <typename RT, typename IT, typename COVT, typename ACCUM = long double>
     class MahalanobisPdist : public Pdist <RT, IT> {
 
     public:
@@ -336,17 +341,17 @@ namespace Risotto {
   
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i, j;
-	double s;
+	ACCUM s;
 	const size_t dim(this->dim);
 	const COVT *covrow = covinv;
 	for (i = 0; i < dim; i++) {
-	  dimbuf1[i] = (RT)(u[i] - v[i]);
+	  dimbuf1[i] = (ACCUM)(u[i] - v[i]);
 	}
 	for (i = 0; i < dim; i++) {
 	  covrow = covinv + (i * dim);
 	  s = 0.0;
 	  for (j = 0; j < dim; j++) {
-	    s += dimbuf1[j] * (RT)covrow[j];
+	    s += dimbuf1[j] * (ACCUM)covrow[j];
 	  }
 	  dimbuf2[i] = s;
 	}
@@ -358,12 +363,12 @@ namespace Risotto {
       }
 
     public:
-      RT *dimbuf1;
-      RT *dimbuf2;
+      ACCUM *dimbuf1;
+      ACCUM *dimbuf2;
       COVT *covinv;
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class MinkowskiPdist: public Pdist <RT, IT> {
 
     public:
@@ -372,10 +377,11 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i = 0;
-	double s = 0.0, d;
+	ACCUM s = 0.0;
+	IT d;
 	for (i = 0; i < this->dim; i++) {
-	  d = fabsl(u[i] - v[i]);
-	  s = s + pow(d, p);
+	  d = abs(u[i] - v[i]);
+	  s = s + pow((ACCUM)d, (ACCUM)p);
 	}
 	return powl(s, 1.0 / p);
       }
@@ -384,7 +390,7 @@ namespace Risotto {
       long double p;
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class RogersTanimotoPdist: public Pdist <RT, IT> {
 
     public:
@@ -400,11 +406,11 @@ namespace Risotto {
 	  nft += (!u[i] && v[i]);
 	  nff += (!u[i] && !v[i]);
 	}
-	return (RT)((long double)(2.0 * (ntf + nft))) / ((long double)ntt + nff + (2.0 * (ntf + nft)));
+	return (RT)(((ACCUM)2.0 * (ntf + nft))) / ((ACCUM)ntt + nff + (((ACCUM)2.0) * (ntf + nft)));
       }
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class RussellRaoPdist: public Pdist <RT, IT> {
 
     public:
@@ -417,11 +423,11 @@ namespace Risotto {
 	for (i = 0; i < this->dim; i++) {
 	  ntt += (u[i] && v[i]);
 	}
-	return (RT)((long double) (this->dim - ntt) / (long double) this->dim);
+	return (RT)((ACCUM) (this->dim - ntt) / (ACCUM) this->dim);
       }
     };
 
-    template <typename RT, typename IT, typename VART>
+    template <typename RT, typename IT, typename VART, typename ACCUM = long double>
     class SEuclideanPdist : public Pdist <RT, IT> {
 
     public:
@@ -430,10 +436,11 @@ namespace Risotto {
 
       virtual RT distance(const IT *u, const IT *v) {
 	size_t i = 0;
-	RT s = 0.0, d;
+	ACCUM s = 0.0;
+	IT d;
 	for (i = 0; i < this->dim; i++) {
-	  d = (RT)(u[i] - v[i]);
-	  s = s + (RT)((long double)(d * d) / (long double)var[i]);
+	  d = u[i] - v[i];
+	  s = s + ((ACCUM)(d * d) / (long double)var[i]);
 	}
 	return sqrt(s);
       }
@@ -442,7 +449,7 @@ namespace Risotto {
       VART *var;
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class SokalMichenerPdist : public Pdist <RT, IT> {
 
     public:
@@ -458,12 +465,12 @@ namespace Risotto {
 	  ntf += (u[_i] && !v[_i]);
 	  nft += (!u[_i] && v[_i]);
 	}
-	return (RT)((long double)(2.0 * (ntf + nft))/(long double)(2.0 * (ntf + nft) + ntt + nff));
+	return (RT)(((ACCUM)2.0 * (ntf + nft))/((ACCUM)2.0 * (ntf + nft) + ntt + nff));
       }
     };
 
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class SokalSneathPdist : public Pdist <RT, IT> {
 
     public:
@@ -478,11 +485,11 @@ namespace Risotto {
 	  ntf += (u[_i] && !v[_i]);
 	  nft += (!u[_i] && v[_i]);
 	}
-	return (RT)((long double)(2.0 * (ntf + nft))/(long double)(2.0 * (ntf + nft) + ntt));
+	return (RT)(((ACCUM)2.0 * (ntf + nft))/(ACCUM)((ACCUM)2.0 * (ntf + nft) + ntt));
       }
     };
 
-    template <typename RT, typename IT>
+    template <typename RT, typename IT, typename ACCUM = long double>
     class YulePdist: public Pdist <RT, IT> {
 
     public:
@@ -498,7 +505,7 @@ namespace Risotto {
 	  nft += (!u[i] && v[i]);
 	  nff += (!u[i] && !v[i]);
 	}
-	return (RT)((long double)(2.0 * ntf * nft) / (long double)(ntt * nff + ntf * nft)); 
+	return (RT)((ACCUM)(2.0 * ntf * nft) / (long double)(ntt * nff + ntf * nft)); 
       }
     };
   }
