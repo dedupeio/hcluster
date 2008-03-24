@@ -87,7 +87,7 @@
 #define CPY_DEBUG_MSG(...)
 #endif
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
