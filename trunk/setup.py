@@ -47,7 +47,7 @@ extra_link_args = []
 
 
 setup(name='hcluster', \
-      version='0.1.5', \
+      version='0.1.6', \
       py_modules=['hcluster.cluster'], \
       description='A hierarchical clustering package written for Scipy.', \
       long_description='A hierarchical clustering package written in C and Python.', \
@@ -57,7 +57,7 @@ setup(name='hcluster', \
                              include_dirs=['hcluster/', include_numpy_array])], \
       keywords=['dendrogram', 'linkage', 'cluster', 'agglomorative', 'hierarchical', 'hierarchy'], \
       author="Damian Eads", \
-      author_email="freesoftware@eadsware.com", \
+      author_email="damian XDOTX eads XATX gmail XDOTX com", \
       license="New BSD License", \
       packages = ['hcluster'], \
       url = 'http://scipy-cluster.googlecode.com', \
