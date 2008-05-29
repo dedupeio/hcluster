@@ -188,7 +188,7 @@ try:
         warnings.warn('scipy-cluster: %s' % s, stacklevel=3)
 except:
     def _warning(s):
-        print ('[WARNING] scipy-cluster: %s' % s)
+        print '[WARNING] scipy-cluster: %s' % s
 
 def _unbiased_variance(X):
     """
@@ -283,16 +283,8 @@ def weighted(y):
     """
     return linkage(y, method='weighted', metric='euclidean')
 
-def centroid(y):
+def centroid(X):
     """
-    Z = centroid(y)
-    
-    Performs centroid/UPGMC linkage on the condensed distance matrix Z.
-    See linkage for more information on the return structure and
-    algorithm.
-
-      (a condensed alias for linkage)
-
     Z = centroid(X)
 
     Performs centroid/UPGMC linkage on the observation matrix X using
@@ -300,16 +292,10 @@ def centroid(y):
     information on the return structure and algorithm.    
 
     """
-    return linkage(y, method='centroid', metric='euclidean')
+    return linkage(X, method='centroid', metric='euclidean')
 
 def median(y):
     """
-    Z = median(y)
-
-    Performs median/WPGMC linkage on the condensed distance matrix Z.
-    See linkage for more information on the return structure and
-    algorithm.
-
     Z = median(X)
 
     Performs median/WPGMC linkage on the observation matrix X using
@@ -322,13 +308,6 @@ def median(y):
 
 def ward(y):
     """
-    Z = ward(y)
-    
-    Performs Ward's linkage on the condensed distance matrix Z. See
-    linkage for more information on the return structure and algorithm.
-
-    Z = ward(X)
-
     Performs Ward's linkage on the observation matrix X using Euclidean
     distance as the distance metric. See linkage for more information
     on the return structure and algorithm.    
@@ -735,7 +714,7 @@ def squareform(X, force="no", checks=True):
         # is indeed a binomial coefficient.
         d = int(numpy.ceil(numpy.sqrt(X.shape[0] * 2)))
 
-        print d, s[0]
+        #print d, s[0]
         # Check that v is of valid dimensions.
         if d * (d - 1) / 2 != int(s[0]):
             raise ValueError('Incompatible vector size. It must be a binomial coefficient n choose 2 for some integer n >= 2.')
@@ -1611,7 +1590,7 @@ def from_mlab_linkage(Z):
     CS = numpy.zeros((Zs[0], 1), dtype='double')
     Zpart = Zpart - 1
     _cluster_wrap.calculate_cluster_sizes_wrap(numpy.hstack([Zpart, \
-                                                             Zd]).copy(), \
+                                                             Zd]), \
                                                CS, int(Zs[0]) + 1)
     return numpy.hstack([Zpart, Zd, CS]).copy()
 
@@ -1625,8 +1604,11 @@ def to_mlab_linkage(Z):
     1..N indexing.
     """
     is_valid_linkage(Z, throw=True, name='Z')
+
+    Z2 = Z[:, 0:3].copy()
+    Z2[:,0:2] += 1
     
-    return numpy.hstack([Z[:,0:2] + 1, Z[:,2]])
+    return Z2
 
 def is_monotonic(Z):
     """
@@ -1639,7 +1621,7 @@ def is_monotonic(Z):
     is_valid_linkage(Z, throw=True, name='Z')
 
     # We expect the i'th value to be greater than its successor.
-    return (Z[:-1,2]>=Z[1:,2]).all()
+    return (Z[:-1,2]<Z[1:,2]).all()
 
 def is_valid_im(R, warning=False, throw=False, name=None):
     """
@@ -1802,7 +1784,7 @@ def is_valid_y(y, warning=False, throw=False, name=None):
     return valid
 
 
-def is_valid_dm(D, t=0.0):
+def is_valid_dm(D, tol=0.0, throw=False, name=None):
     """
     is_valid_dm(D)
     
@@ -1810,7 +1792,7 @@ def is_valid_dm(D, t=0.0):
       Distance matrices must be 2-dimensional numpy arrays containing
       doubles. They must have a zero-diagonal, and they must be symmetric.
 
-    is_valid_dm(D, t)
+    is_valid_dm(D, tol)
 
       Returns True if the variable D passed is a valid distance matrix.
       Small numerical differences in D and D.T and non-zeroness of the
@@ -1838,6 +1820,7 @@ def is_valid_dm(D, t=0.0):
                 raise TypeError('\'%s\' passed as a distance matrix is not a numpy array.' % name)
             else:
                 raise TypeError('Variable is not a numpy array.')
+        s = D.shape
         if D.dtype != 'double':
             if name:
                 raise TypeError('Distance matrix \'%s\' must contain doubles (float64).' % name)
@@ -1848,7 +1831,7 @@ def is_valid_dm(D, t=0.0):
                 raise ValueError('Distance matrix \'%s\' must have shape=2 (i.e. be two-dimensional).' % name)
             else:
                 raise ValueError('Distance matrix must have shape=2 (i.e. be two-dimensional).')
-        if t == 0.0:
+        if tol == 0.0:
             if not (D == D.T).all():
                 if name:
                     raise ValueError('Distance matrix \'%s\' must be symmetric.' % name)
@@ -1860,19 +1843,19 @@ def is_valid_dm(D, t=0.0):
                 else:
                     raise ValueError('Distance matrix diagonal must be zero.')
         else:
-            if not (D - D.T <= t).all():
+            if not (D - D.T <= tol).all():
                 if name:
-                    raise ValueError('Distance matrix \'%s\' must be symmetric within tolerance %d.' % (name, t))
+                    raise ValueError('Distance matrix \'%s\' must be symmetric within tolerance %d.' % (name, tol))
                 else:
                     raise ValueError('Distance matrix must be symmetric within tolerance %d.' % t)
-            if not (D[xrange(0, s[0]), xrange(0, s[0])] <= t).all():
+            if not (D[xrange(0, s[0]), xrange(0, s[0])] <= tol).all():
                 if name:
-                    raise ValueError('Distance matrix \'%s\' diagonal must be close to zero within tolerance %d.' % (name, t))
+                    raise ValueError('Distance matrix \'%s\' diagonal must be close to zero within tolerance %d.' % (name, tol))
                 else:
-                    raise ValueError('Distance matrix \'%s\' diagonal must be close to zero within tolerance %d.' % t)
+                    raise ValueError('Distance matrix \'%s\' diagonal must be close to zero within tolerance %d.' % tol)
     except Exception, e:
         if throw:
-            raise
+            raise e
         if warning:
             _warning(str(e))
         valid = False
@@ -1884,7 +1867,7 @@ def numobs_linkage(Z):
     linkage matrix Z.
     """
     is_valid_linkage(Z, throw=True, name='Z')
-    return (Z.shape[0] - 1)
+    return (Z.shape[0] + 1)
 
 def numobs_dm(D):
     """
@@ -1893,7 +1876,7 @@ def numobs_dm(D):
       Returns the number of original observations that correspond to a
       square, non-condensed distance matrix D.
     """
-    is_valid_dm(D, tol=Inf, throw=True, name='D')
+    is_valid_dm(D, tol=scipy.inf, throw=True, name='D')
     return D.shape[0]
 
 def numobs_y(Y):
@@ -1903,8 +1886,8 @@ def numobs_y(Y):
       Returns the number of original observations that correspond to a
       condensed distance matrix Y.
     """
-    is_valid_y(y, throw=True, name='Y')
-    d = int(numpy.ceil(numpy.sqrt(y.shape[0] * 2)))
+    is_valid_y(Y, throw=True, name='Y')
+    d = int(numpy.ceil(numpy.sqrt(Y.shape[0] * 2)))
     return d
 
 def Z_y_correspond(Z, Y):
@@ -1917,7 +1900,7 @@ def Z_y_correspond(Z, Y):
       check in algorithms that make extensive use of linkage and distance
       matrices that must correspond to the same set of original observations.
     """
-    return numobs_y(Y) == numobs_Z(Z)
+    return numobs_y(Y) == numobs_linkage(Z)
 
 def fcluster(Z, t, criterion='inconsistent', depth=2, R=None, monocrit=None):
     """
