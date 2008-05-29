@@ -47,7 +47,7 @@ extra_link_args = []
 
 
 setup(name='hcluster', \
-      version='0.1.6', \
+      version='0.1.7', \
       py_modules=['hcluster.cluster'], \
       description='A hierarchical clustering package written for Scipy.', \
       long_description='A hierarchical clustering package written in C and Python.', \
