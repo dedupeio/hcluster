@@ -1581,7 +1581,7 @@ def from_mlab_linkage(Z):
        the number of original observations (leaves) in the non-singleton
        cluster i.
     """
-    is_valid_linkage(Z, throw=True, name='Z')
+    #is_valid_linkage(Z, throw=True, name='Z')
     Zs = Z.shape
     Zpart = Z[:,0:2]
     Zd = Z[:,2].reshape(Zs[0], 1)
