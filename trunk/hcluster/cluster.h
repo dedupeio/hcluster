@@ -3,10 +3,9 @@
  *
  * Author: Damian Eads
  * Date:   September 22, 2007
+ * Adapted for incorporation into Scipy, April 9, 2008.
  *
- * Copyright (c) 2007, 2008, Damian Eads
- *
- * All rights reserved.
+ * Copyright (c) 2007, 2008, Damian Eads. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

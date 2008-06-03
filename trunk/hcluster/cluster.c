@@ -4,9 +4,8 @@
  * Author: Damian Eads
  * Date:   September 22, 2007
  *
- * Copyright (c) 2007, 2008, Damian Eads
- *
- * All rights reserved.
+ * Copyright (c) 2007, 2008, Damian Eads. All rights reserved.
+ * Adapted for incorporation into Scipy, April 9, 2008.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -294,7 +293,7 @@ double jaccard_distance(const double *u, const double *v, int n) {
 
 double jaccard_distance_bool(const char *u, const char *v, int n) {
   int i = 0;
-  double denom = 0.0, num = 0.0;
+  double num = 0.0, denom = 0.0;
   for (i = 0; i < n; i++) {
     num += (u[i] != v[i]) && ((u[i] != 0) || (v[i] != 0));
     denom += (u[i] != 0) || (v[i] != 0);
@@ -735,7 +734,7 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n) {
     xi = inds[i];
     cnode *xnd = info->nodes + xi;
     xn = xnd->n;
-    mply = 1.0 / (((double)xn) * rscnt);
+    mply = (double)1.0 / (((double)xn) * rscnt);
     *bit = mply * ((drx * (rc * xn)) + (dsx * (sc * xn)));
   }
   for (i = mini + 1; i < minj; i++, bit++) {
@@ -744,7 +743,7 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n) {
     xi = inds[i];
     cnode *xnd = info->nodes + xi;
     xn = xnd->n;
-    mply = 1.0 / (((double)xn) * rscnt);
+    mply = (double)1.0 / (((double)xn) * rscnt);
     *bit = mply * ((drx * (rc * xn)) + (dsx * (sc * xn)));
   }
   for (i = minj + 1; i < np; i++, bit++) {
@@ -753,7 +752,7 @@ void dist_average(cinfo *info, int mini, int minj, int np, int n) {
     xi = inds[i];
     cnode *xnd = info->nodes + xi;
     xn = xnd->n;
-    mply = 1.0 / (((double)xn) * rscnt);
+    mply = (double)1.0 / (((double)xn) * rscnt);
     *bit = mply * ((drx * (rc * xn)) + (dsx * (sc * xn)));
   }
 }
