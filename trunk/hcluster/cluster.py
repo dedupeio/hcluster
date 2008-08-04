@@ -1494,7 +1494,7 @@ def pdist(X, metric='euclidean', p=2, V=None, VI=None):
             # (u-v)V^(-1)(u-v)^T
             _cluster_wrap.pdist_mahalanobis_wrap(_convert_to_double(X), VI, dm)
         elif mstr == 'canberra':
-            _cluster_wrap.pdist_canberra_wrap(_convert_to_bool(X), dm)
+            _cluster_wrap.pdist_canberra_wrap(_convert_to_double(X), dm)
         elif mstr == 'braycurtis':
             _cluster_wrap.pdist_bray_curtis_wrap(_convert_to_bool(X), dm)
         elif mstr == 'yule':
