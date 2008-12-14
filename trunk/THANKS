@@ -5,6 +5,14 @@ Damian Eads would like to give special thanks to:
   * Arnar Flatberg for finding a bug in correlation and
     optimizing pdist(..., 'correlation'). (Feb. 2008)
 
-  * Mattias Hollander for fixing a label-related bug in dendrogram.
+  * Mattias Hollander for fixing a label-related bug in dendrogram
+    and suggesting a feature for custom color lists.
     (Feb. 2008)
+
+  * Marcin Cieslik for noticing a bug when feeding a 32-bit
+    observation vector array into pdist. Also, thanks to him for noticing
+    a bug in fcluster data. (Mar. 2008)
+
+  * Joonas Paalasmaa for finding a bug in the Canberra function.
+    (Aug. 2008)
 
