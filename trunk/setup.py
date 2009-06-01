@@ -21,7 +21,7 @@ if sys.platform != 'darwin':
 valid_paths = filter(contains_arrayobject_h, sys.path)
 if len(valid_paths) == 0:
     print "No paths in the python path contain numpy/arrayobject.h"
-    sys.exit(0)
+    sys.exit(1)
 
 # The base path is by default the first python path with arrayobject.h in it.
 include_numpy_array=valid_paths[0]
