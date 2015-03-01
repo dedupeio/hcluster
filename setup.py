@@ -1,41 +1,31 @@
 #!/usr/bin/env python
-from __future__ import division, print_function, absolute_import
+try:
+    from setuptools import setup, Extension
+except ImportError :
+    raise ImportError("setuptools module required, please go to https://pypi.python.org/pypi/setuptools and follow the instructions for installing setuptools")
 
-import sys
+class NumpyExtension(Extension):
 
-if sys.version_info[0] >= 3:
-    DEFINE_MACROS = [("SCIPY_PY3K", None)]
-else:
-    DEFINE_MACROS = []
+    def __init__(self, *args, **kwargs):
+        Extension.__init__(self, *args, **kwargs)
 
+        self._include_dirs = self.include_dirs
+        del self.include_dirs  # restore overwritten property
 
-def configuration(parent_package='', top_path=None):
-    from numpy.distutils.system_info import get_info
-    from numpy.distutils.misc_util import Configuration, get_numpy_include_dirs
-    config = Configuration('cluster', parent_package, top_path)
+    # warning: Extension is a classic class so it's not really read-only
 
-    blas_opt = get_info('lapack_opt')
+    @property
+    def include_dirs(self):
+        from numpy import get_include
 
-    config.add_data_dir('tests')
+        return self._include_dirs + [get_include()]
 
-    config.add_extension('_vq',
-        sources=[('_vq.c')],
-        include_dirs=[get_numpy_include_dirs()],
-        extra_info=blas_opt)
-
-    config.add_extension('_hierarchy',
-        sources=[('_hierarchy.c')],
-        include_dirs=[get_numpy_include_dirs()])
-
-    return config
-
-if __name__ == '__main__':
-    from numpy.distutils.core import setup
-    setup(maintainer="SciPy Developers",
-          author="Eric Jones",
-          maintainer_email="scipy-dev@scipy.org",
-          description="Clustering Algorithms (Information Theory)",
-          url="http://www.scipy.org",
-          license="SciPy License (BSD Style)",
-          **configuration(top_path='').todict()
-          )
+setup(maintainer="SciPy Developers",
+      author="Eric Jones",
+      maintainer_email="scipy-dev@scipy.org",
+      description="Hierarchical Clustering Algorithms (Information Theory)",
+      url="http://www.scipy.org",
+      license="SciPy License (BSD Style)",
+      ext_modules=[NumpyExtension('hcluster._hierarchy', 
+                                  ['hcluster/_hierarchy.c'])],
+  )
