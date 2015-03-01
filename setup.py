@@ -27,5 +27,8 @@ setup(maintainer="SciPy Developers",
       url="http://www.scipy.org",
       license="SciPy License (BSD Style)",
       ext_modules=[NumpyExtension('hcluster._hierarchy', 
-                                  ['hcluster/_hierarchy.c'])],
+                                  ['hcluster/_hierarchy.c']),
+
+                   NumpyExtension('hcluster._distance_wrap',
+                                  ['hcluster/distance_wrap.c'])],
   )
