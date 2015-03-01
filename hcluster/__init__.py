@@ -1,2 +1,2 @@
-from hierarchy import *
-from distance import *
+from .hierarchy import *
+from .distance import *
