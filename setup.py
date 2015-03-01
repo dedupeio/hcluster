@@ -21,7 +21,7 @@ class NumpyExtension(Extension):
         return self._include_dirs + [get_include()]
 
 setup(maintainer="Forest Gregg",
-      version=0.3.0,
+      version="0.3.0",
       maintainer_email="fgregg@datamade.us",
       description="Hierarchical Clustering Algorithms (Information Theory)",
       url="https://github.com/datamade/hcluster",
