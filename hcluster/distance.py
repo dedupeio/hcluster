@@ -65,15 +65,13 @@ functions. Use ``pdist`` for this purpose.
 # Copyright (C) Damian Eads, 2007-2008. New BSD License.
 
 from __future__ import division, print_function, absolute_import
+from past.builtins import xrange, basestring
 
 import warnings
 import numpy as np
 
-from scipy.lib.six import callable, string_types
-from scipy.lib.six import xrange
-
 from . import _distance_wrap
-from scipy.linalg import norm
+from numpy.linalg import norm
 import collections
 
 
@@ -1213,7 +1211,7 @@ def pdist(X, metric='euclidean', p=2, w=None, V=None, VI=None):
                 dm[k] = dfun(X[i], X[j])
                 k = k + 1
 
-    elif isinstance(metric, string_types):
+    elif isinstance(metric, basestring):
         mstr = metric.lower()
 
         #if X.dtype != np.double and \
@@ -2056,7 +2054,7 @@ def cdist(XA, XB, metric='euclidean', p=2, V=None, VI=None, w=None):
             for i in xrange(0, mA):
                 for j in xrange(0, mB):
                     dm[i, j] = metric(XA[i, :], XB[j, :])
-    elif isinstance(metric, string_types):
+    elif isinstance(metric, basestring):
         mstr = metric.lower()
 
         #if XA.dtype != np.double and \

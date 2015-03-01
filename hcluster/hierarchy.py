@@ -131,6 +131,7 @@ References
 
 """
 from __future__ import division, print_function, absolute_import
+from past.builtins import xrange, basestring
 
 # Copyright (C) Damian Eads, 2007-2008. New BSD License.
 
@@ -173,10 +174,7 @@ import warnings
 
 import numpy as np
 from . import _hierarchy
-import scipy.spatial.distance as distance
-
-from scipy.lib.six import string_types
-from scipy.lib.six import xrange
+from . import distance
 
 _cpy_non_euclid_methods = {'single': 0, 'complete': 1, 'average': 2,
                            'weighted': 6}
@@ -614,7 +612,7 @@ def linkage(y, method='single', metric='euclidean'):
         The hierarchical clustering encoded as a linkage matrix.
 
     """
-    if not isinstance(method, string_types):
+    if not isinstance(method, basestring):
         raise TypeError("Argument 'method' must be a string.")
 
     y = _convert_to_double(np.asarray(y, order='c'))
@@ -1888,7 +1886,7 @@ def set_link_color_palette(palette):
 
     if type(palette) not in (list, tuple):
         raise TypeError("palette must be a list or tuple")
-    _ptypes = [isinstance(p, string_types) for p in palette]
+    _ptypes = [isinstance(p, basestring) for p in palette]
 
     if False in _ptypes:
         raise TypeError("all palette list elements must be color strings")
@@ -2161,7 +2159,7 @@ def dendrogram(Z, p=30, truncate_mode=None, color_threshold=None,
         ivl = []
 
     if color_threshold is None or \
-       (isinstance(color_threshold, string_types) and
+       (isinstance(color_threshold, basestring) and
                            color_threshold == 'default'):
         color_threshold = max(Z[:, 2]) * 0.7
     R = {'icoord': icoord_list, 'dcoord': dcoord_list, 'ivl': ivl,
@@ -2479,7 +2477,7 @@ def _dendrogram_calculate_info(Z, p, truncate_mode,
     dcoord_list.append([uah, h, h, ubh])
     if link_color_func is not None:
         v = link_color_func(int(i))
-        if not isinstance(v, string_types):
+        if not isinstance(v, basestring):
             raise TypeError("link_color_func must return a matplotlib "
                             "color string!")
         color_list.append(v)

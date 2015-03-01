@@ -26,6 +26,7 @@ setup(maintainer="SciPy Developers",
       description="Hierarchical Clustering Algorithms (Information Theory)",
       url="http://www.scipy.org",
       license="SciPy License (BSD Style)",
+      install_requires=[future, numpy],
       ext_modules=[NumpyExtension('hcluster._hierarchy', 
                                   ['hcluster/_hierarchy.c']),
 

@@ -33,21 +33,19 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import division, print_function, absolute_import
+from past.builtins import xrange
 
 import numpy as np
 from numpy.testing import (TestCase, run_module_suite, dec, assert_raises,
                            assert_allclose, assert_equal, assert_)
 
-from scipy.lib.six import xrange
-from scipy.lib.six import u
-
-import scipy.cluster.hierarchy
-from scipy.cluster.hierarchy import (
+import hcluster.hierarchy
+from hcluster.hierarchy import (
     linkage, from_mlab_linkage, to_mlab_linkage, num_obs_linkage, inconsistent,
     cophenet, fclusterdata, fcluster, is_isomorphic, single, leaders,
     correspond, is_monotonic, maxdists, maxinconsts, maxRstat,
     is_valid_linkage, is_valid_im, to_tree, leaves_list, dendrogram)
-from scipy.spatial.distance import pdist
+from hcluster.distance import pdist
 
 import hierarchy_test_data
 
@@ -854,7 +852,7 @@ def calculate_maximum_inconsistencies(Z, R, k=3):
 
 
 def test_euclidean_linkage_value_error():
-    for method in scipy.cluster.hierarchy._cpy_euclid_methods:
+    for method in hcluster.hierarchy._cpy_euclid_methods:
         assert_raises(ValueError,
                 linkage, [[1, 1], [1, 1]], method=method, metric='cityblock')
 
