@@ -1,7 +1,7 @@
 """
-=====================================================
-Distance computations (:mod:`scipy.spatial.distance`)
-=====================================================
+=====================
+Distance computations
+=====================
 
 .. sectionauthor:: Damian Eads
 
@@ -1964,7 +1964,7 @@ def cdist(XA, XB, metric='euclidean', p=2, V=None, VI=None, w=None):
     --------
     Find the Euclidean distances between four 2-D coordinates:
 
-    >>> from scipy.spatial import distance
+    >>> from hcluster import distance
     >>> coords = [(35.0456, -85.2672),
     ...           (35.1174, -89.9711),
     ...           (35.9728, -83.9422),

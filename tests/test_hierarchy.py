@@ -50,8 +50,8 @@ from hcluster.distance import pdist
 import hierarchy_test_data
 
 
-# Matplotlib is not a scipy dependency but is optionally used in dendrogram, so
-# check if it's available
+# Matplotlib is not a hcluster dependency but is optionally used in
+# dendrogram, so check if it's available
 try:
     # import matplotlib
     import matplotlib

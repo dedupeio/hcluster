@@ -1,9 +1,7 @@
 """
-========================================================
-Hierarchical clustering (:mod:`scipy.cluster.hierarchy`)
-========================================================
-
-.. currentmodule:: scipy.cluster.hierarchy
+=======================
+Hierarchical clustering
+=======================
 
 These functions cut hierarchical clusterings into flat clusterings
 or find the roots of the forest formed by a cut by providing the flat
@@ -192,7 +190,7 @@ __all__ = ['ClusterNode', 'average', 'centroid', 'complete', 'cophenet',
 
 
 def _warning(s):
-    warnings.warn('scipy.cluster: %s' % s, stacklevel=3)
+    warnings.warn('hcluster: %s' % s, stacklevel=3)
 
 
 def _copy_array_if_base_present(a):

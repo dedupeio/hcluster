@@ -1,0 +1,22 @@
+branches:
+  only:
+  - master
+language: python
+notifications:
+  email:
+    on_success: change
+    on_failure: always
+  irc: chat.freenode.net#dedupe
+python:
+- "2.7_with_system_site_packages"
+- '3.4'
+before_install:
+- sudo add-apt-repository ppa:cython-dev/master-ppa -y
+- sudo apt-get update -qq
+- sudo apt-get install cython
+install:
+- pip install requirements
+- cython hcluster/*.pyx
+- python setup.py develop
+script:
+- nosetests
