@@ -14,11 +14,21 @@ class NumpyExtension(Extension):
 
     # warning: Extension is a classic class so it's not really read-only
 
-    @property
-    def include_dirs(self):
+    def get_include_dirs(self):
         from numpy import get_include
 
         return self._include_dirs + [get_include()]
+
+    def set_include_dirs(self, value):
+        self._include_dirs = value
+
+    def del_include_dirs(self):
+        pass
+        
+    include_dirs = property(get_include_dirs, 
+                            set_include_dirs, 
+                            del_include_dirs)
+
 
 setup(maintainer="Forest Gregg",
       version="0.3.0",
