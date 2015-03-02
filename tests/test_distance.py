@@ -34,9 +34,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import division, print_function, absolute_import
+from past.builtins import xrange
 
 import os.path
-from scipy.lib.six import xrange
 
 import numpy as np
 from numpy.linalg import norm
@@ -44,9 +44,7 @@ from numpy.testing import (verbose, TestCase, run_module_suite, assert_,
         assert_raises, assert_array_equal, assert_equal, assert_almost_equal,
         assert_allclose)
 
-from scipy.lib.six import u
-
-from scipy.spatial.distance import (squareform, pdist, cdist, matching,
+from hcluster.distance import (squareform, pdist, cdist, matching,
         jaccard, dice, sokalsneath, rogerstanimoto, russellrao, yule,
         num_obs_y, num_obs_dm, is_valid_dm, is_valid_y, minkowski, wminkowski,
         euclidean, sqeuclidean, cosine, correlation, hamming, mahalanobis,
@@ -120,8 +118,8 @@ class TestCdist(TestCase):
         eps = 1e-07
         X1 = eo['cdist-X1']
         X2 = eo['cdist-X2']
-        Y1 = cdist(X1, X2, u('euclidean'))
-        Y2 = cdist(X1, X2, u('test_euclidean'))
+        Y1 = cdist(X1, X2, u'euclidean')
+        Y2 = cdist(X1, X2, u'test_euclidean')
         _assert_within_tol(Y1, Y2, eps, verbose > 2)
 
     def test_cdist_sqeuclidean_random(self):
@@ -378,7 +376,7 @@ class TestPdist(TestCase):
         eps = 1e-07
         X = eo['pdist-double-inp']
         Y_right = eo['pdist-euclidean']
-        Y_test1 = pdist(X, u('euclidean'))
+        Y_test1 = pdist(X, u'euclidean')
         _assert_within_tol(Y_test1, Y_right, eps)
 
     def test_pdist_euclidean_random_float32(self):
