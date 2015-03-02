@@ -33,7 +33,7 @@ class NumpyExtension(Extension):
 setup(maintainer="Forest Gregg",
       version="0.3.0",
       name='hcluster',
-      package=['hcluster'],
+      packages=['hcluster'],
       maintainer_email="fgregg@datamade.us",
       description="Hierarchical Clustering Algorithms (Information Theory)",
       url="https://github.com/datamade/hcluster",
