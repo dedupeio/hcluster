@@ -31,8 +31,8 @@ class NumpyExtension(Extension):
 
 
 setup(maintainer="Forest Gregg",
-      version="0.3.0",
-      name='hcluster',
+      version="0.3.2",
+      name='dedupe-hcluster',
       packages=['hcluster'],
       maintainer_email="fgregg@datamade.us",
       description="Hierarchical Clustering Algorithms (Information Theory)",
