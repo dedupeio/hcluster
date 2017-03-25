@@ -1,53 +1,76 @@
 branches:
   only:
   - master
-  - /^v.*$/
-language: python
+  - "/^v.*$/"
 notifications:
   email:
     on_success: change
     on_failure: always
   irc: chat.freenode.net#dedupe
+language: python
 matrix:
   include:
-  - os: linux
-    python: 3.4
-  - os: linux
-    python: 2.7
+  - python: 3.6
+  - python: 3.5
+  - python: 2.7
   - os: osx
     language: generic
-    env: TERRYFY_PYTHON='system 2'
   - os: osx
     language: generic
-    env: TERRYFY_PYTHON='homebrew 2'
-  - os: osx
-    language: generic
-    env: TERRYFY_PYTHON='homebrew 3'
-before_install:
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then git clone https://github.com/MacPython/terryfy;
-  fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source terryfy/travis_tools.sh; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then get_python_environment $TERRYFY_PYTHON
-  venv; fi
-- if [[ "$TERRYFY_PYTHON" == "homebrew 3" ]]; then alias pip=`which pip3` ; fi
+    before_install:
+    - brew update
+    - brew install python3
+    - virtualenv env -p python3
+    - source env/bin/activate
+  - sudo: required
+    services:
+    - docker
+    env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+    install:
+    - docker pull $DOCKER_IMAGE
+    script:
+    - docker run --rm -v `pwd`:/io $DOCKER_IMAGE /io/.manylinux-install.sh
+    after_success:
+    - if [[ $TRAVIS_TAG ]]; then pip install twine && twine upload -u datamade.wheelbuilder
+      -p $PYPIPASSWORD --skip-existing wheelhouse/*; fi
+    - exit 0
+  - sudo: required
+    services:
+    - docker
+    env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
+    install:
+    - docker pull $DOCKER_IMAGE
+    script:
+    - docker run --rm -v `pwd`:/io $DOCKER_IMAGE /io/.manylinux-install.sh
+    after_success:
+    - if [[ $TRAVIS_TAG ]]; then pip install twine && twine upload -u datamade.wheelbuilder
+      -p $PYPIPASSWORD --skip-existing wheelhouse/*; fi
+    - exit 0
 install:
-- pip install numpy
-- pip install -r requirements.txt
+- pip install --upgrade pip
+- pip install --upgrade numpy
+- pip install --upgrade -r requirements.txt
 - cython hcluster/_hierarchy.pyx
 - pip install -e .
 script:
-- nosetests
-after_success:
-- coveralls
-- echo [distutils]                                  > ~/.pypirc
-- echo index-servers = pypi                        >> ~/.pypirc
-- echo [pypi]                                      >> ~/.pypirc
-- echo repository=https://pypi.python.org/pypi     >> ~/.pypirc
-- echo username=fgregg                             >> ~/.pypirc
-- echo password=$PYPIPASSWORD                      >> ~/.pypirc
-- if [[ $TRAVIS_TAG && "$TRAVIS_OS_NAME" == "osx" ]]; then python setup.py bdist_wheel upload; fi
-- if [[ $TRAVIS_TAG && "$TRAVIS_OS_NAME" == "linux" ]]; then python setup.py sdist upload; fi
+- pytest tests
+deploy:
+- provider: pypi
+  skip_cleanup: true
+  user: datamade.wheelbuilder
+  on:
+    tags: true
+    condition: "$TRAVIS_OS_NAME = osx"
+  distributions: bdist_wheel
+  password: "$PYPIPASSWORD"
+- provider: pypi
+  skip_cleanup: true
+  user: datamade.wheelbuilder
+  on:
+    tags: true
+    condition: "$TRAVIS_OS_NAME = linux"
+  distributions: sdist
+  password: "$PYPIPASSWORD"
 env:
   global:
-  - secure: Q35ihuxM9ivpAtfWzUEgxgLkiNW1g1w3B/Ny6LDUAtE2KVe/XRCsnIbjwhYQ+0ZXybqO1OJlP+l3mPMn3zCzD6TrvGwsB7Wx+x6pN9sk4DJaT85oYt3uHsGYe2njF4ie+Lvnw6DZGbkA4t5hz2aVQ3WoExxxyuVCzf3CV7LQ+Q8=
-
+  - secure: DxezFbZgFhL7EuIkwJqDDX7lu2aP+JJ9hK5rIIqe5mq0aweZykTF8PIgf0H9J5/Kn5duL6rnLoVuqj1IKnYVOzHpUFO6T/k0W84HjuqfyRbCNuNlJS1shuCPQd4jmQI2VfQUmJsdmYRYTBUhdHpOkKhZ1vR1s2PE9mKEr4ZjUVs=
