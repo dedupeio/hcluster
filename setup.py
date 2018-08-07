@@ -32,8 +32,6 @@ setup(maintainer="Forest Gregg",
       license="SciPy License (BSD Style)",
       install_requires=['future', 'numpy'],
       ext_modules=ext_modules,
-
-)],
       long_description="""
 This library provides Python functions for hierarchical clustering. Its features
 include
