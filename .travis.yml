@@ -48,9 +48,7 @@ matrix:
     - exit 0
 install:
 - pip install --upgrade pip
-- pip install --upgrade numpy
 - pip install --upgrade -r requirements.txt
-- cython hcluster/_hierarchy.pyx
 - pip install -e .
 script:
 - pytest tests
