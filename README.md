@@ -1,6 +1,6 @@
 # hcluster
 
-[![Build Status](https://travis-ci.org/datamade/hcluster.svg?branch=master)](https://travis-ci.org/datamade/hcluster)
+[![Build Status](https://travis-ci.org/dedupeio/hcluster.svg?branch=master)](https://travis-ci.org/dedupeio/hcluster)
 
 This library provides Python functions for hierarchical clustering. Its features
 include
