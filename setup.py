@@ -1,34 +1,26 @@
 #!/usr/bin/env python
+from setuptools import setup, Extension
+import numpy
+
 try:
-    from setuptools import setup, Extension
-except ImportError :
-    raise ImportError("setuptools module required, please go to https://pypi.python.org/pypi/setuptools and follow the instructions for installing setuptools")
+    from Cython.Build import cythonize
+    use_cython = True
+except ImportError:
+    use_cython = False
 
-class NumpyExtension(Extension):
 
-    def __init__(self, *args, **kwargs):
-        Extension.__init__(self, *args, **kwargs)
+ext_modules = [Extension('hcluster._distance_wrap',
+                         ['hcluster/distance_wrap.c'],
+                         include_dirs=numpy.get_dirs())]
 
-        self._include_dirs = self.include_dirs
-        del self.include_dirs  # restore overwritten property
-
-    # warning: Extension is a classic class so it's not really read-only
-
-    def get_include_dirs(self):
-        from numpy import get_include
-
-        return self._include_dirs + [get_include()]
-
-    def set_include_dirs(self, value):
-        self._include_dirs = value
-
-    def del_include_dirs(self):
-        pass
-        
-    include_dirs = property(get_include_dirs, 
-                            set_include_dirs, 
-                            del_include_dirs)
-
+if use_cython:
+    ext_modules += cythonize([Extension('hcluster._hierarchy',
+                                        ['hcluster/_hierarchy.pyx'],
+                                        include_dirs=numpy.get_dirs())])
+else:
+    ext_modules = [Extension('hcluster._hierarchy',
+                             ['hcluster/_hierarchy.c'],
+                             include_dirs=numpy.get_dirs())]
 
 setup(maintainer="Forest Gregg",
       version="0.3.2",
@@ -39,11 +31,9 @@ setup(maintainer="Forest Gregg",
       url="https://github.com/datamade/hcluster",
       license="SciPy License (BSD Style)",
       install_requires=['future', 'numpy'],
-      ext_modules=[NumpyExtension('hcluster._hierarchy', 
-                                  ['hcluster/_hierarchy.c']),
+      ext_modules=ext_modules,
 
-                   NumpyExtension('hcluster._distance_wrap',
-                                  ['hcluster/distance_wrap.c'])],
+)],
       long_description="""
 This library provides Python functions for hierarchical clustering. Its features
 include
