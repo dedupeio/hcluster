@@ -23,7 +23,7 @@ else:
                              include_dirs=[numpy.get_include()])]
 
 setup(maintainer="Forest Gregg",
-      version="0.3.2",
+      version="0.3.3",
       name='dedupe-hcluster',
       packages=['hcluster'],
       maintainer_email="fgregg@datamade.us",
