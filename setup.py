@@ -11,16 +11,16 @@ except ImportError:
 
 ext_modules = [Extension('hcluster._distance_wrap',
                          ['hcluster/distance_wrap.c'],
-                         include_dirs=numpy.get_include())]
+                         include_dirs=[numpy.get_include()])]
 
 if use_cython:
     ext_modules += cythonize([Extension('hcluster._hierarchy',
                                         ['hcluster/_hierarchy.pyx'],
-                                        include_dirs=numpy.get_include())])
+                                        include_dirs=[numpy.get_include()])])
 else:
     ext_modules = [Extension('hcluster._hierarchy',
                              ['hcluster/_hierarchy.c'],
-                             include_dirs=numpy.get_include())]
+                             include_dirs=[numpy.get_include()])]
 
 setup(maintainer="Forest Gregg",
       version="0.3.2",
