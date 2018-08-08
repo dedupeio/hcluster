@@ -18,19 +18,22 @@ if use_cython:
                                         ['hcluster/_hierarchy.pyx'],
                                         include_dirs=[numpy.get_include()])])
 else:
-    ext_modules = [Extension('hcluster._hierarchy',
-                             ['hcluster/_hierarchy.c'],
-                             include_dirs=[numpy.get_include()])]
+    ext_modules += [Extension('hcluster._hierarchy',
+                              ['hcluster/_hierarchy.c'],
+                              include_dirs=[numpy.get_include()])]
 
 setup(maintainer="Forest Gregg",
-      version="0.3.3",
+      version="0.3.4",
       name='dedupe-hcluster',
       packages=['hcluster'],
       maintainer_email="fgregg@datamade.us",
       description="Hierarchical Clustering Algorithms (Information Theory)",
       url="https://github.com/datamade/hcluster",
       license="SciPy License (BSD Style)",
-      install_requires=['future', 'numpy'],
+      install_requires=['future',
+                        "numpy>=1.10.4 ;python_version<'3.6'",
+                        "numpy>=1.12.1 ;python_version=='3.6'",
+	                "numpy>=1.15.0; python_version=='3.7'"],
       ext_modules=ext_modules,
       long_description="""
 This library provides Python functions for hierarchical clustering. Its features
