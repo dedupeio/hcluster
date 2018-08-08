@@ -43,6 +43,6 @@ deploy_script:
   - set HOME=%USERPROFILE%
   - pip install wheel twine
   - pip install --upgrade setuptools
-  - ps: if($env:APPVEYOR_REPO_TAG -eq $TRUE) { python -W ignore setup.py bdist_wheel; twine upload dist/* }
+  - ps: if($env:APPVEYOR_REPO_TAG -eq $TRUE) {  pip wheel -w dist --no-deps .; twine upload dist/* }
 
 deploy : on
