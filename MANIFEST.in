@@ -1,1 +1,6 @@
+include pyproject.toml
 include hcluster/distance_impl.h
+include hcluster/_hierarchy.pyx
+include hcluster/_hierarchy_distance_update.pxi
+include hcluster/distance_wrap.c
+include hcluster/_hierarchy.c
