@@ -24,7 +24,7 @@ jobs:
     - name: Test with pytest
       run: |        
         pip install -r requirements.txt
-        pytest tests dedupe --cov dedupe
+        pytest test
     - name: Integration tests
       run: |
         python tests/canonical.py -vv
