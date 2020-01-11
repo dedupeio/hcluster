@@ -24,7 +24,7 @@ jobs:
     - name: Test with pytest
       run: |        
         pip install -r requirements.txt
-        pytest test
+        pytest tests
     - name: Coveralls
       env:
         COVERALLS_PARALLEL: true
