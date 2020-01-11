@@ -1,6 +1,6 @@
 # hcluster
 
-[![Build Status](https://travis-ci.org/dedupeio/hcluster.svg?branch=master)](https://travis-ci.org/dedupeio/hcluster)
+[![Tests Passing](https://github.com/dedupeio/dedupe/workflows/tests/badge.svg)](https://github.com/dedupeio/dedupe/actions?query=workflow%3Atests)
 
 This library provides Python functions for hierarchical clustering. Its features
 include
