@@ -33,9 +33,6 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import division, print_function, absolute_import
-from past.builtins import xrange
-
 import os.path
 
 import numpy as np
@@ -1211,7 +1208,7 @@ class TestSquareForm(TestCase):
         assert_equal(rA[0], 0.8)
 
     def test_squareform_multi_matrix(self):
-        for n in xrange(2, 5):
+        for n in range(2, 5):
             yield self.check_squareform_multi_matrix(n)
 
     def check_squareform_multi_matrix(self, n):
@@ -1227,8 +1224,8 @@ class TestSquareForm(TestCase):
         assert_equal(len(s), 2)
         assert_equal(len(Yr.shape), 1)
         assert_equal(s[0], s[1])
-        for i in xrange(0, s[0]):
-            for j in xrange(i+1, s[1]):
+        for i in range(0, s[0]):
+            for j in range(i+1, s[1]):
                 if i != j:
                     assert_equal(A[i, j], Y[k])
                     k += 1
@@ -1239,7 +1236,7 @@ class TestSquareForm(TestCase):
 class TestNumObsY(TestCase):
 
     def test_num_obs_y_multi_matrix(self):
-        for n in xrange(2, 10):
+        for n in range(2, 10):
             X = np.random.rand(n, 4)
             Y = pdist(X)
             assert_equal(num_obs_y(Y), n)
@@ -1261,16 +1258,16 @@ class TestNumObsY(TestCase):
         assert_(self.check_y(4))
 
     def test_num_obs_y_5_10(self):
-        for i in xrange(5, 16):
+        for i in range(5, 16):
             self.minit(i)
 
     def test_num_obs_y_2_100(self):
         # Tests num_obs_y(y) on 100 improper condensed distance matrices.
         # Expecting exception.
         a = set([])
-        for n in xrange(2, 16):
+        for n in range(2, 16):
             a.add(n*(n-1)/2)
-        for i in xrange(5, 105):
+        for i in range(5, 105):
             if i not in a:
                 assert_raises(ValueError, self.bad_y, i)
 
@@ -1291,7 +1288,7 @@ class TestNumObsY(TestCase):
 class TestNumObsDM(TestCase):
 
     def test_num_obs_dm_multi_matrix(self):
-        for n in xrange(1, 10):
+        for n in range(1, 10):
             X = np.random.rand(n, 4)
             Y = pdist(X)
             A = squareform(Y)
@@ -1357,14 +1354,14 @@ class TestIsValidDM(TestCase):
     def test_is_valid_dm_nonzero_diagonal_E(self):
         y = np.random.rand(10)
         D = squareform(y)
-        for i in xrange(0, 5):
+        for i in range(0, 5):
             D[i, i] = 2.0
         assert_raises(ValueError, is_valid_dm_throw, (D))
 
     def test_is_valid_dm_nonzero_diagonal_F(self):
         y = np.random.rand(10)
         D = squareform(y)
-        for i in xrange(0, 5):
+        for i in range(0, 5):
             D[i, i] = 2.0
         assert_equal(is_valid_dm(D), False)
 
@@ -1456,9 +1453,9 @@ class TestIsValidY(TestCase):
 
     def test_is_valid_y_2_100(self):
         a = set([])
-        for n in xrange(2, 16):
+        for n in range(2, 16):
             a.add(n*(n-1)/2)
-        for i in xrange(5, 105):
+        for i in range(5, 105):
             if i not in a:
                 assert_raises(ValueError, self.bad_y, i)
 
