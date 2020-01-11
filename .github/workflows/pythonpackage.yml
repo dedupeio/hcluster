@@ -24,10 +24,7 @@ jobs:
     - name: Test with pytest
       run: |        
         pip install -r requirements.txt
-        pytest tests dedupe --cov dedupe
-    - name: Integration tests
-      run: |
-        python tests/canonical.py -vv
+        pytest tests
     - name: Coveralls
       env:
         COVERALLS_PARALLEL: true
