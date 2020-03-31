@@ -16,3 +16,4 @@ library is in C for efficiency.
 It is a fork of clustering and distance functions from the [scipy](http://www.scipy.org/) that removes all the
 dependencies on scipy. It [preserves the API of hcluster 0.2](http://hcluster.damianeads.com/cluster.html).
 
+Part of the [Dedupe.io](https://dedupe.io/) cloud service and open source toolset for de-duplicating and finding fuzzy matches in your data.
