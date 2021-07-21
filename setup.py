@@ -34,7 +34,8 @@ setup(maintainer="Forest Gregg",
                         "numpy>=1.12.1 ;python_version=='3.6'",
 	                "numpy>=1.15.0; python_version=='3.7'",
 		        "numpy>=1.17.3; python_version=='3.8'",
-		        "numpy; python_version>'3.8'"],
+		        "numpy; python_version>'3.8'",
+		        "Cython"],
       ext_modules=ext_modules,
       long_description="""
 This library provides Python functions for hierarchical clustering. Its features
