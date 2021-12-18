@@ -57,3 +57,11 @@ jobs:
     - name: Build sdist
       run: python setup.py sdist
     - name: Publish wheels to PyPI
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        pip install twine
+        twine upload --skip-existing wheelhouse/*.whl
+        twine upload dist/*
+      continue-on-error: true
