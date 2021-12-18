@@ -55,7 +55,7 @@ jobs:
       env:
         CIBW_ARCHS_MACOS: x86_64 arm64 universal2
         CIBW_ARCHS_LINUX: auto aarch64
-        CIBW_SKIP: pp38-macosx_* pp37-macosx_*
+        CIBW_SKIP: pp38-macosx_* pp37-macosx_* pp37-win_* pp38-win_* pp38-manylinux_aarch64 pp37-manylinux_aarch64 pp37-manylinux_i686 pp38-manylinux_i686 *-musllinux_* *s390x *ppc64le
     - name: Build sdist
       run: |
         pip install numpy cython wheel setuptools
