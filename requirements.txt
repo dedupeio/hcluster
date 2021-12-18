@@ -1,2 +1,2 @@
 nose
-pytest<4.0
+pytest
