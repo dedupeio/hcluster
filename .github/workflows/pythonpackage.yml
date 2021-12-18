@@ -54,6 +54,7 @@ jobs:
       uses: pypa/cibuildwheel@v2.2.2
       env:
         CIBW_ARCHS_MACOS: x86_64 arm64 universal2
+        CIBW_ARCHS_LINUX: auto aarch64
     - name: Build sdist
       run: |
         pip install numpy cython wheel setuptools
